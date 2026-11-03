@@ -84,6 +84,12 @@ class SAMOMIND_Fake_Content extends SAMOMIND_Content {
 	public function is_eligible( $post ) {
 		return 'publish' === $post->post_status && '' === $post->post_password;
 	}
+
+	public $published_by_type = array();
+
+	public function get_published_ids( $post_type ) {
+		return isset( $this->published_by_type[ $post_type ] ) ? $this->published_by_type[ $post_type ] : array();
+	}
 }
 
 /**
@@ -451,5 +457,44 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertSame( array( '/checkin' ), $this->endpoints() );
 		$this->assertFalse( SAMOMIND()->connection->is_connected() );
 		$this->assertSame( 'unknown_source', SAMOMIND()->connection->get_block()['code'] );
+	}
+
+	public function test_unticking_a_type_queues_deletes_in_batches() {
+		$this->content->published_by_type = array(
+			'book'  => range( 1, 501 ),
+			'event' => array( 900 ),
+		);
+		$this->client->responses          = array( array( 'results' => array() ), array( 'results' => array() ) );
+
+		$this->sync->on_excluded_post_types_updated( array( 'event' ), array( 'event', 'book' ) );
+
+		$items = $this->sync->get_queue()['items'];
+		$this->assertCount( 501, $items );
+		$this->assertArrayNotHasKey( '900', $items );
+		$this->assertSame( 'delete', $items['1']['op'] );
+
+		$this->sync->run();
+
+		$this->assertSame( array( '/documents/delete', '/documents/delete' ), $this->endpoints() );
+		$this->assertCount( 500, $this->client->calls[0]['payload']['external_ids'] );
+		$this->assertSame( array( '501' ), $this->client->calls[1]['payload']['external_ids'] );
+		$this->assertSame( 0, $this->sync->get_progress()['pending'] );
+	}
+
+	public function test_ticking_a_type_again_sends_nothing_at_once() {
+		$this->content->published_by_type = array( 'book' => array( 1, 2 ) );
+
+		$this->sync->on_excluded_post_types_updated( array( 'book' ), array() );
+
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
+	}
+
+	public function test_unticking_while_not_connected_queues_nothing() {
+		unset( $this->options['samomind_connection'] );
+		$this->content->published_by_type = array( 'book' => array( 1, 2 ) );
+
+		$this->sync->on_excluded_post_types_updated( array(), array( 'book' ) );
+
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
 	}
 }

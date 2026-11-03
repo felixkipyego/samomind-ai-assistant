@@ -10,6 +10,30 @@ use Brain\Monkey\Functions;
 
 class ContentTest extends SAMOMIND_TestCase {
 
+	/**
+	 * Value of the samomind_excluded_post_types option.
+	 *
+	 * @var string[]
+	 */
+	private $excluded_types = array();
+
+	protected function setUp(): void {
+		parent::setUp();
+
+		$this->excluded_types = array();
+		$test                 = $this;
+		Functions\when( 'get_option' )->alias(
+			function ( $name, $default = false ) use ( $test ) {
+				return 'samomind_excluded_post_types' === $name ? $test->excluded_types() : $default;
+			}
+		);
+		$GLOBALS['samomind_test_plugin'] = (object) array( 'helpers' => new SAMOMIND_Helpers() );
+	}
+
+	public function excluded_types() {
+		return $this->excluded_types;
+	}
+
 	private function page_data( array $overrides = array() ) {
 		return array_merge(
 			array(
@@ -222,5 +246,34 @@ class ContentTest extends SAMOMIND_TestCase {
 		);
 
 		$this->assertSame( array( '10', '100', '2', '9' ), array_column( $pairs, 0 ) );
+	}
+
+	public function test_unticked_types_are_not_sent() {
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
+		Functions\when( 'get_post' )->justReturn( new WP_Post( array( 'ID' => 3, 'post_type' => 'book' ) ) );
+		$this->excluded_types = array( 'book', 'page' );
+		$content              = new SAMOMIND_Content();
+
+		$this->assertSame( array( 'post', 'event' ), $content->get_post_types() );
+		$this->assertSame( array( 'post', 'page', 'book', 'event' ), $content->get_available_post_types() );
+		$this->assertFalse( $content->is_eligible( new WP_Post( array( 'ID' => 3, 'post_type' => 'book' ) ) ) );
+		$this->assertTrue( $content->is_eligible( new WP_Post( array( 'ID' => 4, 'post_type' => 'event' ) ) ) );
+		$this->assertNull( $content->get_document( 3, 200000 ) );
+	}
+
+	public function test_filter_runs_after_the_setting() {
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
+		$this->excluded_types = array( 'book' );
+		Filters\expectApplied( 'SAMOMIND/content/post_types' )
+			->once()
+			->with( array( 'post', 'page', 'event' ) )
+			->andReturnUsing(
+				function ( $types ) {
+					// A site can still add a type back or remove another.
+					return array_merge( array_diff( $types, array( 'event' ) ), array( 'book' ) );
+				}
+			);
+
+		$this->assertSame( array( 'post', 'page', 'book' ), ( new SAMOMIND_Content() )->get_post_types() );
 	}
 }

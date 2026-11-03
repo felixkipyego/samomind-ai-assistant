@@ -99,6 +99,18 @@ class SAMOMIND_Helpers {
 	}
 
 	/**
+	 * Post types unticked on the settings page. Stored as exclusions so a
+	 * newly registered type is synced until someone unticks it.
+	 *
+	 * @since   0.1.0
+	 * @return  string[]
+	 */
+	public function get_excluded_post_types() {
+		$types = get_option( 'samomind_excluded_post_types', array() );
+		return is_array( $types ) ? array_values( array_map( 'strval', $types ) ) : array();
+	}
+
+	/**
 	 * Get the stored widget embed snippet.
 	 *
 	 * @since   0.1.0

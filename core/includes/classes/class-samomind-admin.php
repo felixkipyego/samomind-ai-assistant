@@ -155,6 +155,15 @@ class SAMOMIND_Admin {
 		);
 		register_setting(
 			self::SETTINGS_GROUP,
+			'samomind_excluded_post_types',
+			array(
+				'type'              => 'array',
+				'sanitize_callback' => array( $this, 'sanitize_excluded_post_types' ),
+				'default'           => array(),
+			)
+		);
+		register_setting(
+			self::SETTINGS_GROUP,
 			'samomind_embed_snippet',
 			array(
 				'type'              => 'string',
@@ -207,6 +216,35 @@ class SAMOMIND_Admin {
 		}
 		add_settings_error( self::SETTINGS_GROUP, 'samomind_key_id', esc_html__( 'The key id is a UUID such as 3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10. The previous value was kept.', 'samomind-ai-assistant' ) );
 		return SAMOMIND()->helpers->get_key_id();
+	}
+
+	/**
+	 * Turn the post type checklist into the stored exclusion list. The
+	 * form posts every type it offered (offered[]) and the ticked ones
+	 * (included[]); exclusions for types not on the form are kept.
+	 *
+	 * @since   0.1.0
+	 * @param   mixed $value  Submitted value.
+	 * @return  string[]
+	 */
+	public function sanitize_excluded_post_types( $value ) {
+		$previous = SAMOMIND()->helpers->get_excluded_post_types();
+		if ( ! is_array( $value ) ) {
+			return $previous;
+		}
+		if ( ! isset( $value['offered'] ) && ! isset( $value['included'] ) ) {
+			// A plain exclusion list, as stored (add_option() at activation).
+			return array_values( array_filter( array_map( 'sanitize_key', $value ) ) );
+		}
+		if ( ! isset( $value['offered'] ) ) {
+			return $previous;
+		}
+
+		$available = SAMOMIND()->content->get_available_post_types();
+		$offered   = array_intersect( array_map( 'sanitize_key', (array) $value['offered'] ), $available );
+		$included  = isset( $value['included'] ) ? array_map( 'sanitize_key', (array) $value['included'] ) : array();
+
+		return array_values( array_unique( array_merge( array_diff( $previous, $offered ), array_diff( $offered, $included ) ) ) );
 	}
 
 	/**
@@ -854,6 +892,32 @@ class SAMOMIND_Admin {
 									echo esc_html( sprintf( __( 'Leave as %s unless SamoMind asks you to use a staging address. The plugin sends requests only to this address.', 'samomind-ai-assistant' ), SAMOMIND_Helpers::DEFAULT_API_BASE_URL ) );
 									?>
 								</p>
+							</td>
+						</tr>
+					</table>
+
+					<h2><?php esc_html_e( 'What is synced', 'samomind-ai-assistant' ); ?></h2>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Post types', 'samomind-ai-assistant' ); ?></th>
+							<td>
+								<fieldset id="samomind-post-types">
+									<legend class="screen-reader-text"><?php esc_html_e( 'Post types', 'samomind-ai-assistant' ); ?></legend>
+									<?php
+									$excluded = $helpers->get_excluded_post_types();
+									foreach ( SAMOMIND()->content->get_available_post_types() as $post_type ) :
+										$type_object = get_post_type_object( $post_type );
+										$type_label  = $type_object ? $type_object->labels->name : $post_type;
+										?>
+										<input type="hidden" name="samomind_excluded_post_types[offered][]" value="<?php echo esc_attr( $post_type ); ?>">
+										<label>
+											<input type="checkbox" name="samomind_excluded_post_types[included][]" value="<?php echo esc_attr( $post_type ); ?>"<?php checked( ! in_array( $post_type, $excluded, true ) ); ?>>
+											<?php echo esc_html( $type_label ); ?> <code><?php echo esc_html( $post_type ); ?></code>
+										</label><br>
+									<?php endforeach; ?>
+								</fieldset>
+								<p class="description"><?php esc_html_e( 'Only published, public, not password-protected items of the ticked types are sent. New post types are ticked until you untick them.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Unticking a type removes its items from SamoMind: they are queued for deletion and sent in the background. Ticking it again adds them back at the next daily reconcile, or click "Sync now" on the Status page.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>

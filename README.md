@@ -57,6 +57,12 @@ for products, the short description), kind (page, post, product or
 custom), modified time, and the names of its public taxonomy terms. Products
 add price and stock status.
 
+**SamoMind > Settings > What is synced** lists these post types, all
+ticked by default. Untick a type to stop syncing it: its published items
+are queued for deletion and removed from SamoMind in the background.
+Ticking it again adds them back at the next daily reconcile, or click
+**Sync now**. A post type registered later is ticked until you untick it.
+
 Never sent: drafts, scheduled, pending, private or password-protected
 content, users, visitors, comments, form entries, orders, media files.
 
@@ -121,7 +127,9 @@ add_filter( 'SAMOMIND/content/excluded_ids', function ( $ids ) {
 } );
 ```
 
-Attachments are never sent, whatever the filter returns. After changing a
+The post types filter runs after the settings page's checklist, so code
+can still add a type back or remove one. Attachments are never sent,
+whatever the filter returns. After changing a
 filter, click **Sync now** (new exclusions are removed at the next
 reconcile).
 

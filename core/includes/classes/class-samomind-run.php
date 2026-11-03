@@ -57,6 +57,8 @@ class SAMOMIND_Run {
 		$sync = SAMOMIND()->sync;
 		add_action( 'transition_post_status', array( $sync, 'on_transition_post_status' ), 10, 3 );
 		add_action( 'before_delete_post', array( $sync, 'on_before_delete_post' ), 10, 2 );
+		add_action( 'update_option_samomind_excluded_post_types', array( $sync, 'on_excluded_post_types_updated' ), 10, 2 );
+		add_action( 'add_option_samomind_excluded_post_types', array( $sync, 'on_excluded_post_types_added' ), 10, 2 );
 
 		// Background work (docs/ARCHITECTURE.md A1).
 		add_action( SAMOMIND_Scheduler::WORKER_HOOK, array( $sync, 'run' ) );

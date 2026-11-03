@@ -44,12 +44,36 @@ class SAMOMIND_Content {
 	const MAX_URL_CHARS      = 2048;
 
 	/**
-	 * Post types whose published items are sent.
+	 * Post types whose published items are sent: the available types
+	 * minus those unticked on the settings page, then the filter.
 	 *
 	 * @since   0.1.0
 	 * @return  string[]
 	 */
 	public function get_post_types() {
+		$types = array_values( array_diff( $this->get_available_post_types(), SAMOMIND()->helpers->get_excluded_post_types() ) );
+
+		/**
+		 * Filter the post types sent to SamoMind. Runs after the settings
+		 * page's post type selection.
+		 *
+		 * @since 0.1.0
+		 * @param string[] $types Post type names.
+		 */
+		$types = (array) apply_filters( 'SAMOMIND/content/post_types', $types );
+
+		return array_values( array_diff( array_unique( array_map( 'strval', $types ) ), self::NEVER_SENT_TYPES ) );
+	}
+
+	/**
+	 * Post types the content rules allow, before the settings page and the
+	 * filter: pages, posts, public custom post types, and products when
+	 * WooCommerce is active. These are the settings page's checklist.
+	 *
+	 * @since   0.1.0
+	 * @return  string[]
+	 */
+	public function get_available_post_types() {
 		$types  = array( 'post', 'page' );
 		$custom = get_post_types(
 			array(
@@ -66,15 +90,7 @@ class SAMOMIND_Content {
 			$types[] = (string) $type;
 		}
 
-		/**
-		 * Filter the post types sent to SamoMind.
-		 *
-		 * @since 0.1.0
-		 * @param string[] $types Post type names.
-		 */
-		$types = (array) apply_filters( 'SAMOMIND/content/post_types', $types );
-
-		return array_values( array_diff( array_unique( array_map( 'strval', $types ) ), self::NEVER_SENT_TYPES ) );
+		return array_values( array_diff( array_unique( $types ), self::NEVER_SENT_TYPES ) );
 	}
 
 	/**
@@ -432,6 +448,29 @@ class SAMOMIND_Content {
 			$wpdb->prepare(
 				"SELECT ID FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_password = '' AND post_type IN (" . implode( ',', array_fill( 0, count( $types ), '%s' ) ) . ') AND ID > %d ORDER BY ID ASC LIMIT %d',
 				array_merge( $types, array( (int) $after_id, (int) $limit ) )
+			)
+		);
+
+		return array_map( 'intval', $ids );
+	}
+
+	/**
+	 * Ids of every published post of one type, eligible or not. Used to
+	 * remove a type that was unticked; ids SamoMind never had come back
+	 * not_found, which is harmless.
+	 *
+	 * @since   0.1.0
+	 * @param   string $post_type  Post type name.
+	 * @return  int[]
+	 */
+	public function get_published_ids( $post_type ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ids only, read once per settings change.
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish' ORDER BY ID ASC",
+				$post_type
 			)
 		);
 

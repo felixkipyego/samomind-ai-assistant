@@ -27,7 +27,7 @@ Only published, public content that is not password-protected: for each page, po
 
 Never sent: drafts, scheduled, private or password-protected content, users, visitors, comments, form entries, orders, carts, customers or media files. Hidden WooCommerce products are not sent.
 
-Use the `SAMOMIND/content/post_types` and `SAMOMIND/content/excluded_ids` filters to leave out post types or single posts.
+Choose the post types under SamoMind > Settings > What is synced (all ticked by default). Unticking a type removes its items from SamoMind. Developers can also use the `SAMOMIND/content/post_types` filter (it runs after that setting) and `SAMOMIND/content/excluded_ids` to leave out single posts.
 
 == External services ==
 

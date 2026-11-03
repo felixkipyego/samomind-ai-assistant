@@ -408,6 +408,54 @@ class SAMOMIND_Sync {
 	}
 
 	/**
+	 * Hooked to update_option_samomind_excluded_post_types: queue deletes
+	 * for every published item of a type that was just unticked. Ticking a
+	 * type again needs no request here; the next reconcile reports its
+	 * items as missing, or "Sync now" sends them.
+	 *
+	 * @since   0.1.0
+	 * @param   mixed $old_value  Previous exclusions.
+	 * @param   mixed $new_value  New exclusions.
+	 * @return  void
+	 */
+	public function on_excluded_post_types_updated( $old_value, $new_value ) {
+		if ( ! SAMOMIND()->connection->is_connected() ) {
+			return;
+		}
+		$unticked = array_diff( (array) $new_value, (array) $old_value );
+		if ( empty( $unticked ) ) {
+			return;
+		}
+
+		// The settings change is the event: its time keeps the keys stable
+		// across worker re-runs and distinct from an earlier untick.
+		$changed = 'excluded@' . time();
+		$queue   = $this->get_queue();
+		foreach ( $unticked as $post_type ) {
+			foreach ( SAMOMIND()->content->get_published_ids( (string) $post_type ) as $post_id ) {
+				$queue['items'][ (string) $post_id ] = array(
+					'op'    => 'delete',
+					'event' => self::event_id( 'delete', $post_id, $changed ),
+				);
+			}
+		}
+		$this->save_queue( $queue );
+		SAMOMIND()->scheduler->schedule_worker( 0 );
+	}
+
+	/**
+	 * Hooked to add_option_samomind_excluded_post_types (first save).
+	 *
+	 * @since   0.1.0
+	 * @param   string $option  Option name.
+	 * @param   mixed  $value   Exclusions.
+	 * @return  void
+	 */
+	public function on_excluded_post_types_added( $option, $value ) {
+		$this->on_excluded_post_types_updated( array(), $value );
+	}
+
+	/**
 	 * Hourly tick: check in when the interval has passed, then reconcile
 	 * (contract 9: "check-in then reconcile daily"). Also wakes the worker
 	 * if a scheduled run was lost.

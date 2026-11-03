@@ -139,6 +139,7 @@ two read on every front-end request.
 | `samomind_key_id` | no | ingest key id (UUID) |
 | `samomind_api_secret` | no | ingest secret; ignored when `SAMOMIND_API_SECRET` is defined |
 | `samomind_embed_snippet` | yes | validated widget `<script>` tag, empty by default |
+| `samomind_excluded_post_types` | no | post types unticked on the settings page; an exclusion list, so a newly registered type is synced until unticked |
 | `samomind_connection` | no | source id, connected time, limits, check-in interval and time, last error, block state, failure start |
 | `samomind_sync` | no | full sync state and progress, reconcile state |
 | `samomind_queue` | no | pending pushes and deletes per external id, retry state |
@@ -254,7 +255,7 @@ drop the request and record the error.
 
 | Filter | Default | Use |
 |---|---|---|
-| `SAMOMIND/content/post_types` | post, page, public custom post types, `product` with WooCommerce | add or remove post types |
+| `SAMOMIND/content/post_types` | post, page, public custom post types, `product` with WooCommerce, minus the types unticked on the settings page | add or remove post types; runs after the setting |
 | `SAMOMIND/content/excluded_ids` | `array()` | post ids never sent |
 | `SAMOMIND/settings/get_plugin_name` | `SamoMind AI Assistant` | same as the reference |
 

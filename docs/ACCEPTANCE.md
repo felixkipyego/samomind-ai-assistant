@@ -82,6 +82,18 @@ And nothing at all for:
 
 - [ ] Saving a draft (no request in the log).
 
+## 4b. Untick a post type
+
+| Step | Expected |
+|---|---|
+| SamoMind > Settings > What is synced: all types ticked by default | checklist shows Pages, Posts, any public custom types, Products (with WooCommerce) |
+| Untick Posts, Save Settings | `/documents/delete` 200 (one request per 500 ids) with every published post id; items `queued` (or `not_found` for any SamoMind never had) |
+| Chat / dashboard | posts are no longer cited; the page count drops by the number of posts |
+| Publish a new post | no request |
+| Tick Posts again, Save, then **Reconcile now** | `/reconcile` reports the posts as `missing`; `/documents` 200 sends them; cited again |
+
+- [ ] Done
+
 ## 5. Reconcile
 
 | Step | Expected |

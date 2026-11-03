@@ -45,6 +45,7 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 					'samomind_api_base_url'  => 'https://api.samomind.com',
 					'samomind_key_id'        => '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10',
 					'samomind_embed_snippet' => '',
+					'samomind_excluded_post_types' => array( 'retired_type', 'event' ),
 				);
 				return isset( $saved[ $name ] ) ? $saved[ $name ] : $default;
 			}
@@ -63,7 +64,16 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 		Functions\when( 'sanitize_text_field' )->alias( 'trim' );
 		Functions\when( 'add_action' )->justReturn( true );
 
-		$GLOBALS['samomind_test_plugin'] = (object) array( 'helpers' => new SAMOMIND_Helpers() );
+		Functions\when( 'sanitize_key' )->alias(
+			function ( $key ) {
+				return preg_replace( '/[^a-z0-9_\\-]/', '', strtolower( $key ) );
+			}
+		);
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
+		$GLOBALS['samomind_test_plugin'] = (object) array(
+			'helpers' => new SAMOMIND_Helpers(),
+			'content' => new SAMOMIND_Content(),
+		);
 		$this->admin                     = new SAMOMIND_Admin();
 	}
 
@@ -130,5 +140,29 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( $snippet, $this->admin->sanitize_embed_snippet( "\n" . $snippet . "\n" ) );
 		$this->assertSame( array(), $this->errors );
+	}
+
+	public function test_checklist_is_stored_as_exclusions() {
+		// Ticked: post, event. Unticked: page, book. "retired_type" is not on the form, so its exclusion stays.
+		$stored = $this->admin->sanitize_excluded_post_types(
+			array(
+				'offered'  => array( 'post', 'page', 'book', 'event', 'not_a_type' ),
+				'included' => array( 'post', 'event' ),
+			)
+		);
+
+		$this->assertSame( array( 'retired_type', 'page', 'book' ), $stored );
+	}
+
+	public function test_unticking_everything_excludes_every_offered_type() {
+		$stored = $this->admin->sanitize_excluded_post_types( array( 'offered' => array( 'post', 'page' ) ) );
+
+		$this->assertSame( array( 'retired_type', 'event', 'post', 'page' ), $stored );
+	}
+
+	public function test_checklist_without_offered_list_keeps_the_previous_value() {
+		$this->assertSame( array( 'retired_type', 'event' ), $this->admin->sanitize_excluded_post_types( 'junk' ) );
+		$this->assertSame( array( 'retired_type', 'event' ), $this->admin->sanitize_excluded_post_types( array( 'included' => array( 'post' ) ) ) );
+		$this->assertSame( array(), $this->admin->sanitize_excluded_post_types( array() ) );
 	}
 }
