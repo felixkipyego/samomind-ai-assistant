@@ -1,0 +1,515 @@
+# Copyright (C) 2026 SoftwaresKe Ltd
+# This file is distributed under the GPL-2.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: SamoMind AI Assistant 0.1.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/samomind-ai-assistant\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2026-11-03T12:07:51+00:00\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"X-Generator: WP-CLI 2.12.0\n"
+"X-Domain: samomind-ai-assistant\n"
+
+#. Plugin Name of the plugin
+#: samomind-ai-assistant.php
+msgid "SamoMind AI Assistant"
+msgstr ""
+
+#. Plugin URI of the plugin
+#. Author URI of the plugin
+#: samomind-ai-assistant.php
+msgid "https://samomind.com"
+msgstr ""
+
+#. Description of the plugin
+#: samomind-ai-assistant.php
+msgid "Keeps your SamoMind AI assistant's knowledge base in sync with this site's public pages, posts and products, and adds the SamoMind chat widget."
+msgstr ""
+
+#. Author of the plugin
+#: samomind-ai-assistant.php
+msgid "SoftwaresKe Ltd"
+msgstr ""
+
+#: core/class-samomind-ai-assistant.php:101
+msgid "You are not allowed to clone this class."
+msgstr ""
+
+#: core/class-samomind-ai-assistant.php:112
+msgid "You are not allowed to unserialize this class."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:99
+#: core/includes/classes/class-samomind-admin.php:100
+msgid "SamoMind"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:110
+#: core/includes/classes/class-samomind-admin.php:635
+msgid "SamoMind Status"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:111
+#: core/includes/classes/class-samomind-admin.php:644
+msgid "Status"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:119
+#: core/includes/classes/class-samomind-admin.php:824
+msgid "SamoMind Settings"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:120
+#: core/includes/classes/class-samomind-run.php:94
+msgid "Settings"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:197
+msgid "The API base URL must be an https address (http is accepted only for localhost, .local and .test hosts). The previous value was kept."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:217
+msgid "The key id is a UUID such as 3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10. The previous value was kept."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:262
+msgid "The previous snippet was kept."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:295
+#: core/includes/classes/class-samomind-admin.php:467
+msgid "You do not have permission to do this."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:344
+msgid "Enter the key id and secret from the SamoMind dashboard first."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:349
+msgid "Connect failed:"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:351
+msgid "Connected. The first sync has started in the background."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:365
+msgid "Disconnect failed:"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:367
+msgid "Disconnected. SamoMind removes this site's documents. Your settings are kept."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:380
+#: core/includes/classes/class-samomind-admin.php:412
+msgid "Connect the site first."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:383
+msgid "Full sync started in the background."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:397
+msgid "Check-in failed:"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:399
+msgid "Checked in."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:415
+msgid "Reconcile started in the background."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:428
+msgid "Request log cleared."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:441
+msgid "The secret is set in wp-config.php and cannot be changed here."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:447
+msgid "No secret entered; nothing changed."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:450
+msgid "That does not look like a SamoMind ingest secret (it starts with smik_). Nothing changed."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:455
+msgid "Secret saved. It will not be shown again."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:533
+msgid "Open SamoMind status"
+msgstr ""
+
+#. translators: %s: reason, for example "Disconnected from the SamoMind dashboard."
+#: core/includes/classes/class-samomind-admin.php:544
+#, php-format
+msgid "SamoMind: %s Nothing is sent until you click Connect."
+msgstr ""
+
+#. translators: 1: API message, 2: error code
+#: core/includes/classes/class-samomind-admin.php:557
+#, php-format
+msgid "SamoMind sync is paused: %1$s (%2$s)"
+msgstr ""
+
+#. translators: %s: last error
+#: core/includes/classes/class-samomind-admin.php:570
+#, php-format
+msgid "SamoMind sync has been failing for more than 24 hours. Last error: %s"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:608
+msgid "Not started"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:609
+msgid "Running"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:610
+msgid "Complete"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:611
+msgid "Stopped"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:641
+#: core/includes/classes/class-samomind-admin.php:874
+msgid "Connection"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:647
+msgid "Connected, paused"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:649
+msgid "Connected"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:653
+msgid "Not connected"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:658
+msgid "Site address"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:663
+msgid "Source id"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:667
+msgid "Connected since"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:671
+msgid "Last check-in"
+msgstr ""
+
+#. translators: %s: status reported by SamoMind
+#: core/includes/classes/class-samomind-admin.php:677
+#, php-format
+msgid "(SamoMind reports: %s)"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:686
+msgid "Paused because"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:692
+msgid "Last error"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:701
+msgid "Sync now"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:702
+msgid "Check in now"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:703
+msgid "Reconcile now"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:704
+msgid "Reconnect"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:705
+msgid "Disconnect"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:705
+msgid "Disconnect this site? SamoMind removes every document it received from this site. Your settings stay."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:707
+msgid "Connect"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:714
+msgid "Sync"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:717
+msgid "Full sync"
+msgstr ""
+
+#. translators: 1: documents sent, 2: published items
+#: core/includes/classes/class-samomind-admin.php:724
+#, php-format
+msgid "%1$d sent of about %2$d published items"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:731
+msgid "Last full sync"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:735
+msgid "Documents"
+msgstr ""
+
+#. translators: 1: queued, 2: unchanged, 3: refused
+#: core/includes/classes/class-samomind-admin.php:739
+#, php-format
+msgid "Last full sync: %1$d accepted, %2$d unchanged, %3$d refused."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:741
+msgid "The SamoMind API does not report a page count to the plugin; the dashboard shows the indexed count for this site."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:745
+msgid "Reconcile"
+msgstr ""
+
+#. translators: 1: time, 2: missing, 3: stale, 4: deleted
+#: core/includes/classes/class-samomind-admin.php:751
+#, php-format
+msgid "(last %1$s: %2$d missing, %3$d stale, %4$d removed by SamoMind)"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:757
+msgid "Waiting to send"
+msgstr ""
+
+#. translators: 1: attempt number, 2: time
+#: core/includes/classes/class-samomind-admin.php:763
+#, php-format
+msgid "(attempt %1$d failed, next try %2$s)"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:770
+msgid "Note"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:778
+msgid "Request log"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:779
+msgid "The last 200 requests to SamoMind: time, endpoint, HTTP status and error code. Request bodies and credentials are never logged."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:781
+msgid "No requests yet."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:786
+msgid "Time"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:787
+msgid "Endpoint"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:788
+msgid "HTTP status"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:789
+msgid "Code"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:797
+msgid "network"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:803
+msgid "Clear log"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:826
+msgid "In the SamoMind dashboard, open Sources, then the WordPress card, and click \"Create an ingest key\". Copy the key id and the secret here. The secret is shown only once there."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:834
+msgid "Ingest secret"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:838
+#: core/includes/classes/class-samomind-admin.php:851
+msgid "Secret"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:841
+msgid "Set by the SAMOMIND_API_SECRET constant in wp-config.php, which takes priority. Change it there."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:855
+msgid "A secret is saved"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:857
+msgid "No secret saved"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:861
+msgid "The saved secret is never shown. Paste a new one to replace it. You can also define SAMOMIND_API_SECRET in wp-config.php instead."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:865
+msgid "Replace secret"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:865
+msgid "Save secret"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:877
+msgid "Key id"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:885
+msgid "API base URL"
+msgstr ""
+
+#. translators: %s: default API URL
+#: core/includes/classes/class-samomind-admin.php:892
+#, php-format
+msgid "Leave as %s unless SamoMind asks you to use a staging address. The plugin sends requests only to this address."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:899
+msgid "What is synced"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:902
+#: core/includes/classes/class-samomind-admin.php:905
+msgid "Post types"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:919
+msgid "Only published, public, not password-protected items of the ticked types are sent. New post types are ticked until you untick them."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:920
+msgid "Unticking a type removes its items from SamoMind: they are queued for deletion and sent in the background. Ticking it again adds them back at the next daily reconcile, or click \"Sync now\" on the Status page."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:925
+msgid "Chat widget"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:928
+msgid "Embed snippet"
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:931
+msgid "Paste the snippet from the Widget screen of the SamoMind dashboard to show the chat on every page. Leave empty to turn the widget off. Only a script tag from widget.samomind.com is accepted."
+msgstr ""
+
+#: core/includes/classes/class-samomind-admin.php:936
+msgid "Save Settings"
+msgstr ""
+
+#: core/includes/classes/class-samomind-client.php:282
+msgid "Enter the API base URL, key id and secret first."
+msgstr ""
+
+#. translators: %d: HTTP status code
+#: core/includes/classes/class-samomind-client.php:369
+#, php-format
+msgid "Unexpected response from SamoMind (HTTP %d)."
+msgstr ""
+
+#: core/includes/classes/class-samomind-connection.php:235
+msgid "Disconnected from the SamoMind dashboard."
+msgstr ""
+
+#: core/includes/classes/class-samomind-connection.php:236
+msgid "SamoMind no longer knows this site; it may have been removed in the dashboard."
+msgstr ""
+
+#: core/includes/classes/class-samomind-connection.php:300
+msgid "SamoMind did not return a source id."
+msgstr ""
+
+#: core/includes/classes/class-samomind-connection.php:341
+#: core/includes/classes/class-samomind-connection.php:397
+msgid "This site is not connected."
+msgstr ""
+
+#: core/includes/classes/class-samomind-connection.php:436
+msgid "SamoMind no longer supports this plugin version. Update the plugin."
+msgstr ""
+
+#: core/includes/classes/class-samomind-embed.php:71
+msgid "Paste the single <script> tag exactly as the SamoMind dashboard shows it. Inline code and other tags are not accepted."
+msgstr ""
+
+#: core/includes/classes/class-samomind-embed.php:79
+msgid "The script tag has malformed attributes."
+msgstr ""
+
+#. translators: %s: attribute name
+#: core/includes/classes/class-samomind-embed.php:91
+#, php-format
+msgid "The attribute \"%s\" appears twice."
+msgstr ""
+
+#. translators: %s: widget host name
+#: core/includes/classes/class-samomind-embed.php:97
+#, php-format
+msgid "The script must load from https://%s."
+msgstr ""
+
+#. translators: %s: attribute name
+#: core/includes/classes/class-samomind-embed.php:103
+#, php-format
+msgid "The attribute \"%s\" takes no value."
+msgstr ""
+
+#. translators: %s: attribute name
+#: core/includes/classes/class-samomind-embed.php:110
+#, php-format
+msgid "The attribute \"%s\" is not allowed. Only src, async, defer and data-* attributes are accepted."
+msgstr ""
+
+#: core/includes/classes/class-samomind-embed.php:115
+msgid "The script tag has no src."
+msgstr ""
+
+#: core/includes/classes/class-samomind-helpers.php:143
+msgid "Never"
+msgstr ""
+
+#: core/includes/classes/class-samomind-sync.php:975
+msgid "SamoMind refused more pages because your plan's page limit is reached (plan_page_cap). Sync stopped. Upgrade the plan or remove pages in the SamoMind dashboard, then click \"Sync now\"."
+msgstr ""
+
+#: core/includes/classes/class-samomind-sync.php:991
+msgid "SamoMind refused some updates (off_site_url: the page address is not on the connected site)."
+msgstr ""

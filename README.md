@@ -152,6 +152,7 @@ composer install
 composer lint     # PHPCS, WordPress Coding Standards (phpcs.xml.dist)
 composer compat   # PHPCompatibilityWP, PHP 7.4 and up
 composer plugin-check  # static checks of the WordPress.org Plugin Check tool
+composer pot      # regenerate languages/samomind-ai-assistant.pot (needs WP-CLI)
 composer test     # unit tests with Brain Monkey, no WordPress needed
 composer smoke    # wp-env smoke test (Docker), then: npx @wordpress/env destroy
 ```
