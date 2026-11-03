@@ -23,7 +23,8 @@ differ, the contract wins.
 | PHP namespace | none (global, prefixed classes) | none |
 | Main class | `final class Onsite_Training_Estimator`, singleton, in `core/class-onsite-training-estimator.php` | `final class SamoMind_AI_Assistant` in `core/class-samomind-ai-assistant.php` |
 | Accessor function | `OTCE()` returns the singleton | `SAMOMIND()` |
-| Bootstrap sequence | `instance()`: `base_hooks()`, `includes()`, `new OTCE_Helpers`, `new OTCE_Settings`, `new OTCE_Run`, `do_action( 'OTCE/plugin_loaded' )` | same order; the instance also holds the service objects (see section 3) before `new SAMOMIND_Run` |
+| Bootstrap sequence | `instance()`: `base_hooks()`, `includes()`, `new OTCE_Helpers`, `new OTCE_Settings`, `new OTCE_Run`, `do_action( 'OTCE/plugin_loaded' )` | same order; the instance also holds the service objects (section 3) before `new SAMOMIND_Run` |
+| Feature classes | `OTCE_Run::add_hooks()` creates `new OTCE_Shortcode()` and `new OTCE_Admin()`, each hooking itself in its constructor | `SAMOMIND_Run::add_hooks()` creates `new SAMOMIND_Embed()` and `new SAMOMIND_Admin()` the same way |
 | Class loading | `require_once` list in `includes()`, no autoloader | same; Composer is dev tooling only |
 | Class prefix | `OTCE_Helpers`, `OTCE_Settings`, `OTCE_Run`, `OTCE_Admin` ... | `SAMOMIND_Helpers`, `SAMOMIND_Settings`, `SAMOMIND_Run`, `SAMOMIND_Admin` ... |
 | Class files | `core/includes/classes/class-otce-<name>.php` | `core/includes/classes/class-samomind-<name>.php` |
@@ -94,7 +95,7 @@ samomind-ai-assistant/
         js/backend-scripts.js
   templates/index.php
   languages/index.php
-  docs/  tests/  composer.json  phpcs.xml.dist  phpunit.xml.dist  .github/   (not shipped, see .distignore)
+  docs/  tests/  composer.json  phpcs.xml.dist  phpunit.xml.dist  .github/  .wp-env.json   (not shipped, see .distignore)
 ```
 
 ## 3. Bootstrap
@@ -105,11 +106,12 @@ samomind-ai-assistant/
 2. `SamoMind_AI_Assistant::instance()` runs `base_hooks()` (text domain),
    `includes()` (the `require_once` list), then creates, in order:
    `helpers`, `settings`, `log`, `content`, `scheduler`, `connection`,
-   `sync`, `embed`, and finally `new SAMOMIND_Run()`, then fires
+   `sync`, and finally `new SAMOMIND_Run()`, then fires
    `SAMOMIND/plugin_loaded`.
-3. `SAMOMIND_Run::add_hooks()` registers every WordPress hook: assets,
-   action link, AJAX, post events, cron hooks, the footer embed, the admin
-   (`new SAMOMIND_Admin()`) and, under WP-CLI, the `samomind` command.
+3. `SAMOMIND_Run::add_hooks()` registers every WordPress hook: action link,
+   assets, the footer embed (`new SAMOMIND_Embed()`), the admin
+   (`new SAMOMIND_Admin()`), AJAX, post events, cron hooks and, under
+   WP-CLI, the `samomind` command.
 
 Service objects hang off the singleton as public properties, like the
 reference's `helpers` and `settings`, so callers write
@@ -198,7 +200,12 @@ Why: no content sync in the reference.
 **A9. Tooling.** Composer (dev only): PHPCS with WordPress Coding
 Standards and PHPCompatibilityWP, PHPUnit 9.6, Brain Monkey. Unit tests
 run without WordPress. CI on GitHub Actions: PHPCS, PHP 7.4 compatibility,
-unit tests on PHP 7.4, 8.1, 8.3.
+unit tests on PHP 7.4, 8.1, 8.3. `composer smoke` runs a wp-env smoke test
+(activate, open both admin pages, `wp samomind status`) where Docker is
+available. The ruleset is WordPress with these exclusions, each commented:
+no file docblock (the reference documents classes), the reference's
+`PREFIX/area/name` hook names, its `###` banner comments, the uppercase
+`SAMOMIND()` accessor, and unused `$args` in WP-CLI commands.
 Why: the reference has no tests or tooling.
 
 ## 6. Request flows (contract section 5)
@@ -235,3 +242,17 @@ drop the request and record the error.
 | `SAMOMIND/settings/get_plugin_name` | `SamoMind AI Assistant` | same as the reference |
 
 Action: `SAMOMIND/plugin_loaded` after setup.
+
+## 8. Where the contract decided
+
+The 7.6.b brief and the contract differ in four places; the contract wins.
+
+| Brief | Contract | Built |
+|---|---|---|
+| `external_id` = post type + ":" + post id | 9: "`external_id` is the post id as a string" | post id as a string |
+| hourly check-in | 5.5 and 9: `checkin_interval_seconds` 86400, "check-in then reconcile daily" | hourly tick that checks in once the server's interval has passed, then reconciles |
+| uninstall does not call disconnect | 9: "`disconnect` on deactivation and uninstall" | deactivation disconnects; uninstall disconnects only if a source id is still stored |
+| status shows the document count reported by the API | no connector endpoint returns a count (the count is in the dashboard's session-only overview) | the status page shows the plugin's own counts from the last full sync and says the dashboard holds the indexed count |
+
+Product price goes in `fields.price` (contract 4), not in `text`; terms of
+public taxonomies go in `fields.categories`.
