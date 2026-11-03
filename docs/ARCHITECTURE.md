@@ -23,7 +23,7 @@ differ, the contract wins.
 | PHP namespace | none (global, prefixed classes) | none |
 | Main class | `final class Onsite_Training_Estimator`, singleton, in `core/class-onsite-training-estimator.php` | `final class SamoMind_AI_Assistant` in `core/class-samomind-ai-assistant.php` |
 | Accessor function | `OTCE()` returns the singleton | `SAMOMIND()` |
-| Bootstrap sequence | `instance()`: `base_hooks()`, `includes()`, `new OTCE_Helpers`, `new OTCE_Settings`, `new OTCE_Run`, `do_action( 'OTCE/plugin_loaded' )` | same order; the instance also holds the service objects (section 3) before `new SAMOMIND_Run` |
+| Bootstrap sequence | `instance()`: `base_hooks()`, `includes()`, `new OTCE_Helpers`, `new OTCE_Settings`, `new OTCE_Run`, `do_action( 'OTCE/plugin_loaded' )` | same order without `base_hooks()` (it only loaded the text domain, see i18n); the instance also holds the service objects (section 3) before `new SAMOMIND_Run` |
 | Feature classes | `OTCE_Run::add_hooks()` creates `new OTCE_Shortcode()` and `new OTCE_Admin()`, each hooking itself in its constructor | `SAMOMIND_Run::add_hooks()` creates `new SAMOMIND_Embed()` and `new SAMOMIND_Admin()` the same way |
 | Class loading | `require_once` list in `includes()`, no autoloader | same; Composer is dev tooling only |
 | Class prefix | `OTCE_Helpers`, `OTCE_Settings`, `OTCE_Run`, `OTCE_Admin` ... | `SAMOMIND_Helpers`, `SAMOMIND_Settings`, `SAMOMIND_Run`, `SAMOMIND_Admin` ... |
@@ -43,7 +43,7 @@ differ, the contract wins.
 | Plugin action link | "Settings" link via `plugin_action_links_` + base | same, to the status page |
 | Front end output | shortcode class `OTCE_Shortcode` | `SAMOMIND_Embed` on `wp_footer` |
 | Outbound HTTP | `OTCE_Distance`: endpoint URLs as class constants, `wp_remote_get`, returns `array` or `WP_Error` | `SAMOMIND_Client`: path prefix as a class constant, `wp_remote_post`, returns `array` or `WP_Error` |
-| i18n | text domain `onsite-training-cost-estimator`, `load_plugin_textdomain` on `plugins_loaded`, `/languages` | `samomind-ai-assistant`, same hook, `/languages` |
+| i18n | text domain `onsite-training-cost-estimator`, `load_plugin_textdomain` on `plugins_loaded`, `/languages` | `samomind-ai-assistant`, `/languages` holds the `.pot`; no `load_plugin_textdomain` call, because WordPress loads translations for a WordPress.org plugin itself since 4.6 and Plugin Check flags the call |
 | Docblocks | class docblock with `@package`, `@subpackage Classes/<Class>`, `@since`; method docblocks with `@since`, `@param`, `@return` | same |
 | Formatting | tabs, `array()` long syntax, WordPress spacing | same |
 | Templates folder | `templates/index.php` only | same |
@@ -72,7 +72,7 @@ samomind-ai-assistant/
   index.php
   core/
     index.php
-    class-samomind-ai-assistant.php    singleton, includes(), base_hooks(), textdomain
+    class-samomind-ai-assistant.php    singleton, includes(), activation and deactivation
     includes/
       index.php
       classes/
@@ -103,9 +103,8 @@ samomind-ai-assistant/
 1. `samomind-ai-assistant.php` defines the constants, registers the
    activation and deactivation hooks, requires the main class and calls
    `SAMOMIND()`.
-2. `SamoMind_AI_Assistant::instance()` runs `base_hooks()` (text domain),
-   `includes()` (the `require_once` list), then creates, in order:
-   `helpers`, `settings`, `log`, `content`, `scheduler`, `connection`,
+2. `SamoMind_AI_Assistant::instance()` runs `includes()` (the
+   `require_once` list), then creates, in order: `helpers`, `settings`, `log`, `content`, `scheduler`, `connection`,
    `sync`, and finally `new SAMOMIND_Run()`, then fires
    `SAMOMIND/plugin_loaded`.
 3. `SAMOMIND_Run::add_hooks()` registers every WordPress hook: action link,

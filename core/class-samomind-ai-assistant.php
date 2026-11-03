@@ -126,7 +126,6 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		public static function instance() {
 			if ( ! isset( self::$instance ) && ! ( self::$instance instanceof SamoMind_AI_Assistant ) ) {
 				self::$instance = new SamoMind_AI_Assistant();
-				self::$instance->base_hooks();
 				self::$instance->includes();
 				self::$instance->helpers    = new SAMOMIND_Helpers();
 				self::$instance->settings   = new SAMOMIND_Settings();
@@ -172,17 +171,6 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		}
 
 		/**
-		 * Add base hooks for the core functionality
-		 *
-		 * @access  private
-		 * @since   0.1.0
-		 * @return  void
-		 */
-		private function base_hooks() {
-			add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
-		}
-
-		/**
 		 * Activation: create the options with autoload off and schedule the
 		 * hourly tick.
 		 *
@@ -212,17 +200,6 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		public function deactivate() {
 			$this->scheduler->clear_all();
 			delete_option( SAMOMIND_Sync::LOCK_OPTION );
-		}
-
-		/**
-		 * Loads the plugin language files.
-		 *
-		 * @access  public
-		 * @since   0.1.0
-		 * @return  void
-		 */
-		public function load_textdomain() {
-			load_plugin_textdomain( 'samomind-ai-assistant', false, dirname( plugin_basename( SAMOMIND_PLUGIN_FILE ) ) . '/languages/' );
 		}
 	}
 
