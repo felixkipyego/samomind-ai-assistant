@@ -40,6 +40,8 @@ This plugin connects to the SamoMind API, a service of SoftwaresKe Ltd, to keep 
 If you paste the chat widget snippet, visitors' browsers load the widget from `https://widget.samomind.com`, and the widget talks to the SamoMind API.
 
 Service: https://samomind.com
+<!-- TODO(7.6.d): Terms of service URL. No terms page exists yet; add the real link here before the WordPress.org submission. -->
+<!-- TODO(7.6.d): Privacy policy URL. No privacy page exists yet; add the real link here before the WordPress.org submission. -->
 
 No other outbound requests are made. There is no telemetry.
 

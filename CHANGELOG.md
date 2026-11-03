@@ -12,6 +12,11 @@ ingestion contract at commit `98d55ccc0091a4bfb013302b5a82cf29b50bd872`
   vector.
 - Connect and disconnect; status page with connection, sync progress and a
   200-row request log.
+- Post type checklist on the settings page (all ticked by default); unticking
+  a type removes its items from SamoMind.
+- Deactivation sends nothing and keeps the connection; uninstall disconnects.
+- A disconnect from the SamoMind dashboard wins: the plugin stops and waits
+  for an admin to click Connect.
 - Full sync in the background (Action Scheduler or WP-Cron), resumable from
   the server's cursor, stopping on the plan's page cap.
 - Pushes on publish and update, deletes on trash, unpublish, private,
@@ -20,4 +25,5 @@ ingestion contract at commit `98d55ccc0091a4bfb013302b5a82cf29b50bd872`
   admin notice after 24 hours of failures.
 - Widget snippet in the footer, accepted only from widget.samomind.com.
 - WP-CLI: `wp samomind status|connect|disconnect|sync|reconcile|checkin`.
-- Uninstall removes all options, transients and scheduled events.
+- Uninstall disconnects a connected site, then removes all options,
+  transients and scheduled events.
