@@ -1,0 +1,41 @@
+name: Release
+
+# Pushing a v* tag (v0.1.0) builds the plugin zip and attaches it to a
+# GitHub release for that tag. Nothing is published to WordPress.org.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and attach the zip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.4'
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --no-progress
+      - run: composer lint
+      - run: composer compat
+      - run: composer plugin-check
+      - run: composer test
+      - name: Check the tag matches the plugin version
+        run: |
+          version=$(sed -n 's/^ \* Version: *//p' samomind-ai-assistant.php | tr -d '[:space:]')
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match plugin Version $version" >&2
+            exit 1
+          fi
+      - name: Build the zip
+        id: build
+        run: echo "zip=$(sh bin/build-zip.sh)" >> "$GITHUB_OUTPUT"
+      - name: Create the release with the zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "${{ steps.build.outputs.zip }}" --title "$GITHUB_REF_NAME" --notes "See CHANGELOG.md." --verify-tag

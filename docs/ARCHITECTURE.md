@@ -213,7 +213,11 @@ Plugin Check tool (`phpcs-plugin-check.xml.dist`). Plugin Check is not on
 Packagist, so `composer.json` pins its 2.1.0 GitHub release as a `package`
 repository; only its `phpcs-sniffs` and `phpcs-rulesets` are used. The
 tool's VIP query check (`WordPressVIPMinimum.Performance.WPQueryParams`) is
-left out to avoid a second dependency.
+left out to avoid a second dependency. `composer build`
+(`bin/build-zip.sh`) packs HEAD into `build/samomind-ai-assistant-<version>.zip`
+without the paths in `.distignore`, and refuses when the header `Version`
+and readme `Stable tag` differ; the Release workflow attaches that zip to
+a GitHub release on a `v*` tag.
 Why: the reference has no tests or tooling.
 
 ## 6. Request flows (contract section 5)

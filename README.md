@@ -155,6 +155,12 @@ composer plugin-check  # static checks of the WordPress.org Plugin Check tool
 composer pot      # regenerate languages/samomind-ai-assistant.pot (needs WP-CLI)
 composer test     # unit tests with Brain Monkey, no WordPress needed
 composer smoke    # wp-env smoke test (Docker), then: npx @wordpress/env destroy
+composer build    # build/samomind-ai-assistant-<version>.zip from HEAD, honouring .distignore
 ```
+
+To release, set the same version in the plugin header (`Version:`) and
+readme.txt (`Stable tag:`), commit, then push a tag `v<version>`. The
+Release workflow runs the checks, builds the zip and attaches it to a
+GitHub release. Nothing is published to WordPress.org.
 
 No build step. The tests never call the API; the client is mocked.

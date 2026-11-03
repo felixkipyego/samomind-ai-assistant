@@ -9,6 +9,10 @@
   first, a Screenshots section (images to come, see `.wordpress-org/`), and
   External services moved under Description so the sections keep the
   WordPress.org order.
+- Development: Plugin Check static rules (`composer plugin-check`), the
+  translation template, `composer build` for the release zip and a Release
+  workflow on `v*` tags. `load_plugin_textdomain` is no longer called
+  (WordPress loads WordPress.org translations itself).
 
 ## 0.1.0 (2026-11-03)
 

@@ -21,3 +21,5 @@
 /CHANGELOG.md
 /Makefile
 /.wordpress-org
+/bin
+/build
