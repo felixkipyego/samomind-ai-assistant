@@ -32,6 +32,11 @@
 		<exclude-pattern>/samomind-ai-assistant\.php$</exclude-pattern>
 	</rule>
 
+	<!-- WP-CLI calls every command with ( $args, $assoc_args ), used or not. -->
+	<rule ref="Generic.CodeAnalysis.UnusedFunctionParameter">
+		<exclude-pattern>/class-samomind-cli\.php$</exclude-pattern>
+	</rule>
+
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">

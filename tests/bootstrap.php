@@ -22,8 +22,5 @@ require_once __DIR__ . '/stubs/samomind-function.php';
 require_once __DIR__ . '/class-samomind-testcase.php';
 
 foreach ( glob( SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-*.php' ) as $samomind_class_file ) {
-	// The CLI class extends nothing but calls WP_CLI; it is not unit tested.
-	if ( false === strpos( $samomind_class_file, 'class-samomind-cli.php' ) ) {
-		require_once $samomind_class_file;
-	}
+	require_once $samomind_class_file;
 }

@@ -62,6 +62,11 @@ class SAMOMIND_Run {
 		add_action( SAMOMIND_Scheduler::WORKER_HOOK, array( $sync, 'run' ) );
 		add_action( SAMOMIND_Scheduler::HOURLY_HOOK, array( $sync, 'on_hourly' ) );
 		add_action( 'admin_init', array( SAMOMIND()->scheduler, 'ensure_hourly' ) );
+
+		// WP-CLI commands (docs/ARCHITECTURE.md A7).
+		if ( defined( 'WP_CLI' ) && WP_CLI ) {
+			WP_CLI::add_command( 'samomind', 'SAMOMIND_CLI' );
+		}
 	}
 
 	/**
