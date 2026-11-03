@@ -185,7 +185,7 @@ class SAMOMIND_Admin {
 			&& ( in_array( $host, array( 'localhost', '127.0.0.1' ), true ) || preg_match( '/\.(local|test)$/', $host ) );
 
 		if ( '' === $host || ( ! $https && ! $local ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
-			add_settings_error( self::SETTINGS_GROUP, 'samomind_api_base_url', __( 'The API base URL must be an https address (http is accepted only for localhost, .local and .test hosts). The previous value was kept.', 'samomind-ai-assistant' ) );
+			add_settings_error( self::SETTINGS_GROUP, 'samomind_api_base_url', esc_html__( 'The API base URL must be an https address (http is accepted only for localhost, .local and .test hosts). The previous value was kept.', 'samomind-ai-assistant' ) );
 			return SAMOMIND()->helpers->get_api_base_url();
 		}
 
@@ -205,7 +205,7 @@ class SAMOMIND_Admin {
 		if ( '' === $value || preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $value ) ) {
 			return $value;
 		}
-		add_settings_error( self::SETTINGS_GROUP, 'samomind_key_id', __( 'The key id is a UUID such as 3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10. The previous value was kept.', 'samomind-ai-assistant' ) );
+		add_settings_error( self::SETTINGS_GROUP, 'samomind_key_id', esc_html__( 'The key id is a UUID such as 3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10. The previous value was kept.', 'samomind-ai-assistant' ) );
 		return SAMOMIND()->helpers->get_key_id();
 	}
 
@@ -220,7 +220,8 @@ class SAMOMIND_Admin {
 		$value  = trim( (string) $value );
 		$result = SAMOMIND_Embed::parse( $value );
 		if ( is_wp_error( $result ) ) {
-			add_settings_error( self::SETTINGS_GROUP, 'samomind_embed_snippet', $result->get_error_message() . ' ' . __( 'The previous snippet was kept.', 'samomind-ai-assistant' ) );
+			// settings_errors() prints messages as HTML, and this one quotes "<script>".
+			add_settings_error( self::SETTINGS_GROUP, 'samomind_embed_snippet', esc_html( $result->get_error_message() . ' ' . __( 'The previous snippet was kept.', 'samomind-ai-assistant' ) ) );
 			return SAMOMIND()->helpers->get_embed_snippet();
 		}
 		return $value;

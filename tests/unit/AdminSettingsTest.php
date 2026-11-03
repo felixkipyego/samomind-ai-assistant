@@ -21,6 +21,13 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 	 */
 	private $errors = array();
 
+	/**
+	 * Messages by code, as WordPress would print them (unescaped).
+	 *
+	 * @var string[]
+	 */
+	private $messages = array();
+
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -28,7 +35,8 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 		$errors       = &$this->errors;
 		Functions\when( 'add_settings_error' )->alias(
 			function ( $setting, $code, $message ) use ( &$errors ) {
-				$errors[] = $code;
+				$errors[]                 = $code;
+				$this->messages[ $code ] = $message;
 			}
 		);
 		Functions\when( 'get_option' )->alias(
@@ -42,6 +50,16 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 			}
 		);
 		Functions\when( 'esc_url_raw' )->returnArg( 1 );
+		Functions\when( 'esc_html' )->alias(
+			function ( $text ) {
+				return htmlspecialchars( $text, ENT_QUOTES );
+			}
+		);
+		Functions\when( 'esc_html__' )->alias(
+			function ( $text ) {
+				return htmlspecialchars( $text, ENT_QUOTES );
+			}
+		);
 		Functions\when( 'sanitize_text_field' )->alias( 'trim' );
 		Functions\when( 'add_action' )->justReturn( true );
 
@@ -92,6 +110,19 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 	public function test_bad_snippet_keeps_the_previous_one() {
 		$this->assertSame( '', $this->admin->sanitize_embed_snippet( '<script>alert(1)</script>' ) );
 		$this->assertSame( array( 'samomind_embed_snippet' ), $this->errors );
+	}
+
+	public function test_settings_error_messages_are_escaped() {
+		// settings_errors() prints messages as HTML; the shape message quotes "<script>".
+		$this->admin->sanitize_embed_snippet( '<p>not a script</p>' );
+		$this->admin->sanitize_api_base_url( 'http://example.com' );
+		$this->admin->sanitize_key_id( 'nope' );
+
+		$this->assertCount( 3, $this->messages );
+		foreach ( $this->messages as $message ) {
+			$this->assertStringNotContainsString( '<', $message );
+		}
+		$this->assertStringContainsString( '&lt;script&gt;', $this->messages['samomind_embed_snippet'] );
 	}
 
 	public function test_good_snippet_is_saved() {
