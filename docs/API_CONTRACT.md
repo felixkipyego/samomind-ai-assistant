@@ -1,11 +1,14 @@
-<!-- Copied unchanged from SamoMind docs/ingest/PUSH_INGESTION_DESIGN.md at commit 98d55ccc0091a4bfb013302b5a82cf29b50bd872 (origin/main). -->
+<!-- Copied unchanged from SamoMind docs/ingest/PUSH_INGESTION_DESIGN.md at commit ba44704d3282672b5bfaf63b32f9134b1aea251e (origin/main). -->
 # Push ingestion: design, as built (Step 7.6)
 
 Kickoff 2026-11-02 (`docs/wordpress/`, track/golive); amended the same day
 by Felix's decisions (`D-7.6-cms-neutral-push`, `D-7.6-ingest-token-design`
 APPROVED as built, `D-7.6-key-rotation`, `D-7.6-no-domain-check`,
 `D-7.6-ingest-error-shape`, `D-api-enum-additions-additive`, IC-9 built
-here) and built at 7.6.a. This is the contract a connector builds against;
+here) and built at 7.6.a; amended 2026-11-03 at 7.6.a1 after the first
+connector build (`D-7.6-deactivate-no-op`,
+`D-7.6-dashboard-disconnect-wins`; docs only, no API change). This is the
+contract a connector builds against;
 `docs/openapi.json` carries the same paths and schemas. Code:
 `backend/app/ingest/push.py` (request side), `push_routes.py` (endpoints),
 `push_schemas.py` (bodies), `push_adapter.py` (worker side),
@@ -169,7 +172,7 @@ carry `X-SamoMind-API-Version`.
 | 401 | `invalid_key`, `key_revoked` | stop; ask the site admin to paste the current key |
 | 403 | `tenant_suspended` | stop; check in daily |
 | 404 | `unknown_source` | call `connect` again |
-| 409 | `source_disconnected` | call `connect` again |
+| 409 | `source_disconnected` | stop all background work (pushes, deletes, check-ins, reconcile, first sync); tell the site admin the site was disconnected from the SamoMind dashboard; do not call `connect` again until the admin explicitly reconnects in the connector |
 | 409 | `source_disabled` | stop; the tenant disabled the source in the dashboard |
 | 409 | `duplicate_request` | the request with this Idempotency-Key was already applied; do not resend it |
 | 409 | `connect_conflict` | retry `connect` |
@@ -179,6 +182,15 @@ carry `X-SamoMind-API-Version`.
 
 Per-item refusals inside a 200 from `/documents`: `off_site_url`,
 `plan_page_cap` (do not resend that item until something changes).
+
+A disconnect made in the SamoMind dashboard wins
+(`D-7.6-dashboard-disconnect-wins`): the tenant removed the site, so a
+connector that reconnected on its own would undo that decision and push
+everything back. Only an explicit admin action in the connector (for
+example a "Reconnect" button) calls `connect` after `source_disconnected`.
+The server's message for this code says the same: "This site was
+disconnected from the SamoMind dashboard; reconnect from the connector only
+when the site admin intends it."
 
 ### 5.5 Endpoints
 
@@ -266,15 +278,25 @@ Dashboard routes (session, CSRF; recent sign-in on the three changes):
   WordPress version.
 - Send on publish and on update of a published post (debounced); delete on
   trash, unpublish, a change to private or password-protected, and
-  permanent deletion; first sync on connect; check-in then reconcile daily;
-  `disconnect` on deactivation and uninstall, then remove every option and
-  scheduled event the plugin created.
+  permanent deletion; first sync on connect; check-in then reconcile daily.
+- Deactivating the plugin does nothing server-side
+  (`D-7.6-deactivate-no-op`): the source and its documents stay, and the
+  site shows "disconnected" in the dashboard after 72 hours without a
+  check-in, until it is reactivated and checks in again. Only an explicit
+  disconnect (the plugin's own Disconnect action or its CLI command, sent
+  with `reason: "admin"`) or uninstall (`reason: "uninstall"`) calls
+  `/disconnect`, and `/disconnect` removes every document of the source.
+  On uninstall the plugin then removes every option and scheduled event it
+  created. The API still accepts `reason: "deactivate"` (unchanged
+  schema); this connector does not send it.
 - `text` is the rendered content (`the_content` filters run, so shortcodes
   render) reduced to text; theme header, footer, menus and widgets are not
   part of a post and are never sent. Products add `fields`.
 - Minimums: WordPress 6.0, PHP 7.4, no PHP 8-only syntax
   (`D-7.6-min-versions`). Pin `X-SamoMind-API-Version: 1`.
-- Distribution and repository: `D-7.6-distribution`, `D-7.6-separate-repo`,
+- The plugin: **SamoMind AI Assistant**, slug `samomind-ai-assistant`,
+  repository `felixkipyego/samomind-ai-assistant`, built at 7.6.b.
+  Distribution and repository: `D-7.6-distribution`, `D-7.6-separate-repo`,
   docs/wordpress/REPO_BOOTSTRAP.md.
 
 ## 10. Acceptance line for 7.6
@@ -302,3 +324,12 @@ with a production key, the first sync indexes its published pages and
 posts, an edit updates the answer within minutes, a trashed page is
 removed, and the widget answers from pushed content with citations to the
 real permalinks.
+
+## 11. Open items
+
+- **An indexed-document count on the `/checkin` response (later).** An
+  additive field (`D-api-enum-additions-additive` and the additive OpenAPI
+  rule) so a connector can show how many of its documents SamoMind has
+  indexed. Not built; until it is, a connector shows its own count of
+  documents it has sent, and the dashboard's site table shows the indexed
+  count.

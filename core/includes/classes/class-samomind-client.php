@@ -213,8 +213,9 @@ class SAMOMIND_Client {
 		if ( 'connect_conflict' === $code ) {
 			return 'retry';
 		}
-		// The dashboard wins: never reconnect on our own (Felix, 2026-11-03;
-		// contract 5.4 says "call connect again").
+		// The dashboard wins: never reconnect on our own (contract 5.4 for
+		// source_disconnected; it still says "call connect again" for
+		// unknown_source, which is treated the same way).
 		if ( 'unknown_source' === $code || 'source_disconnected' === $code ) {
 			return 'detached';
 		}

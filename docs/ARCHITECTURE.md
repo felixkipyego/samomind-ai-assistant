@@ -1,16 +1,5 @@
 # SamoMind AI Assistant: architecture
 
-> **Pending upstream revision.** `docs/API_CONTRACT.md` is still SamoMind
-> commit `98d55cc` (upstream unchanged on 2026-11-03). Felix's decisions of
-> 2026-11-03 override it until SamoMind's design doc is revised; the next
-> task refreshes the copy:
->
-> 1. Deactivation sends nothing (contract 9 says `disconnect` on
->    deactivation). Uninstall still disconnects.
-> 2. The dashboard wins: on `source_disconnected` (and `unknown_source`)
->    the plugin forgets the source and waits for an admin to click Connect
->    (contract 5.4 says "call `connect` again").
-
 This plugin copies the structure of the reference plugin
 `onsite-training-cost-estimator` (OTCE) one for one. None of its business
 logic is used, only the shape: file layout, loading, naming, settings and
@@ -195,8 +184,8 @@ settings stay. `uninstall.php` calls `disconnect` with reason `uninstall`
 if a source id is stored, then deletes every option and scheduled event.
 Why: the reference leaves its options behind. Deactivation is often
 temporary (debugging, updates), and removing every document each time
-would force a full sync on return (Felix, 2026-11-03; differs from
-contract 9, see the note at the top).
+would force a full sync on return (Felix, 2026-11-03; contract 9 since
+7.6.a1).
 
 **A7. WP-CLI.** `SAMOMIND_CLI`, registered as `wp samomind` only when
 `WP_CLI` is defined. Each command calls the same service method the admin
@@ -243,7 +232,8 @@ the same key and the 5.7 backoff (1 min, 5 min, 15 min, 1 h, 6 h, then
 daily), after 24 h of failures an admin notice appears;
 `invalid_signature` and `stale_timestamp` retry once with a fresh timestamp
 inside the client; `unknown_source` and `source_disconnected` mean the
-dashboard wins: the source id, queue and sync state are dropped, the
+dashboard wins (contract 5.4 for `source_disconnected`; see "Still differs"
+for `unknown_source`): the source id, queue and sync state are dropped, the
 connection is blocked ("Disconnected from the SamoMind dashboard."), the
 worker and the hourly tick send nothing, and `/connect` is called only from
 the Connect button or `wp samomind connect`; `duplicate_request` counts as applied; `invalid_key`, `key_revoked`,
@@ -269,9 +259,19 @@ The 7.6.b brief and the contract differ in four places; the contract wins.
 |---|---|---|
 | `external_id` = post type + ":" + post id | 9: "`external_id` is the post id as a string" | post id as a string |
 | hourly check-in | 5.5 and 9: `checkin_interval_seconds` 86400, "check-in then reconcile daily" | hourly tick that checks in once the server's interval has passed, then reconciles |
-| uninstall does not call disconnect | 9: "`disconnect` on deactivation and uninstall" | uninstall disconnects when a source id is stored; deactivation sends nothing (Felix's decision 1, 2026-11-03, overrides the contract here) |
-| (not in the brief) | 5.4: on `unknown_source` and `source_disconnected`, "call `connect` again" | never reconnects on its own; blocked until Connect is clicked (Felix's decision 2, 2026-11-03, overrides the contract here) |
-| status shows the document count reported by the API | no connector endpoint returns a count (the count is in the dashboard's session-only overview) | the status page shows the plugin's own counts from the last full sync and says the dashboard holds the indexed count |
+| uninstall does not call disconnect | 9: deactivation does nothing server-side; only an explicit disconnect or uninstall calls `/disconnect` | uninstall disconnects when a source id is stored; deactivation sends nothing |
+| status shows the document count reported by the API | 11: a `/checkin` indexed count is an open item; until then a connector shows its own count of documents sent | the status page shows the plugin's own counts from the last full sync and says the dashboard holds the indexed count |
 
 Product price goes in `fields.price` (contract 4), not in `text`; terms of
 public taxonomies go in `fields.categories`.
+
+### Still differs
+
+The contract copy is SamoMind `ba44704` (7.6.a1 amendments: deactivation
+does nothing server-side, a dashboard disconnect wins, open item for an
+indexed count). Two places still read differently from what is built:
+
+| Contract | Built |
+|---|---|
+| 5.4: on `unknown_source`, "call `connect` again" | treated like `source_disconnected`: the plugin forgets the source and waits for the Connect button or `wp samomind connect`, so it never reconnects on its own |
+| 9: `kind` `custom` is "a public custom post type the admin selected" | every public custom post type is sent until the admin unticks it on the settings page (`samomind_excluded_post_types`, section 4) |

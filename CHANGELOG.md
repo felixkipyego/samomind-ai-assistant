@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- `docs/API_CONTRACT.md` refreshed to SamoMind `ba44704` (7.6.a1: deactivation
+  does nothing server-side, a dashboard disconnect wins, indexed count is an
+  open item). No change to the plugin's behaviour.
+
 ## 0.1.0 (2026-11-03)
 
 First release, for the pilot (step 7.6.b). Built against SamoMind's push
