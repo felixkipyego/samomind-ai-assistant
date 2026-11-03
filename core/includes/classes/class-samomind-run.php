@@ -42,6 +42,9 @@ class SAMOMIND_Run {
 	 */
 	private function add_hooks() {
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_backend_scripts_and_styles' ), 20 );
+
+		// Widget snippet in the front-end footer.
+		new SAMOMIND_Embed();
 	}
 
 	/**

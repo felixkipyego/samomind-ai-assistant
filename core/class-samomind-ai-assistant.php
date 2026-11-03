@@ -132,6 +132,7 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-log.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-client.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-content.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-embed.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-run.php';
 		}
 
