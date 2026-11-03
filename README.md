@@ -68,7 +68,8 @@ When content changes:
 | trash, unpublish, make private, add a password, delete | `/documents/delete` |
 | connect, "Sync now" | full sync: `/sync begin`, `/documents` batches, `/sync complete`, then reconcile |
 | daily | `/checkin`, then `/reconcile` |
-| deactivate, uninstall, "Disconnect" | `/disconnect` (SamoMind removes this site's documents) |
+| uninstall, "Disconnect", `wp samomind disconnect` | `/disconnect` (SamoMind removes this site's documents) |
+| deactivate | nothing; scheduled work stops until you reactivate |
 
 Background work runs on Action Scheduler when WooCommerce provides it,
 otherwise on WP-Cron. WP-Cron runs when the site gets visits; on a quiet
@@ -121,9 +122,15 @@ reconcile).
 
 ## Uninstall
 
-Deleting the plugin removes every option, notice and scheduled event it
-created. Deactivating already disconnects the site; if that failed,
-uninstall disconnects once more.
+Deactivating sends nothing to SamoMind: it only stops the scheduled work.
+The documents stay in SamoMind and the connection is kept, so reactivating
+picks up where it left off, without a full sync. Edits made while the
+plugin was inactive are caught by the next daily reconcile (or click
+**Reconcile now**).
+
+Deleting the plugin disconnects the site if it is still connected
+(SamoMind removes its documents), then removes every option, notice and
+scheduled event it created.
 
 ## Development
 

@@ -2,10 +2,9 @@
 /**
  * Removes everything SamoMind AI Assistant stored on this site.
  *
- * Deactivation already disconnects. If that failed and a source id is
- * still stored, disconnect once more with reason "uninstall" (contract
+ * If a source id is stored, disconnect with reason "uninstall" (contract
  * section 9), best effort, then delete every option, transient and
- * scheduled event the plugin created.
+ * scheduled event the plugin created. Deactivation sends nothing.
  *
  * @package SAMOMIND
  */

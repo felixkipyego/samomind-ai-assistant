@@ -34,7 +34,7 @@ Use the `SAMOMIND/content/post_types` and `SAMOMIND/content/excluded_ids` filter
 This plugin connects to the SamoMind API, a service of SoftwaresKe Ltd, to keep your SamoMind assistant's knowledge base in sync. Nothing is sent until an administrator enters an ingest key and clicks Connect.
 
 * Where: `https://api.samomind.com/api/v1/ingest/...` by default, or the API base URL an administrator sets.
-* What and when: on Connect, the site address, "wordpress", and the plugin and WordPress versions; on Connect and "Sync now", the public content described above, in batches; when public content is published, changed or removed, that item or its id; once a day, a check-in (plugin and WordPress versions, last error) and the list of public item ids with their modified times; on Disconnect, deactivation or uninstall, a disconnect request.
+* What and when: on Connect, the site address, "wordpress", and the plugin and WordPress versions; on Connect and "Sync now", the public content described above, in batches; when public content is published, changed or removed, that item or its id; once a day, a check-in (plugin and WordPress versions, last error) and the list of public item ids with their modified times; on Disconnect or uninstall, a disconnect request. Deactivating the plugin sends nothing.
 * Every request is signed with your ingest key. The secret itself is never sent.
 
 If you paste the chat widget snippet, visitors' browsers load the widget from `https://widget.samomind.com`, and the widget talks to the SamoMind API.
@@ -60,7 +60,7 @@ SamoMind > Status shows the sync progress and the last 200 requests (time, endpo
 
 = What happens when I deactivate or delete the plugin? =
 
-Deactivating disconnects the site: SamoMind removes the documents it received from this site. Your settings stay, so you can reconnect later. Deleting the plugin removes all of its settings, logs and scheduled events; if the site was still connected (for example because the disconnect at deactivation failed), it disconnects first.
+Deactivating only stops the plugin's scheduled work. Nothing is sent, your documents stay in SamoMind and the connection is kept, so reactivating carries on without a full sync; changes made while it was inactive are picked up by the next daily reconcile. Deleting the plugin disconnects the site if it is still connected (SamoMind then removes the documents it received from this site) and removes all of the plugin's settings, logs and scheduled events. To remove your content from SamoMind without deleting the plugin, use Disconnect on the Status page.
 
 = My site is quiet and updates arrive late. =
 

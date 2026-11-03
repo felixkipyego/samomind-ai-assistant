@@ -1,5 +1,13 @@
 # SamoMind AI Assistant: architecture
 
+> **Pending upstream revision.** `docs/API_CONTRACT.md` is still SamoMind
+> commit `98d55cc` (upstream unchanged on 2026-11-03). Felix's decisions of
+> 2026-11-03 override it until SamoMind's design doc is revised; the next
+> task refreshes the copy:
+>
+> 1. Deactivation sends nothing (contract 9 says `disconnect` on
+>    deactivation). Uninstall still disconnects.
+
 This plugin copies the structure of the reference plugin
 `onsite-training-cost-estimator` (OTCE) one for one. None of its business
 logic is used, only the shape: file layout, loading, naming, settings and
@@ -178,11 +186,13 @@ need.
 
 **A6. Activation, deactivation, uninstall.** Activation creates the
 options with autoload off and schedules the hourly event. Deactivation
-calls `disconnect` with reason `deactivate` (contract 9) and clears
-scheduled work. `uninstall.php` calls `disconnect` with reason `uninstall`
-if a source id is still stored, then deletes every option and scheduled
-event.
-Why: the reference leaves its options behind; the contract asks for this.
+clears scheduled work and the lock and sends nothing; the source id and
+settings stay. `uninstall.php` calls `disconnect` with reason `uninstall`
+if a source id is stored, then deletes every option and scheduled event.
+Why: the reference leaves its options behind. Deactivation is often
+temporary (debugging, updates), and removing every document each time
+would force a full sync on return (Felix, 2026-11-03; differs from
+contract 9, see the note at the top).
 
 **A7. WP-CLI.** `SAMOMIND_CLI`, registered as `wp samomind` only when
 `WP_CLI` is defined. Each command calls the same service method the admin
@@ -217,7 +227,8 @@ Why: the reference has no tests or tooling.
 | Post published or updated | `/documents` (batched with other pending pushes) |
 | Trash, unpublish, private, password, excluded, deleted | `/documents/delete` |
 | Hourly tick, interval passed | `/checkin`, then reconcile pages (`/reconcile`), push `missing` and `stale` |
-| Disconnect (button, CLI, deactivation, uninstall) | `/disconnect` |
+| Disconnect (button, CLI, uninstall) | `/disconnect` |
+| Deactivation | nothing sent |
 
 Batches hold at most `limits.max_documents_per_push` documents (50) and stay
 under `limits.max_body_bytes` (2 MiB); a 413 halves the next batch. A
@@ -251,7 +262,7 @@ The 7.6.b brief and the contract differ in four places; the contract wins.
 |---|---|---|
 | `external_id` = post type + ":" + post id | 9: "`external_id` is the post id as a string" | post id as a string |
 | hourly check-in | 5.5 and 9: `checkin_interval_seconds` 86400, "check-in then reconcile daily" | hourly tick that checks in once the server's interval has passed, then reconciles |
-| uninstall does not call disconnect | 9: "`disconnect` on deactivation and uninstall" | deactivation disconnects; uninstall disconnects only if a source id is still stored |
+| uninstall does not call disconnect | 9: "`disconnect` on deactivation and uninstall" | uninstall disconnects when a source id is stored; deactivation sends nothing (Felix's decision 1, 2026-11-03, overrides the contract here) |
 | status shows the document count reported by the API | no connector endpoint returns a count (the count is in the dashboard's session-only overview) | the status page shows the plugin's own counts from the last full sync and says the dashboard holds the indexed count |
 
 Product price goes in `fields.price` (contract 4), not in `text`; terms of

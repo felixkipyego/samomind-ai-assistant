@@ -200,18 +200,15 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		}
 
 		/**
-		 * Deactivation: disconnect (contract 9) and clear scheduled work.
-		 * Settings are kept.
+		 * Deactivation: clear scheduled work and the lock. Nothing is sent;
+		 * the source id and settings stay, so reactivating resumes without a
+		 * full sync (Felix, 2026-11-03).
 		 *
 		 * @access  public
 		 * @since   0.1.0
 		 * @return  void
 		 */
 		public function deactivate() {
-			if ( $this->connection->is_connected() ) {
-				// A failure leaves the source id, so uninstall can try again.
-				$this->connection->disconnect( 'deactivate' );
-			}
 			$this->scheduler->clear_all();
 			delete_option( SAMOMIND_Sync::LOCK_OPTION );
 		}

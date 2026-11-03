@@ -138,11 +138,22 @@ And nothing at all for:
 
 - [ ] Done
 
-## 10. Deactivate and uninstall
+## 10. Deactivate and reactivate
 
 | Step | Expected |
 |---|---|
-| Deactivate the plugin while connected | `/disconnect` 200 with reason `deactivate` (contract 9); dashboard shows disconnected |
-| Delete the plugin | no request if already disconnected; every `samomind_*` option and the `SAMOMIND/*` cron events are gone (`wp option list --search='samomind_*'` is empty, `wp cron event list` has none) |
+| Deactivate the plugin while connected | no request in the log; `wp cron event list` has no `SAMOMIND/*` events |
+| Dashboard | the site is still listed with its page count; documents still present (the chat still cites the site's pages) |
+| Reactivate the plugin | no request; SamoMind > Status shows Connected with the same source id; Full sync still shows the earlier "Complete" (no new full sync starts) |
+| Edit a published page | `/documents` 200, item `queued` (events work again) |
+
+- [ ] Done
+
+## 11. Uninstall
+
+| Step | Expected |
+|---|---|
+| Deactivate, then Delete the plugin while connected | `/disconnect` 200 with reason `uninstall`; dashboard shows disconnected and the documents are removed |
+| After deletion | every `samomind_*` option and the `SAMOMIND/*` cron events are gone (`wp option list --search='samomind_*'` is empty, `wp cron event list` has none) |
 
 - [ ] Done
