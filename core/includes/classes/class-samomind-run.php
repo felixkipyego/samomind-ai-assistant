@@ -45,6 +45,16 @@ class SAMOMIND_Run {
 
 		// Widget snippet in the front-end footer.
 		new SAMOMIND_Embed();
+
+		// Content events (docs/ARCHITECTURE.md A8).
+		$sync = SAMOMIND()->sync;
+		add_action( 'transition_post_status', array( $sync, 'on_transition_post_status' ), 10, 3 );
+		add_action( 'before_delete_post', array( $sync, 'on_before_delete_post' ), 10, 2 );
+
+		// Background work (docs/ARCHITECTURE.md A1).
+		add_action( SAMOMIND_Scheduler::WORKER_HOOK, array( $sync, 'run' ) );
+		add_action( SAMOMIND_Scheduler::HOURLY_HOOK, array( $sync, 'on_hourly' ) );
+		add_action( 'admin_init', array( SAMOMIND()->scheduler, 'ensure_hourly' ) );
 	}
 
 	/**

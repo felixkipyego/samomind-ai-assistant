@@ -62,6 +62,33 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		public $content;
 
 		/**
+		 * SAMOMIND scheduler object.
+		 *
+		 * @access  public
+		 * @since   0.1.0
+		 * @var     object|SAMOMIND_Scheduler
+		 */
+		public $scheduler;
+
+		/**
+		 * SAMOMIND connection object.
+		 *
+		 * @access  public
+		 * @since   0.1.0
+		 * @var     object|SAMOMIND_Connection
+		 */
+		public $connection;
+
+		/**
+		 * SAMOMIND sync object.
+		 *
+		 * @access  public
+		 * @since   0.1.0
+		 * @var     object|SAMOMIND_Sync
+		 */
+		public $sync;
+
+		/**
 		 * Throw error on object clone.
 		 *
 		 * Cloning instances of the class is forbidden.
@@ -101,10 +128,13 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 				self::$instance = new SamoMind_AI_Assistant();
 				self::$instance->base_hooks();
 				self::$instance->includes();
-				self::$instance->helpers  = new SAMOMIND_Helpers();
-				self::$instance->settings = new SAMOMIND_Settings();
-				self::$instance->log      = new SAMOMIND_Log();
-				self::$instance->content  = new SAMOMIND_Content();
+				self::$instance->helpers    = new SAMOMIND_Helpers();
+				self::$instance->settings   = new SAMOMIND_Settings();
+				self::$instance->log        = new SAMOMIND_Log();
+				self::$instance->content    = new SAMOMIND_Content();
+				self::$instance->scheduler  = new SAMOMIND_Scheduler();
+				self::$instance->connection = new SAMOMIND_Connection();
+				self::$instance->sync       = new SAMOMIND_Sync();
 
 				// Fire the plugin logic.
 				new SAMOMIND_Run();
@@ -133,6 +163,9 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-client.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-content.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-embed.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-scheduler.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-connection.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-sync.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-run.php';
 		}
 
@@ -145,6 +178,40 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		 */
 		private function base_hooks() {
 			add_action( 'plugins_loaded', array( self::$instance, 'load_textdomain' ) );
+		}
+
+		/**
+		 * Activation: create the options with autoload off and schedule the
+		 * hourly tick.
+		 *
+		 * @access  public
+		 * @since   0.1.0
+		 * @return  void
+		 */
+		public function activate() {
+			// add_option() leaves existing values alone.
+			add_option( 'samomind_api_base_url', SAMOMIND_Helpers::DEFAULT_API_BASE_URL, '', false );
+			add_option( 'samomind_key_id', '', '', false );
+			add_option( 'samomind_api_secret', '', '', false );
+			add_option( 'samomind_embed_snippet', '', '', true );
+			$this->scheduler->ensure_hourly();
+		}
+
+		/**
+		 * Deactivation: disconnect (contract 9) and clear scheduled work.
+		 * Settings are kept.
+		 *
+		 * @access  public
+		 * @since   0.1.0
+		 * @return  void
+		 */
+		public function deactivate() {
+			if ( $this->connection->is_connected() ) {
+				// A failure leaves the source id, so uninstall can try again.
+				$this->connection->disconnect( 'deactivate' );
+			}
+			$this->scheduler->clear_all();
+			delete_option( SAMOMIND_Sync::LOCK_OPTION );
 		}
 
 		/**

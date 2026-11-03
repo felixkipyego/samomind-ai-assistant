@@ -65,3 +65,6 @@ function SAMOMIND() {
 }
 
 SAMOMIND();
+
+register_activation_hook( SAMOMIND_PLUGIN_FILE, array( SAMOMIND(), 'activate' ) );
+register_deactivation_hook( SAMOMIND_PLUGIN_FILE, array( SAMOMIND(), 'deactivate' ) );
