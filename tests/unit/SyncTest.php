@@ -497,4 +497,44 @@ class SyncTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( array(), $this->sync->get_queue()['items'] );
 	}
+
+	public function test_reconcile_pages_over_the_entry_cap() {
+		$this->content->posts = array_fill_keys( range( 1, 5003 ), true );
+		$ids                  = array_map( 'strval', range( 1, 5003 ) );
+		usort( $ids, 'strcmp' );
+		$this->client->responses = array(
+			array( 'missing' => array( '42' ), 'stale' => array(), 'deleted' => array() ),
+			$this->queued( array( 42 ) ),
+			array( 'missing' => array(), 'stale' => array( '999' ), 'deleted' => array( '7777' ) ),
+			$this->queued( array( 999 ) ),
+		);
+
+		$this->sync->request_reconcile( 'test-run' );
+		$this->assertSame( 'idle', $this->sync->run() );
+
+		$this->assertSame( array( '/reconcile', '/documents', '/reconcile', '/documents' ), $this->endpoints() );
+		$first  = $this->client->calls[0];
+		$second = $this->client->calls[2];
+
+		// Page 1: open start, closed end at the 5000th id in byte order.
+		$this->assertNull( $first['payload']['range_start'] );
+		$this->assertSame( $ids[4999], $first['payload']['range_end'] );
+		$this->assertSame( array_slice( $ids, 0, 5000 ), array_column( $first['payload']['entries'], 'external_id' ) );
+
+		// Page 2: starts after page 1's end (exclusive), open end, the last 3 ids.
+		$this->assertSame( $ids[4999], $second['payload']['range_start'] );
+		$this->assertNull( $second['payload']['range_end'] );
+		$this->assertSame( array_slice( $ids, 5000 ), array_column( $second['payload']['entries'], 'external_id' ) );
+
+		// Each page has its own key; missing and stale items were pushed.
+		$this->assertNotSame( $first['key'], $second['key'] );
+		$this->assertSame( array( '42' ), array_column( $this->client->calls[1]['payload']['documents'], 'external_id' ) );
+		$this->assertSame( array( '999' ), array_column( $this->client->calls[3]['payload']['documents'], 'external_id' ) );
+
+		$reconcile = $this->sync->get_progress()['reconcile'];
+		$this->assertSame( 'complete', $reconcile['state'] );
+		$this->assertSame( 1, $reconcile['missing'] );
+		$this->assertSame( 1, $reconcile['stale'] );
+		$this->assertSame( 1, $reconcile['deleted'] );
+	}
 }
