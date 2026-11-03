@@ -41,7 +41,14 @@ class SAMOMIND_Run {
 	 * @return  void
 	 */
 	private function add_hooks() {
+		add_action( 'plugin_action_links_' . SAMOMIND_PLUGIN_BASE, array( $this, 'add_plugin_action_link' ), 20 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_backend_scripts_and_styles' ), 20 );
+
+		// Admin interface.
+		$admin = new SAMOMIND_Admin();
+
+		// AJAX handler (logged-in admins only).
+		add_action( 'wp_ajax_samomind_sync_progress', array( $admin, 'ajax_sync_progress' ) );
 
 		// Widget snippet in the front-end footer.
 		new SAMOMIND_Embed();
@@ -64,6 +71,26 @@ class SAMOMIND_Run {
 	 * ###
 	 * ######################
 	 */
+
+	/**
+	 * Add a settings link to the Plugins list page.
+	 *
+	 * @access  public
+	 * @since   0.1.0
+	 * @param   array $links  Action links.
+	 * @return  array
+	 */
+	public function add_plugin_action_link( array $links ) {
+		$settings_link = sprintf(
+			'<a href="%s">%s</a>',
+			esc_url( admin_url( 'admin.php?page=' . SAMOMIND_Admin::STATUS_SLUG ) ),
+			esc_html__( 'Settings', 'samomind-ai-assistant' )
+		);
+
+		array_unshift( $links, $settings_link );
+
+		return $links;
+	}
 
 	/**
 	 * Enqueue backend scripts and styles.
@@ -94,6 +121,15 @@ class SAMOMIND_Run {
 			array( 'jquery' ),
 			SAMOMIND_VERSION,
 			true
+		);
+
+		wp_localize_script(
+			'samomind-backend-scripts',
+			'samomind_params',
+			array(
+				'ajaxurl' => admin_url( 'admin-ajax.php' ),
+				'nonce'   => wp_create_nonce( 'samomind_nonce' ),
+			)
 		);
 	}
 }

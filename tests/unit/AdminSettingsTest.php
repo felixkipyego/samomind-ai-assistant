@@ -1,0 +1,103 @@
+<?php
+/**
+ * Settings sanitisers: what the plugin may call and print.
+ *
+ * @package SAMOMIND
+ */
+
+use Brain\Monkey\Functions;
+
+class AdminSettingsTest extends SAMOMIND_TestCase {
+
+	/**
+	 * @var SAMOMIND_Admin
+	 */
+	private $admin;
+
+	/**
+	 * Messages passed to add_settings_error().
+	 *
+	 * @var string[]
+	 */
+	private $errors = array();
+
+	protected function setUp(): void {
+		parent::setUp();
+
+		$this->errors = array();
+		$errors       = &$this->errors;
+		Functions\when( 'add_settings_error' )->alias(
+			function ( $setting, $code, $message ) use ( &$errors ) {
+				$errors[] = $code;
+			}
+		);
+		Functions\when( 'get_option' )->alias(
+			function ( $name, $default = false ) {
+				$saved = array(
+					'samomind_api_base_url'  => 'https://api.samomind.com',
+					'samomind_key_id'        => '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10',
+					'samomind_embed_snippet' => '',
+				);
+				return isset( $saved[ $name ] ) ? $saved[ $name ] : $default;
+			}
+		);
+		Functions\when( 'esc_url_raw' )->returnArg( 1 );
+		Functions\when( 'sanitize_text_field' )->alias( 'trim' );
+		Functions\when( 'add_action' )->justReturn( true );
+
+		$GLOBALS['samomind_test_plugin'] = (object) array( 'helpers' => new SAMOMIND_Helpers() );
+		$this->admin                     = new SAMOMIND_Admin();
+	}
+
+	public function test_base_url_accepts_https_and_drops_query_and_trailing_slash() {
+		$this->assertSame( 'https://staging.samomind.com/api-root', $this->admin->sanitize_api_base_url( ' https://Staging.SamoMind.com/api-root/?x=1#y ' ) );
+		$this->assertSame( array(), $this->errors );
+	}
+
+	public function test_base_url_empty_falls_back_to_production() {
+		$this->assertSame( 'https://api.samomind.com', $this->admin->sanitize_api_base_url( '' ) );
+	}
+
+	public function test_base_url_allows_http_only_for_local_hosts() {
+		$this->assertSame( 'http://localhost:8000', $this->admin->sanitize_api_base_url( 'http://localhost:8000' ) );
+		$this->assertSame( 'http://samomind.test', $this->admin->sanitize_api_base_url( 'http://samomind.test' ) );
+		$this->assertSame( array(), $this->errors );
+	}
+
+	/**
+	 * @dataProvider bad_base_urls
+	 */
+	public function test_base_url_refuses_and_keeps_the_previous_value( $url ) {
+		$this->assertSame( 'https://api.samomind.com', $this->admin->sanitize_api_base_url( $url ) );
+		$this->assertSame( array( 'samomind_api_base_url' ), $this->errors );
+	}
+
+	public function bad_base_urls() {
+		return array(
+			'plain http'   => array( 'http://api.samomind.com' ),
+			'no scheme'    => array( 'api.samomind.com' ),
+			'ftp'          => array( 'ftp://api.samomind.com' ),
+			'credentials'  => array( 'https://user:pass@api.samomind.com' ),
+			'javascript'   => array( 'javascript:alert(1)' ),
+		);
+	}
+
+	public function test_key_id_must_be_a_uuid() {
+		$this->assertSame( '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f11', $this->admin->sanitize_key_id( ' 3F2B6C1E-8D4A-4F0B-9A7E-2C5D1B6E9F11 ' ) );
+		$this->assertSame( '', $this->admin->sanitize_key_id( '' ) );
+		$this->assertSame( '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10', $this->admin->sanitize_key_id( 'not-a-uuid"><script>' ) );
+		$this->assertSame( array( 'samomind_key_id' ), $this->errors );
+	}
+
+	public function test_bad_snippet_keeps_the_previous_one() {
+		$this->assertSame( '', $this->admin->sanitize_embed_snippet( '<script>alert(1)</script>' ) );
+		$this->assertSame( array( 'samomind_embed_snippet' ), $this->errors );
+	}
+
+	public function test_good_snippet_is_saved() {
+		$snippet = '<script src="https://widget.samomind.com/widget.js" data-site-key="pk_live_abc" async></script>';
+
+		$this->assertSame( $snippet, $this->admin->sanitize_embed_snippet( "\n" . $snippet . "\n" ) );
+		$this->assertSame( array(), $this->errors );
+	}
+}
