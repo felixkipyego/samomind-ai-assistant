@@ -192,7 +192,12 @@ class SAMOMIND_Connection {
 	 * @return  string  The SAMOMIND_Client::action_for() result.
 	 */
 	public function handle_error( $error ) {
-		$action  = SAMOMIND_Client::action_for( $error );
+		$action = SAMOMIND_Client::action_for( $error );
+		if ( 'detached' === $action ) {
+			$this->detach( $error );
+			return $action;
+		}
+
 		$changes = array( 'last_error' => self::describe( $error ) );
 
 		if ( 'block' === $action ) {
@@ -213,6 +218,36 @@ class SAMOMIND_Connection {
 		}
 
 		return $action;
+	}
+
+	/**
+	 * The source was disconnected or removed on the SamoMind side. Forget
+	 * the source id and all pending work, and block until an admin clicks
+	 * Connect (or runs `wp samomind connect`). Nothing calls /connect on
+	 * its own.
+	 *
+	 * @since   0.1.0
+	 * @param   WP_Error $error  source_disconnected or unknown_source.
+	 * @return  void
+	 */
+	public function detach( $error ) {
+		$message = 'source_disconnected' === $error->get_error_code()
+			? __( 'Disconnected from the SamoMind dashboard.', 'samomind-ai-assistant' )
+			: __( 'SamoMind no longer knows this site; it may have been removed in the dashboard.', 'samomind-ai-assistant' );
+
+		SAMOMIND()->sync->reset();
+		update_option(
+			self::OPTION,
+			array(
+				'last_error' => self::describe( $error ),
+				'blocked'    => array(
+					'code'    => $error->get_error_code(),
+					'message' => $message,
+					'at'      => time(),
+				),
+			),
+			false
+		);
 	}
 
 	/**
@@ -298,7 +333,7 @@ class SAMOMIND_Connection {
 	 * Call /disconnect and forget the source id. Settings are kept.
 	 *
 	 * @since   0.1.0
-	 * @param   string $reason  deactivate, uninstall or admin.
+	 * @param   string $reason  uninstall or admin (deactivation sends nothing).
 	 * @return  true|WP_Error
 	 */
 	public function disconnect( $reason ) {
@@ -316,7 +351,7 @@ class SAMOMIND_Connection {
 		);
 
 		// An unknown or already disconnected source is the state we want.
-		if ( is_wp_error( $result ) && 'reconnect' !== SAMOMIND_Client::action_for( $result ) ) {
+		if ( is_wp_error( $result ) && 'detached' !== SAMOMIND_Client::action_for( $result ) ) {
 			$this->handle_error( $result );
 			return $result;
 		}
@@ -379,9 +414,6 @@ class SAMOMIND_Connection {
 
 		if ( is_wp_error( $result ) ) {
 			$action = $this->handle_error( $result );
-			if ( 'reconnect' === $action ) {
-				return $this->connect();
-			}
 			if ( 'applied' !== $action ) {
 				return $result;
 			}

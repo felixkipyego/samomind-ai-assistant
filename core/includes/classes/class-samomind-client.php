@@ -198,7 +198,7 @@ class SAMOMIND_Client {
 	 *
 	 * @since   0.1.0
 	 * @param   WP_Error $error  Error returned by post().
-	 * @return  string  retry, applied, reconnect, split, block or stop.
+	 * @return  string  retry, applied, detached, split, block or stop.
 	 */
 	public static function action_for( $error ) {
 		$code = $error->get_error_code();
@@ -213,8 +213,10 @@ class SAMOMIND_Client {
 		if ( 'connect_conflict' === $code ) {
 			return 'retry';
 		}
+		// The dashboard wins: never reconnect on our own (Felix, 2026-11-03;
+		// contract 5.4 says "call connect again").
 		if ( 'unknown_source' === $code || 'source_disconnected' === $code ) {
-			return 'reconnect';
+			return 'detached';
 		}
 		if ( 'body_too_large' === $code ) {
 			return 'split';

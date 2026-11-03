@@ -484,7 +484,7 @@ class SAMOMIND_Admin {
 			return;
 		}
 		$connection = SAMOMIND()->connection;
-		if ( ! $connection->is_connected() ) {
+		if ( ! $connection->is_connected() && ! $connection->is_blocked() ) {
 			return;
 		}
 
@@ -495,7 +495,21 @@ class SAMOMIND_Admin {
 			esc_html__( 'Open SamoMind status', 'samomind-ai-assistant' )
 		);
 
-		if ( $connection->is_blocked() ) {
+		if ( ! $connection->is_connected() ) {
+			// Disconnected on the SamoMind side; only an admin reconnects.
+			$block = $connection->get_block();
+			printf(
+				'<div class="notice notice-warning"><p>%1$s %2$s</p></div>',
+				esc_html(
+					sprintf(
+						/* translators: %s: reason, for example "Disconnected from the SamoMind dashboard." */
+						__( 'SamoMind: %s Nothing is sent until you click Connect.', 'samomind-ai-assistant' ),
+						$block['message']
+					)
+				),
+				$link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above from escaped parts.
+			);
+		} elseif ( $connection->is_blocked() ) {
 			$block = $connection->get_block();
 			printf(
 				'<div class="notice notice-error"><p>%1$s %2$s</p></div>',
@@ -595,6 +609,8 @@ class SAMOMIND_Admin {
 								<span class="samomind-badge samomind-badge--error"><?php esc_html_e( 'Connected, paused', 'samomind-ai-assistant' ); ?></span>
 							<?php elseif ( $connected ) : ?>
 								<span class="samomind-badge samomind-badge--ok"><?php esc_html_e( 'Connected', 'samomind-ai-assistant' ); ?></span>
+							<?php elseif ( $connection->is_blocked() ) : ?>
+								<span class="samomind-badge samomind-badge--error"><?php echo esc_html( $connection->get_block()['message'] ); ?></span>
 							<?php else : ?>
 								<span class="samomind-badge"><?php esc_html_e( 'Not connected', 'samomind-ai-assistant' ); ?></span>
 							<?php endif; ?>

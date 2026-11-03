@@ -214,8 +214,9 @@ class SAMOMIND_CLI {
 			if ( 'retry' === $outcome ) {
 				WP_CLI::error( 'A request failed and will be retried in the background at ' . gmdate( 'c', $progress['retry_at'] ) . '. Last error: ' . SAMOMIND()->connection->get_state()['last_error'] );
 			}
-			if ( 'not_connected' === $outcome ) {
-				WP_CLI::error( 'This site is not connected.' );
+			if ( 'detached' === $outcome || 'not_connected' === $outcome ) {
+				$block = SAMOMIND()->connection->get_block();
+				WP_CLI::error( ( empty( $block['message'] ) ? 'This site is not connected.' : $block['message'] ) . ' Run `wp samomind connect` to connect again.' );
 			}
 			if ( 'more' === $outcome || 'locked' === $outcome ) {
 				sleep( self::PASS_PAUSE );

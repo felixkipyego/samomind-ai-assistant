@@ -450,7 +450,7 @@ class SAMOMIND_Sync {
 	 * budget is spent, or a request fails.
 	 *
 	 * @since   0.1.0
-	 * @return  string  idle, more, retry, blocked, locked, reconnected or not_connected.
+	 * @return  string  idle, more, retry, blocked, locked, detached or not_connected.
 	 */
 	public function run() {
 		$connection = SAMOMIND()->connection;
@@ -507,10 +507,10 @@ class SAMOMIND_Sync {
 			if ( 'split' === $action && $this->shrink_batch( $request ) ) {
 				continue;
 			}
-			if ( 'reconnect' === $action ) {
+			if ( 'detached' === $action ) {
+				// handle_error() dropped the source and all pending work.
 				$this->unlock();
-				$connection->connect();
-				return 'reconnected';
+				return 'detached';
 			}
 			if ( 'block' === $action ) {
 				$outcome = 'blocked';

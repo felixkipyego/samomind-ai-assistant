@@ -7,6 +7,9 @@
 >
 > 1. Deactivation sends nothing (contract 9 says `disconnect` on
 >    deactivation). Uninstall still disconnects.
+> 2. The dashboard wins: on `source_disconnected` (and `unknown_source`)
+>    the plugin forgets the source and waits for an admin to click Connect
+>    (contract 5.4 says "call `connect` again").
 
 This plugin copies the structure of the reference plugin
 `onsite-training-cost-estimator` (OTCE) one for one. None of its business
@@ -238,8 +241,11 @@ Error handling follows contract 5.4: 429, 5xx and network errors retry with
 the same key and the 5.7 backoff (1 min, 5 min, 15 min, 1 h, 6 h, then
 daily), after 24 h of failures an admin notice appears;
 `invalid_signature` and `stale_timestamp` retry once with a fresh timestamp
-inside the client; `unknown_source` and `source_disconnected` call connect
-again; `duplicate_request` counts as applied; `invalid_key`, `key_revoked`,
+inside the client; `unknown_source` and `source_disconnected` mean the
+dashboard wins: the source id, queue and sync state are dropped, the
+connection is blocked ("Disconnected from the SamoMind dashboard."), the
+worker and the hourly tick send nothing, and `/connect` is called only from
+the Connect button or `wp samomind connect`; `duplicate_request` counts as applied; `invalid_key`, `key_revoked`,
 `unsupported_api_version`, `tenant_suspended` and `source_disabled` block
 background work until settings change or a check-in succeeds; other 4xx
 drop the request and record the error.
@@ -263,6 +269,7 @@ The 7.6.b brief and the contract differ in four places; the contract wins.
 | `external_id` = post type + ":" + post id | 9: "`external_id` is the post id as a string" | post id as a string |
 | hourly check-in | 5.5 and 9: `checkin_interval_seconds` 86400, "check-in then reconcile daily" | hourly tick that checks in once the server's interval has passed, then reconciles |
 | uninstall does not call disconnect | 9: "`disconnect` on deactivation and uninstall" | uninstall disconnects when a source id is stored; deactivation sends nothing (Felix's decision 1, 2026-11-03, overrides the contract here) |
+| (not in the brief) | 5.4: on `unknown_source` and `source_disconnected`, "call `connect` again" | never reconnects on its own; blocked until Connect is clicked (Felix's decision 2, 2026-11-03, overrides the contract here) |
 | status shows the document count reported by the API | no connector endpoint returns a count (the count is in the dashboard's session-only overview) | the status page shows the plugin's own counts from the last full sync and says the dashboard holds the indexed count |
 
 Product price goes in `fields.price` (contract 4), not in `text`; terms of

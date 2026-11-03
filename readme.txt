@@ -62,6 +62,10 @@ SamoMind > Status shows the sync progress and the last 200 requests (time, endpo
 
 Deactivating only stops the plugin's scheduled work. Nothing is sent, your documents stay in SamoMind and the connection is kept, so reactivating carries on without a full sync; changes made while it was inactive are picked up by the next daily reconcile. Deleting the plugin disconnects the site if it is still connected (SamoMind then removes the documents it received from this site) and removes all of the plugin's settings, logs and scheduled events. To remove your content from SamoMind without deleting the plugin, use Disconnect on the Status page.
 
+= What if I disconnect the site in the SamoMind dashboard? =
+
+The dashboard wins. The plugin stops sending, forgets the connection and shows "Disconnected from the SamoMind dashboard." on SamoMind > Status. It does not reconnect by itself; click Connect when you want the site back.
+
 = My site is quiet and updates arrive late. =
 
 WP-Cron runs when the site gets visits. Set up a real cron job that runs `wp cron event run --due-now`, or install WooCommerce, whose Action Scheduler runs the work.

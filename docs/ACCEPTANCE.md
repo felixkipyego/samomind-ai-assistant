@@ -138,6 +138,18 @@ And nothing at all for:
 
 - [ ] Done
 
+### 9b. Disconnect from the dashboard
+
+| Step | Expected |
+|---|---|
+| In the SamoMind dashboard, Disconnect the site | documents removed there |
+| Edit a published page on the site (or **Check in now**) | one request, answered 409 `source_disconnected` |
+| Status page | "Disconnected from the SamoMind dashboard." with a **Connect** button; source id gone; an admin notice says nothing is sent until Connect |
+| Edit another page, wait past the next hourly cron | no request at all; never a `/connect` |
+| Click **Connect** | `/connect` 200, a new full sync |
+
+- [ ] Done
+
 ## 10. Deactivate and reactivate
 
 | Step | Expected |

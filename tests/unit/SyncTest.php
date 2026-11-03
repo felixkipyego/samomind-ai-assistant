@@ -99,6 +99,18 @@ class SAMOMIND_Test_Sync extends SAMOMIND_Sync {
 }
 
 /**
+ * Connection with the fake client.
+ */
+class SAMOMIND_Test_Connection extends SAMOMIND_Connection {
+
+	public $fake_client;
+
+	protected function client() {
+		return $this->fake_client;
+	}
+}
+
+/**
  * Scheduler that only records.
  */
 class SAMOMIND_Fake_Scheduler {
@@ -183,8 +195,10 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->content             = new SAMOMIND_Fake_Content();
 		$this->sync                = new SAMOMIND_Test_Sync();
 		$this->sync->fake_client   = $this->client;
+		$connection                = new SAMOMIND_Test_Connection();
+		$connection->fake_client   = $this->client;
 		$GLOBALS['samomind_test_plugin'] = (object) array(
-			'connection' => new SAMOMIND_Connection(),
+			'connection' => $connection,
 			'content'    => $this->content,
 			'scheduler'  => new SAMOMIND_Fake_Scheduler(),
 			'sync'       => $this->sync,
@@ -401,5 +415,41 @@ class SyncTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( $first['key'], $second['key'] );
 		$this->assertSame( $first['payload'], $second['payload'] );
+	}
+
+	public function test_dashboard_disconnect_leaves_the_worker_idle_and_never_reconnects() {
+		Functions\when( 'get_bloginfo' )->justReturn( '7.1' );
+		$this->sync->on_transition_post_status( 'publish', 'draft', new WP_Post( array( 'ID' => 5 ) ) );
+		$this->content->posts    = array( 5 => true );
+		$this->client->responses = array( $this->error( 409, 'source_disconnected' ) );
+
+		$this->assertSame( 'detached', $this->sync->run() );
+
+		// Two more worker ticks and two hourly ticks, with a check-in long overdue.
+		$this->options['samomind_connection']['last_checkin_at'] = 0;
+		$this->assertSame( 'not_connected', $this->sync->run() );
+		$this->sync->on_hourly();
+		$this->assertSame( 'not_connected', $this->sync->run() );
+		$this->sync->on_hourly();
+
+		$this->assertSame( array( '/documents' ), $this->endpoints() );
+		$connection = SAMOMIND()->connection;
+		$this->assertFalse( $connection->is_connected() );
+		$this->assertSame( 'source_disconnected', $connection->get_block()['code'] );
+		$this->assertSame( 'Disconnected from the SamoMind dashboard.', $connection->get_block()['message'] );
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
+		$this->assertFalse( $this->sync->has_work() );
+	}
+
+	public function test_unknown_source_on_checkin_detaches_without_reconnecting() {
+		Functions\when( 'get_bloginfo' )->justReturn( '7.1' );
+		$this->client->responses = array( $this->error( 404, 'unknown_source' ) );
+
+		$result = SAMOMIND()->connection->checkin( false );
+
+		$this->assertSame( 'unknown_source', $result->get_error_code() );
+		$this->assertSame( array( '/checkin' ), $this->endpoints() );
+		$this->assertFalse( SAMOMIND()->connection->is_connected() );
+		$this->assertSame( 'unknown_source', SAMOMIND()->connection->get_block()['code'] );
 	}
 }

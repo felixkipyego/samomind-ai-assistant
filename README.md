@@ -75,6 +75,11 @@ Background work runs on Action Scheduler when WooCommerce provides it,
 otherwise on WP-Cron. WP-Cron runs when the site gets visits; on a quiet
 site, use a real cron job (`wp cron event run --due-now`).
 
+If the site is disconnected in the SamoMind dashboard, the dashboard wins:
+the plugin forgets the connection, sends nothing more, and shows
+"Disconnected from the SamoMind dashboard." with a **Connect** button. It
+never reconnects by itself.
+
 The **Status** page shows the connection, sync progress, the last full
 sync's counts and the last 200 requests (time, endpoint, HTTP status,
 code; never bodies). The SamoMind API does not report the indexed page
