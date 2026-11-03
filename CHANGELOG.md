@@ -5,6 +5,10 @@
 - `docs/API_CONTRACT.md` refreshed to SamoMind `ba44704` (7.6.a1: deactivation
   does nothing server-side, a dashboard disconnect wins, indexed count is an
   open item). No change to the plugin's behaviour.
+- readme.txt: FAQ rewritten around the five questions a site owner asks
+  first, a Screenshots section (images to come, see `.wordpress-org/`), and
+  External services moved under Description so the sections keep the
+  WordPress.org order.
 
 ## 0.1.0 (2026-11-03)
 

@@ -29,7 +29,7 @@ Never sent: drafts, scheduled, private or password-protected content, users, vis
 
 Choose the post types under SamoMind > Settings > What is synced (all ticked by default). Unticking a type removes its items from SamoMind. Developers can also use the `SAMOMIND/content/post_types` filter (it runs after that setting) and `SAMOMIND/content/excluded_ids` to leave out single posts.
 
-== External services ==
+= External services =
 
 This plugin connects to the SamoMind API, a service of SoftwaresKe Ltd, to keep your SamoMind assistant's knowledge base in sync. Nothing is sent until an administrator enters an ingest key and clicks Connect.
 
@@ -56,25 +56,30 @@ No other outbound requests are made. There is no telemetry.
 
 == Frequently Asked Questions ==
 
-= Where do I see what was sent? =
+= Do I need a SamoMind account? =
 
-SamoMind > Status shows the sync progress and the last 200 requests (time, endpoint, HTTP status and error code). Request bodies and credentials are never logged.
+Yes. The plugin is free, but it sends your content to your SamoMind knowledge base, so you need a SamoMind account and an ingest key from the dashboard (Sources, then the WordPress card). Your SamoMind plan sets how many pages the knowledge base holds; when the limit is reached the sync stops with `plan_page_cap` on SamoMind > Status. Upgrade the plan or remove pages in the dashboard, then click "Sync now".
 
-= What happens when I deactivate or delete the plugin? =
+= What exactly is sent to SamoMind? =
 
-Deactivating only stops the plugin's scheduled work. Nothing is sent, your documents stay in SamoMind and the connection is kept, so reactivating carries on without a full sync; changes made while it was inactive are picked up by the next daily reconcile. Deleting the plugin disconnects the site if it is still connected (SamoMind then removes the documents it received from this site) and removes all of the plugin's settings, logs and scheduled events. To remove your content from SamoMind without deleting the plugin, use Disconnect on the Status page.
+Only published, public content that is not password-protected, and only the post types ticked under SamoMind > Settings > What is synced. Drafts, private content, users, comments, orders and customers are never sent. See "What is sent" above for the full list. SamoMind > Status shows the last 200 requests (time, endpoint, HTTP status and error code); request bodies and credentials are never logged.
 
-= What if I disconnect the site in the SamoMind dashboard? =
+= How quickly do changes show up in the assistant? =
 
-The dashboard wins. The plugin stops sending, forgets the connection and shows "Disconnected from the SamoMind dashboard." on SamoMind > Status. It does not reconnect by itself; click Connect when you want the site back.
+A change is sent within a minute or so of publishing, editing, trashing or unpublishing it, then SamoMind indexes it. A daily check-in and reconcile catches anything missed. WP-Cron only runs when the site gets visits, so on a quiet site set up a real cron job that runs `wp cron event run --due-now`, or install WooCommerce, whose Action Scheduler runs the work.
 
-= My site is quiet and updates arrive late. =
+= Will it slow down my site? =
 
-WP-Cron runs when the site gets visits. Set up a real cron job that runs `wp cron event run --due-now`, or install WooCommerce, whose Action Scheduler runs the work.
+No. All syncing runs in the background in small batches, never while a visitor loads a page. The only thing added to the front end is the chat widget, and only if you paste its snippet.
 
-= Sync stopped with plan_page_cap. =
+= What happens when I deactivate, delete or disconnect? =
 
-Your SamoMind plan's page limit is reached. Upgrade the plan or remove pages in the SamoMind dashboard, then click "Sync now".
+Deactivating only stops the plugin's scheduled work. Nothing is sent, your documents stay in SamoMind and the connection is kept, so reactivating carries on without a full sync; changes made while it was inactive are picked up by the next daily reconcile. Deleting the plugin disconnects the site if it is still connected (SamoMind then removes the documents it received from this site) and removes all of the plugin's settings, logs and scheduled events. Disconnect on the Status page removes your content from SamoMind but keeps the plugin and its settings. If someone disconnects the site in the SamoMind dashboard, the dashboard wins: the plugin stops sending, shows "Disconnected from the SamoMind dashboard." on SamoMind > Status and does not reconnect until you click Connect.
+
+== Screenshots ==
+
+1. SamoMind > Status: connection, sync progress and the request log.
+2. SamoMind > Settings: ingest key, the post types that are synced, and the widget embed snippet.
 
 == Changelog ==
 
