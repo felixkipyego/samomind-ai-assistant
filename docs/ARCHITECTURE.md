@@ -208,6 +208,12 @@ available. The ruleset is WordPress with these exclusions, each commented:
 no file docblock (the reference documents classes), the reference's
 `PREFIX/area/name` hook names, its `###` banner comments, the uppercase
 `SAMOMIND()` accessor, and unused `$args` in WP-CLI commands.
+`composer plugin-check` runs the static phpcs checks of the WordPress.org
+Plugin Check tool (`phpcs-plugin-check.xml.dist`). Plugin Check is not on
+Packagist, so `composer.json` pins its 2.1.0 GitHub release as a `package`
+repository; only its `phpcs-sniffs` and `phpcs-rulesets` are used. The
+tool's VIP query check (`WordPressVIPMinimum.Performance.WPQueryParams`) is
+left out to avoid a second dependency.
 Why: the reference has no tests or tooling.
 
 ## 6. Request flows (contract section 5)

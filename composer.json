@@ -6,13 +6,29 @@
   "require": {
     "php": ">=7.4"
   },
+  "repositories": [
+    {
+      "type": "package",
+      "package": {
+        "name": "wordpress/plugin-check",
+        "version": "2.1.0",
+        "type": "phpcodesniffer-standard",
+        "description": "Static phpcs rules of the WordPress.org Plugin Check tool (not on Packagist).",
+        "dist": {
+          "url": "https://github.com/WordPress/plugin-check/archive/refs/tags/2.1.0.zip",
+          "type": "zip"
+        }
+      }
+    }
+  ],
   "require-dev": {
-    "squizlabs/php_codesniffer": "^3.13",
-    "wp-coding-standards/wpcs": "^3.1",
-    "phpcompatibility/phpcompatibility-wp": "^2.1",
+    "brain/monkey": "^2.6",
     "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpcompatibility/phpcompatibility-wp": "^2.1",
     "phpunit/phpunit": "^9.6",
-    "brain/monkey": "^2.6"
+    "squizlabs/php_codesniffer": "^3.13",
+    "wordpress/plugin-check": "2.1.0",
+    "wp-coding-standards/wpcs": "^3.1"
   },
   "config": {
     "platform": {
@@ -30,8 +46,10 @@
     "check": [
       "@lint",
       "@compat",
+      "@plugin-check",
       "@test"
     ],
-    "smoke": "sh tests/smoke/wp-env-smoke.sh"
+    "smoke": "sh tests/smoke/wp-env-smoke.sh",
+    "plugin-check": "phpcs --standard=phpcs-plugin-check.xml.dist"
   }
 }

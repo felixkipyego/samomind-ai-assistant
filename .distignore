@@ -14,6 +14,7 @@
 /composer.json
 /composer.lock
 /phpcs.xml.dist
+/phpcs-plugin-check.xml.dist
 /phpunit.xml.dist
 /CLAUDE.md
 /README.md

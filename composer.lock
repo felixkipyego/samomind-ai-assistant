@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "13ea6a2b2d67838f5b2b37b837246897",
+    "content-hash": "5d5247e9a1383c05f9d7ce1a5fbd7dd5",
     "packages": [],
     "packages-dev": [
         {
@@ -2606,6 +2606,16 @@
                 }
             ],
             "time": "2025-11-17T20:03:58+00:00"
+        },
+        {
+            "name": "wordpress/plugin-check",
+            "version": "2.1.0",
+            "dist": {
+                "type": "zip",
+                "url": "https://github.com/WordPress/plugin-check/archive/refs/tags/2.1.0.zip"
+            },
+            "type": "phpcodesniffer-standard",
+            "description": "Static phpcs rules of the WordPress.org Plugin Check tool (not on Packagist)."
         },
         {
             "name": "wp-coding-standards/wpcs",

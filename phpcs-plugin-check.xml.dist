@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<ruleset name="SamoMind AI Assistant: Plugin Check">
+	<description>The static phpcs checks of the WordPress.org Plugin Check tool (2.1.0), run with `composer plugin-check`. The everyday ruleset is phpcs.xml.dist.</description>
+
+	<file>.</file>
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/tests/*</exclude-pattern>
+	<exclude-pattern>/build/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg value="sp"/>
+
+	<config name="minimum_wp_version" value="6.0"/>
+
+	<!-- The tool's "plugin_review_phpcs" check. -->
+	<rule ref="./vendor/wordpress/plugin-check/phpcs-rulesets/plugin-review.xml"/>
+
+	<!-- Every PluginCheck sniff the tool's other checks run (direct DB, nonces, offloading, localhost, setting sanitisation, error reporting, write file, AI provider). -->
+	<rule ref="PluginCheck"/>
+
+	<!-- The WordPress sniffs the tool's other checks run. -->
+	<rule ref="WordPress.DB.DirectDatabaseQuery"/>
+	<rule ref="WordPress.DB.SlowDBQuery"/>
+	<rule ref="WordPress.Security.EscapeOutput"/>
+	<rule ref="WordPress.Security.SafeRedirect"/>
+	<rule ref="WordPress.WP.EnqueuedResources"/>
+	<rule ref="WordPress.WP.EnqueuedResourceParameters"/>
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="samomind-ai-assistant"/>
+			</property>
+		</properties>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="samomind"/>
+				<element value="SAMOMIND"/>
+			</property>
+		</properties>
+	</rule>
+</ruleset>
