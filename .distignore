@@ -1,0 +1,21 @@
+# Files and folders left out of the plugin zip.
+/.git
+/.github
+/.distignore
+/.editorconfig
+/.gitignore
+/.wp-env.json
+/.phpunit.result.cache
+/.phpcs-cache
+/docs
+/tests
+/vendor
+/node_modules
+/composer.json
+/composer.lock
+/phpcs.xml.dist
+/phpunit.xml.dist
+/CLAUDE.md
+/README.md
+/CHANGELOG.md
+/Makefile

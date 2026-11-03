@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<ruleset name="SamoMind AI Assistant">
+	<description>WordPress Coding Standards, tuned to the conventions of the reference plugin (docs/ARCHITECTURE.md section 1).</description>
+
+	<file>.</file>
+	<exclude-pattern>/vendor/*</exclude-pattern>
+	<exclude-pattern>/node_modules/*</exclude-pattern>
+	<exclude-pattern>/tests/*</exclude-pattern>
+
+	<arg name="extensions" value="php"/>
+	<arg name="colors"/>
+	<arg name="cache" value=".phpcs-cache"/>
+	<arg value="sp"/>
+
+	<config name="minimum_wp_version" value="6.0"/>
+	<config name="testVersion" value="7.4-"/>
+
+	<rule ref="WordPress">
+		<!-- The reference documents classes, not files: one class docblock per file. -->
+		<exclude name="Squiz.Commenting.FileComment.Missing"/>
+		<exclude name="Squiz.Commenting.FileComment.WrongStyle"/>
+		<!-- The reference names its hooks PREFIX/area/name (OTCE/plugin_loaded). -->
+		<exclude name="WordPress.NamingConventions.ValidHookName.NotLowercase"/>
+		<exclude name="WordPress.NamingConventions.ValidHookName.UseUnderscores"/>
+		<!-- The reference's class docblocks use a ### banner between hook groups. -->
+		<exclude name="Squiz.Commenting.BlockComment.WrongEnd"/>
+		<exclude name="Squiz.Commenting.InlineComment.SpacingAfter"/>
+	</rule>
+
+	<!-- The reference's uppercase accessor, OTCE(), becomes SAMOMIND(). -->
+	<rule ref="WordPress.NamingConventions.ValidFunctionName.FunctionNameInvalid">
+		<exclude-pattern>/samomind-ai-assistant\.php$</exclude-pattern>
+	</rule>
+
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="samomind-ai-assistant"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="samomind"/>
+				<element value="SAMOMIND"/>
+			</property>
+		</properties>
+	</rule>
+
+	<rule ref="PHPCompatibilityWP"/>
+</ruleset>
