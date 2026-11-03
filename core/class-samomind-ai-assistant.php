@@ -44,6 +44,15 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		public $settings;
 
 		/**
+		 * SAMOMIND request log object.
+		 *
+		 * @access  public
+		 * @since   0.1.0
+		 * @var     object|SAMOMIND_Log
+		 */
+		public $log;
+
+		/**
 		 * Throw error on object clone.
 		 *
 		 * Cloning instances of the class is forbidden.
@@ -85,6 +94,7 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 				self::$instance->includes();
 				self::$instance->helpers  = new SAMOMIND_Helpers();
 				self::$instance->settings = new SAMOMIND_Settings();
+				self::$instance->log      = new SAMOMIND_Log();
 
 				// Fire the plugin logic.
 				new SAMOMIND_Run();
@@ -109,6 +119,8 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		private function includes() {
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-helpers.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-settings.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-log.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-client.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-run.php';
 		}
 
