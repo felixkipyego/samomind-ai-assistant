@@ -57,6 +57,18 @@ class SAMOMIND_Run {
 		$sync = SAMOMIND()->sync;
 		add_action( 'transition_post_status', array( $sync, 'on_transition_post_status' ), 10, 3 );
 		add_action( 'before_delete_post', array( $sync, 'on_before_delete_post' ), 10, 2 );
+
+		// Saves from the block editor, Classic editor, Quick Edit and REST (docs/ARCHITECTURE.md A8, A11).
+		add_action( 'wp_after_insert_post', array( $sync, 'on_after_insert_post' ), 10, 4 );
+
+		// Page builders write their layout to post meta, often after the post itself.
+		add_action( 'added_post_meta', array( $sync, 'on_post_meta_change' ), 10, 3 );
+		add_action( 'updated_post_meta', array( $sync, 'on_post_meta_change' ), 10, 3 );
+		add_action( 'deleted_post_meta', array( $sync, 'on_post_meta_change' ), 10, 3 );
+
+		// A builder's own "layout saved" action; nothing depends on these.
+		add_action( 'elementor/document/after_save', array( $this, 'on_elementor_saved' ) );
+		add_action( 'fl_builder_after_save_layout', array( $this, 'on_beaver_saved' ), 10, 2 );
 		add_action( 'update_option_samomind_excluded_post_types', array( $sync, 'on_excluded_post_types_updated' ), 10, 2 );
 		add_action( 'add_option_samomind_excluded_post_types', array( $sync, 'on_excluded_post_types_added' ), 10, 2 );
 
@@ -78,6 +90,36 @@ class SAMOMIND_Run {
 	 * ###
 	 * ######################
 	 */
+
+	/**
+	 * Elementor finished saving a document (elementor/document/after_save).
+	 *
+	 * @access  public
+	 * @since   0.2.0
+	 * @param   object $document  Elementor document.
+	 * @return  void
+	 */
+	public function on_elementor_saved( $document ) {
+		if ( is_object( $document ) && method_exists( $document, 'get_main_id' ) ) {
+			SAMOMIND()->sync->queue_post_id( (int) $document->get_main_id() );
+		}
+	}
+
+	/**
+	 * Beaver Builder published a layout (fl_builder_after_save_layout). A
+	 * draft save is not content that is live, so it is ignored.
+	 *
+	 * @access  public
+	 * @since   0.2.0
+	 * @param   int  $post_id  Post id.
+	 * @param   bool $publish  Whether the layout was published.
+	 * @return  void
+	 */
+	public function on_beaver_saved( $post_id, $publish = false ) {
+		if ( $publish ) {
+			SAMOMIND()->sync->queue_post_id( (int) $post_id );
+		}
+	}
 
 	/**
 	 * Add a settings link to the Plugins list page.

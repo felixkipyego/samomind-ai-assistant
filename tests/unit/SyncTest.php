@@ -38,6 +38,13 @@ class SAMOMIND_Fake_Content extends SAMOMIND_Content {
 
 	public $posts = array();
 
+	/**
+	 * Current text per post id; what a push would carry right now.
+	 *
+	 * @var array
+	 */
+	public $texts = array();
+
 	public function get_candidate_ids( $after_id, $limit ) {
 		$ids = array_filter(
 			array_keys( $this->posts ),
@@ -62,7 +69,7 @@ class SAMOMIND_Fake_Content extends SAMOMIND_Content {
 			'url'         => 'https://www.example.com/?p=' . $post_id,
 			'kind'        => 'page',
 			'title'       => 'Page ' . $post_id,
-			'text'        => 'Text ' . $post_id,
+			'text'        => isset( $this->texts[ $post_id ] ) ? $this->texts[ $post_id ] : 'Text ' . $post_id,
 			'modified_at' => '2026-11-01T00:00:00+00:00',
 		);
 	}
@@ -102,6 +109,17 @@ class SAMOMIND_Fake_Content extends SAMOMIND_Content {
 class SAMOMIND_Test_Sync extends SAMOMIND_Sync {
 
 	public $fake_client;
+
+	/**
+	 * Seconds the test clock is ahead of the real one.
+	 *
+	 * @var int
+	 */
+	public $clock = 0;
+
+	protected function now() {
+		return time() + $this->clock;
+	}
 
 	protected function client() {
 		return $this->fake_client;
@@ -201,6 +219,11 @@ class SyncTest extends SAMOMIND_TestCase {
 		Functions\when( 'sanitize_text_field' )->returnArg( 1 );
 		Functions\when( 'wp_is_post_revision' )->justReturn( false );
 		Functions\when( 'wp_is_post_autosave' )->justReturn( false );
+		Functions\when( 'get_post' )->alias(
+			function ( $id ) {
+				return new WP_Post( array( 'ID' => $id ) );
+			}
+		);
 
 		$this->client              = new SAMOMIND_Fake_Client();
 		$this->content             = new SAMOMIND_Fake_Content();
@@ -211,9 +234,17 @@ class SyncTest extends SAMOMIND_TestCase {
 		$GLOBALS['samomind_test_plugin'] = (object) array(
 			'connection' => $connection,
 			'content'    => $this->content,
+			'builders'   => new SAMOMIND_Builders(),
 			'scheduler'  => new SAMOMIND_Fake_Scheduler(),
 			'sync'       => $this->sync,
 		);
+	}
+
+	/**
+	 * Let queued post events come due (the debounce is 30 seconds).
+	 */
+	private function wait( $seconds = 31 ) {
+		$this->sync->clock += $seconds;
 	}
 
 	private function endpoints() {
@@ -333,6 +364,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->content->posts    = array( 5 => true );
 		$this->client->responses = array( $this->error( 409, 'duplicate_request' ) );
 
+		$this->wait();
 		$this->assertSame( 'idle', $this->sync->run() );
 
 		$this->assertSame( array( '/documents' ), $this->endpoints() );
@@ -391,6 +423,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		);
 		$this->client->responses = array( array( 'results' => array( array( 'external_id' => '5', 'status' => 'queued' ) ) ) );
 
+		$this->wait();
 		$this->sync->run();
 
 		$this->assertSame( array( '/documents/delete' ), $this->endpoints() );
@@ -421,6 +454,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->sync->on_transition_post_status( 'publish', 'draft', new WP_Post( array( 'ID' => 5 ) ) );
 		$this->content->posts = array( 5 => true );
 
+		$this->wait();
 		$first  = $this->sync->next_request();
 		$second = $this->sync->next_request();
 
@@ -434,6 +468,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->content->posts    = array( 5 => true );
 		$this->client->responses = array( $this->error( 409, 'source_disconnected' ) );
 
+		$this->wait();
 		$this->assertSame( 'detached', $this->sync->run() );
 
 		// Two more worker ticks and two hourly ticks, with a check-in long overdue.
@@ -522,6 +557,145 @@ class SyncTest extends SAMOMIND_TestCase {
 
 		$this->assertNull( SAMOMIND()->connection->refresh_status() );
 		$this->assertSame( array(), $this->endpoints() );
+	}
+
+	private function pushed_texts() {
+		$texts = array();
+		foreach ( $this->client->calls as $call ) {
+			if ( '/documents' === $call['endpoint'] ) {
+				foreach ( $call['payload']['documents'] as $document ) {
+					$texts[] = $document['external_id'] . ':' . $document['text'];
+				}
+			}
+		}
+		return $texts;
+	}
+
+	public function test_a_rest_save_queues_the_id_and_pushes_the_new_content() {
+		$this->content->posts = array( 5 => true );
+		$this->content->texts = array( 5 => 'New sentence from the block editor' );
+
+		$this->sync->on_after_insert_post( 5, new WP_Post( array( 'ID' => 5 ) ), true, new WP_Post( array( 'ID' => 5 ) ) );
+
+		$queue = $this->sync->get_queue();
+		$this->assertSame( array( 'op', 'event', 'due' ), array_keys( $queue['items']['5'] ) );
+
+		$this->wait();
+		$this->sync->run();
+
+		$this->assertSame( array( '5:New sentence from the block editor' ), $this->pushed_texts() );
+	}
+
+	public function test_an_elementor_style_meta_save_queues_and_pushes_the_new_content() {
+		$this->content->posts = array( 6 => true );
+		$this->content->texts = array( 6 => 'Text with the new unique word zebra' );
+
+		$this->sync->on_post_meta_change( 11, 6, '_elementor_data' );
+		$this->assertArrayHasKey( '6', $this->sync->get_queue()['items'] );
+
+		$this->wait();
+		$this->sync->run();
+
+		$this->assertSame( array( '6:Text with the new unique word zebra' ), $this->pushed_texts() );
+	}
+
+	public function test_a_beaver_builder_meta_save_queues_and_pushes_the_new_content() {
+		$this->content->posts = array( 7 => true );
+		$this->content->texts = array( 7 => 'Beaver layout with the word giraffe' );
+
+		$this->sync->on_post_meta_change( 12, 7, '_fl_builder_data' );
+
+		$this->wait();
+		$this->sync->run();
+
+		$this->assertSame( array( '7:Beaver layout with the word giraffe' ), $this->pushed_texts() );
+	}
+
+	public function test_other_meta_keys_queue_nothing() {
+		$this->sync->on_post_meta_change( 13, 8, '_edit_lock' );
+		$this->sync->on_post_meta_change( 14, 8, '_fl_builder_draft' );
+
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
+	}
+
+	public function test_three_saves_within_the_wait_make_one_push_of_the_last_content() {
+		$this->content->posts = array( 9 => true );
+
+		$this->content->texts = array( 9 => 'first' );
+		$this->sync->on_after_insert_post( 9, new WP_Post( array( 'ID' => 9 ) ), true );
+		$this->wait( 10 );
+		$this->content->texts = array( 9 => 'second' );
+		$this->sync->on_post_meta_change( 1, 9, '_elementor_data' );
+		$this->wait( 10 );
+		$this->content->texts = array( 9 => 'third and final' );
+		$this->sync->on_after_insert_post( 9, new WP_Post( array( 'ID' => 9 ) ), true );
+
+		// 25 seconds after the first save but only 10 after the last: not yet.
+		$this->wait( 10 );
+		$this->assertSame( 'more', $this->sync->run() );
+		$this->assertSame( array(), $this->client->calls );
+		$this->assertCount( 1, $this->sync->get_queue()['items'] );
+
+		$this->wait( 25 );
+		$this->sync->run();
+
+		$this->assertSame( array( '9:third and final' ), $this->pushed_texts() );
+		$this->assertSame( 0, $this->sync->get_progress()['pending'] );
+	}
+
+	public function test_an_early_worker_run_does_not_send_a_post_a_builder_is_still_saving() {
+		// The live bug: the post is saved, the worker runs a few seconds
+		// later, the builder writes its layout after that.
+		$this->content->posts = array( 10 => true );
+		$this->content->texts = array( 10 => 'old text' );
+
+		$this->sync->on_transition_post_status( 'publish', 'publish', new WP_Post( array( 'ID' => 10 ) ) );
+		$this->wait( 5 );
+		$this->assertSame( 'more', $this->sync->run() );
+		$this->assertSame( array(), $this->client->calls );
+
+		$this->content->texts = array( 10 => 'new text from the builder' );
+		$this->sync->on_post_meta_change( 2, 10, '_elementor_data' );
+		$this->wait( 31 );
+		$this->sync->run();
+
+		$this->assertSame( array( '10:new text from the builder' ), $this->pushed_texts() );
+	}
+
+	public function test_a_meta_only_save_gets_a_new_idempotency_key() {
+		// Same post modified time both times: the key must still differ,
+		// or the server would replay the first request and drop the second.
+		$this->content->posts = array( 11 => true );
+
+		$this->sync->on_post_meta_change( 1, 11, '_elementor_data' );
+		$this->wait();
+		$this->sync->run();
+		$this->sync->on_post_meta_change( 2, 11, '_elementor_data' );
+		$this->wait();
+		$this->sync->run();
+
+		$this->assertCount( 2, $this->client->calls );
+		$this->assertNotSame( $this->client->calls[0]['key'], $this->client->calls[1]['key'] );
+	}
+
+	public function test_the_wait_can_be_changed_with_a_filter() {
+		\Brain\Monkey\Filters\expectApplied( 'SAMOMIND/sync/debounce_seconds' )->andReturn( 0 );
+		$this->content->posts = array( 12 => true );
+
+		$this->sync->on_after_insert_post( 12, new WP_Post( array( 'ID' => 12 ) ), true );
+		$this->sync->run();
+
+		$this->assertSame( array( '/documents' ), $this->endpoints() );
+	}
+
+	public function test_a_trashed_post_is_deleted_after_its_wait_and_a_draft_save_is_ignored() {
+		$draft = new WP_Post( array( 'ID' => 13, 'post_status' => 'draft' ) );
+		$this->sync->on_after_insert_post( 13, $draft, true, $draft );
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
+
+		$trashed = new WP_Post( array( 'ID' => 14, 'post_status' => 'trash' ) );
+		$this->sync->on_after_insert_post( 14, $trashed, true, new WP_Post( array( 'ID' => 14 ) ) );
+		$this->assertSame( 'delete', $this->sync->get_queue()['items']['14']['op'] );
 	}
 
 	public function test_unticking_a_type_queues_deletes_in_batches() {

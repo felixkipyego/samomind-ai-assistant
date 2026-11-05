@@ -47,7 +47,9 @@ class SAMOMIND_Sync {
 	const LOCK_TTL = 300;
 
 	/**
-	 * Seconds between a post event and the push, so rapid saves coalesce.
+	 * Seconds a queued post event waits after its last enqueue before the
+	 * worker may send it, so rapid saves collapse into one push of the
+	 * final content. Filter: SAMOMIND/sync/debounce_seconds.
 	 *
 	 * @var int
 	 */
@@ -347,7 +349,84 @@ class SAMOMIND_Sync {
 	 * @return  void
 	 */
 	public function on_transition_post_status( $new_status, $old_status, $post ) {
-		if ( ! $post instanceof WP_Post || ! SAMOMIND()->connection->is_connected() ) {
+		if ( ! $post instanceof WP_Post ) {
+			return;
+		}
+		$this->queue_post( $post, 'publish' === $old_status || 'publish' === $new_status );
+	}
+
+	/**
+	 * Hooked to wp_after_insert_post: runs after a save through the block
+	 * editor, the Classic editor, Quick Edit, the REST API or wp_update_post(),
+	 * once the post's meta and terms are written. Only the id is queued; the
+	 * content is read when the worker sends it.
+	 *
+	 * @since   0.2.0
+	 * @param   int          $post_id      Post id.
+	 * @param   WP_Post      $post         Post.
+	 * @param   bool         $update       Whether this updated an existing post.
+	 * @param   WP_Post|null $post_before  Post before the update.
+	 * @return  void
+	 */
+	public function on_after_insert_post( $post_id, $post, $update = false, $post_before = null ) {
+		if ( ! $post instanceof WP_Post ) {
+			return;
+		}
+		$was_published = $post_before instanceof WP_Post && 'publish' === $post_before->post_status;
+		$this->queue_post( $post, $was_published );
+	}
+
+	/**
+	 * Hooked to added_post_meta, updated_post_meta and deleted_post_meta:
+	 * page builders write their layout to post meta, often after the post
+	 * itself was saved, so a change to one of their storage keys queues a
+	 * push. Cheap for every other key.
+	 *
+	 * @since   0.2.0
+	 * @param   mixed  $meta_id   Meta id (or ids).
+	 * @param   int    $post_id   Post id.
+	 * @param   string $meta_key  Meta key.
+	 * @return  void
+	 */
+	public function on_post_meta_change( $meta_id, $post_id, $meta_key = '' ) {
+		if ( ! SAMOMIND()->builders->is_builder_meta_key( (string) $meta_key ) ) {
+			return;
+		}
+		$this->queue_post_id( (int) $post_id );
+	}
+
+	/**
+	 * Queue a push for a post id after a builder's own "layout saved"
+	 * action. Nothing depends on these actions; the meta and save hooks
+	 * above catch the same save.
+	 *
+	 * @since   0.2.0
+	 * @param   int $post_id  Post id.
+	 * @return  void
+	 */
+	public function queue_post_id( $post_id ) {
+		if ( $post_id <= 0 || wp_is_post_revision( $post_id ) || wp_is_post_autosave( $post_id ) ) {
+			return;
+		}
+		$post = get_post( $post_id );
+		if ( $post instanceof WP_Post ) {
+			// A layout save only ever adds or changes content, never deletes it.
+			$this->queue_post( $post, false );
+		}
+	}
+
+	/**
+	 * Queue the right operation for a post: a push when it is eligible, a
+	 * delete when it just stopped being eligible.
+	 *
+	 * @since   0.2.0
+	 * @param   WP_Post $post             Post.
+	 * @param   bool    $may_have_been_sent  Whether it could be at SamoMind already
+	 *                                       (it was or is published).
+	 * @return  void
+	 */
+	private function queue_post( $post, $may_have_been_sent ) {
+		if ( ! SAMOMIND()->connection->is_connected() ) {
 			return;
 		}
 		if ( wp_is_post_revision( $post ) || wp_is_post_autosave( $post ) ) {
@@ -359,12 +438,11 @@ class SAMOMIND_Sync {
 			return;
 		}
 
-		$modified = SAMOMIND_Content::modified_gmt( $post );
 		if ( $content->is_eligible( $post ) ) {
-			$this->enqueue( $post->ID, 'push', self::event_id( 'push', $post->ID, $modified ) );
-		} elseif ( 'publish' === $old_status || 'publish' === $new_status ) {
+			$this->enqueue( $post, 'push' );
+		} elseif ( $may_have_been_sent ) {
 			// Unpublished, trashed, made private, given a password or excluded.
-			$this->enqueue( $post->ID, 'delete', self::event_id( 'delete', $post->ID, $modified ) );
+			$this->enqueue( $post, 'delete' );
 		}
 	}
 
@@ -385,26 +463,91 @@ class SAMOMIND_Sync {
 		if ( ! SAMOMIND()->content->is_tracked_type( $post->post_type ) ) {
 			return;
 		}
-		$this->enqueue( $post->ID, 'delete', self::event_id( 'delete', $post->ID, SAMOMIND_Content::modified_gmt( $post ) ) );
+		$this->enqueue( $post, 'delete' );
 	}
 
 	/**
-	 * Put an operation in the queue. The latest operation per post wins.
+	 * Put an operation in the queue. The latest operation per post wins and
+	 * restarts the wait, so several saves in a row become one push.
+	 *
+	 * The event id carries the enqueue time and a counter, so a later save
+	 * never reuses an earlier request's Idempotency-Key, even when the
+	 * post's modified time did not change (a builder writing only meta).
 	 *
 	 * @since   0.1.0
-	 * @param   int    $post_id  Post id.
-	 * @param   string $op       push or delete.
-	 * @param   string $event    Event id.
+	 * @param   WP_Post $post  Post.
+	 * @param   string  $op    push or delete.
 	 * @return  void
 	 */
-	private function enqueue( $post_id, $op, $event ) {
-		$queue                                     = $this->get_queue();
-		$queue['items'][ (string) (int) $post_id ] = array(
+	private function enqueue( $post, $op ) {
+		$queue        = $this->get_queue();
+		$queue['seq'] = isset( $queue['seq'] ) ? (int) $queue['seq'] + 1 : 1;
+		$delay        = $this->debounce_seconds();
+
+		if ( 'delete' === $op ) {
+			// A post that is gone from SamoMind cannot be incomplete there.
+			SAMOMIND()->builders->forget( $post->ID );
+		}
+
+		$queue['items'][ (string) (int) $post->ID ] = array(
 			'op'    => $op,
-			'event' => $event,
+			'event' => self::event_id( $op, $post->ID, SAMOMIND_Content::modified_gmt( $post ) . '@' . $this->now() . '.' . $queue['seq'] ),
+			'due'   => $this->now() + $delay,
 		);
 		$this->save_queue( $queue );
-		SAMOMIND()->scheduler->schedule_worker( self::EVENT_DELAY );
+		SAMOMIND()->scheduler->schedule_worker( $delay );
+	}
+
+	/**
+	 * Seconds a post event waits before it is sent.
+	 *
+	 * @since   0.2.0
+	 * @return  int
+	 */
+	public function debounce_seconds() {
+		/**
+		 * Filter how long a saved post waits before it is pushed. Every new
+		 * save of the same post restarts the wait.
+		 *
+		 * @since 0.2.0
+		 * @param int $seconds Seconds, 30 by default; 0 sends at the next worker run.
+		 */
+		return max( 0, (int) apply_filters( 'SAMOMIND/sync/debounce_seconds', self::EVENT_DELAY ) );
+	}
+
+	/**
+	 * The current time. Separate so tests can move the clock.
+	 *
+	 * @since   0.2.0
+	 * @return  int
+	 */
+	protected function now() {
+		return time();
+	}
+
+	/**
+	 * Seconds until the worker has something to send: 0 when a full sync or
+	 * reconcile is running or an item is due, otherwise the wait for the
+	 * first item to come due.
+	 *
+	 * @since   0.2.0
+	 * @return  int
+	 */
+	public function seconds_until_due() {
+		$state = $this->get_state();
+		if ( 'running' === $state['full']['state'] || 'running' === $state['reconcile']['state'] ) {
+			return 0;
+		}
+		$queue = $this->get_queue();
+		$wait  = null;
+		foreach ( $queue['items'] as $item ) {
+			$left = isset( $item['due'] ) ? (int) $item['due'] - $this->now() : 0;
+			if ( $left <= 0 ) {
+				return 0;
+			}
+			$wait = null === $wait ? $left : min( $wait, $left );
+		}
+		return null === $wait ? 0 : $wait;
 	}
 
 	/**
@@ -581,8 +724,10 @@ class SAMOMIND_Sync {
 
 		if ( 'idle' === $outcome && $this->has_work() ) {
 			$outcome = 'more';
-			// Leave room under the per-key rate limit before the next run.
-			SAMOMIND()->scheduler->schedule_worker( $sent >= self::MAX_REQUESTS_PER_RUN ? MINUTE_IN_SECONDS : 5 );
+			// Items still waiting out their debounce: come back when the first is due.
+			// Otherwise leave room under the per-key rate limit before the next run.
+			$wait = $this->seconds_until_due();
+			SAMOMIND()->scheduler->schedule_worker( $wait > 0 ? $wait : ( $sent >= self::MAX_REQUESTS_PER_RUN ? MINUTE_IN_SECONDS : 5 ) );
 		}
 
 		return $outcome;
@@ -612,7 +757,12 @@ class SAMOMIND_Sync {
 
 		$deletes = array();
 		$pushes  = array();
+		$now     = $this->now();
 		foreach ( $queue['items'] as $external_id => $item ) {
+			if ( isset( $item['due'] ) && (int) $item['due'] > $now ) {
+				// Saved moments ago: wait, a builder may still be writing.
+				continue;
+			}
 			if ( 'delete' === $item['op'] ) {
 				$deletes[ (string) $external_id ] = $item['event'];
 			} else {
