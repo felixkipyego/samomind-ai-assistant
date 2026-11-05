@@ -60,8 +60,8 @@ add price and stock status.
 **SamoMind > Settings > What is synced** lists these post types, all
 ticked by default. Untick a type to stop syncing it: its published items
 are queued for deletion and removed from SamoMind in the background.
-Ticking it again adds them back at the next daily reconcile, or click
-**Sync now**. A post type registered later is ticked until you untick it.
+Ticking it again queues its published items to be sent again at once. A
+post type registered later is ticked until you untick it.
 
 Never sent: drafts, scheduled, pending, private or password-protected
 content, users, visitors, comments, form entries, orders, media files.
@@ -70,7 +70,7 @@ When content changes:
 
 | On the site | Request |
 |---|---|
-| publish or update | `/documents` (about 30 seconds later, batched) |
+| publish or update, in any editor or page builder | `/documents` (30 seconds after the last save, batched) |
 | trash, unpublish, make private, add a password, delete | `/documents/delete` |
 | connect, "Sync now" | full sync: `/sync begin`, `/documents` batches, `/sync complete`, then reconcile |
 | daily | `/checkin`, then `/reconcile` |
@@ -86,10 +86,48 @@ the plugin forgets the connection, sends nothing more, and shows
 "Disconnected from the SamoMind dashboard." with a **Connect** button. It
 never reconnects by itself.
 
-The **Status** page shows the connection, sync progress, the last full
-sync's counts and the last 200 requests (time, endpoint, HTTP status,
-code; never bodies). The SamoMind API does not report the indexed page
-count to the plugin; the dashboard shows it.
+The **Status** page shows the connection, how many items are included on
+this site (published items of the ticked types), sync progress, the last
+full sync's counts, the pages that may be incomplete, and the last 200
+requests (time, endpoint, HTTP status, code; never bodies). Opening it
+also checks in with SamoMind (at most once a minute), so a disconnect made
+in the dashboard shows at once. The SamoMind API does not report the
+indexed page count to the plugin; the dashboard shows it.
+
+### Page builders
+
+The text sent is what a visitor sees. For each page the plugin picks the
+builder it was made with and asks that builder to render it, then reduces
+the result to plain text.
+
+| Editor | How it is read |
+|---|---|
+| Block editor, Classic editor | rendered like the theme does |
+| Elementor | Elementor's own renderer |
+| Beaver Builder | `FLBuilder::render_content_by_id()` |
+| Divi 4 and 5 | rendered when Divi's shortcodes or blocks are loaded; otherwise the shortcode tags are removed and the text between them kept (Divi 5: the text in the block data) |
+| WPBakery | its mapped shortcodes are registered, then rendered |
+| Avada / Fusion Builder | rendered when the `fusion_*` shortcodes are loaded; otherwise tags removed, text kept |
+| Bricks | no public renderer: only the stored content is read, so most Bricks pages show as "may be incomplete" |
+| Oxygen (classic) | the text in its shortcode data; JSON-only layouts cannot be read |
+
+When a builder fails or is not active, the plugin falls back to the stored
+content with shortcode tags removed; raw shortcodes are never sent.
+
+**Pages that may be incomplete** (Status page) lists pages where the
+builder failed or was not active, shortcodes did not render, or a large page
+produced almost no text. Open the listed page and ask the assistant about
+it. A developer can supply the text for a page:
+
+```php
+add_filter( 'SAMOMIND/content/text', function ( $text, $post ) {
+	return 123 === $post->ID ? 'The text the assistant should know.' : $text;
+}, 10, 2 );
+```
+
+Another builder's storage meta key can be added with
+`SAMOMIND/sync/builder_meta_keys`, and the 30 second wait changed with
+`SAMOMIND/sync/debounce_seconds`.
 
 ## Chat widget
 

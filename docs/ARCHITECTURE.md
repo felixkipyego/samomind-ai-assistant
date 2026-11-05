@@ -84,6 +84,8 @@ samomind-ai-assistant/
         class-samomind-client.php      signed requests to the ingest API (A2)
         class-samomind-log.php         capped request log (A5)
         class-samomind-content.php     what is eligible, document mapping, inventory
+        class-samomind-builders.php    adapter registry, fallback, quality list (A10)
+        builders/                      interface-samomind-builder-adapter.php, class-samomind-builder-{base,core,elementor,beaver,bricks,oxygen,divi,wpbakery,avada}.php
         class-samomind-connection.php  connect, disconnect, checkin, connection state
         class-samomind-sync.php        queue, full sync, reconcile, worker (A1)
         class-samomind-scheduler.php   Action Scheduler or WP-Cron (A1)
@@ -130,7 +132,8 @@ two read on every front-end request.
 | `samomind_excluded_post_types` | no | post types unticked on the settings page; an exclusion list, so a newly registered type is synced until unticked |
 | `samomind_connection` | no | source id, connected time, limits, check-in interval and time, last error, block state, failure start |
 | `samomind_sync` | no | full sync state and progress, reconcile state |
-| `samomind_queue` | no | pending pushes and deletes per external id, retry state |
+| `samomind_queue` | no | pending pushes and deletes per external id (op, event id, earliest send time), event counter, retry state; ids only, never content |
+| `samomind_incomplete` | no | posts whose text may be incomplete: post id, builder, reasons, time (200 at most; A10) |
 | `samomind_log` | no | last 200 request rows: time, endpoint, HTTP status, code |
 | `samomind_lock` | no | worker lock (time it was taken) |
 
@@ -164,10 +167,14 @@ Why: the reference stores no credentials.
 **A4. Idempotency keys.** User actions (connect, disconnect, manual
 check-in) get a fresh UUID key. Background requests get a key derived from
 the event: `wp-` + the first 40 hex of `sha256( scope + "\n" + parts )`,
-where parts are, for a push, `push:<id>:<modified_gmt>` per item, and for a
-sync batch the run id and cursor. A WP-Cron re-run of the same work builds
-the same key, so the server answers `duplicate_request` instead of applying
-it twice.
+where parts are, for a push, `push:<id>:<modified_gmt>@<enqueue time>.<counter>`
+per item, and for a sync batch the run id and cursor. The event id is
+stored in the queue, so a WP-Cron re-run or a retry of the same work builds
+the same key and the server answers `duplicate_request` instead of applying
+it twice. Every new save gets a new event id (the time and counter), because
+a page builder can change the content without changing the post's modified
+time, and a key reused for different content would be replayed and dropped
+(7.6.b2).
 Why: contract 5.1 and 5.7; WP-Cron can run an event twice.
 
 **A5. Request log.** A capped option (200 rows, newest first) holding time,
@@ -192,12 +199,26 @@ button calls; `sync` and `reconcile` then drive the worker in the
 foreground until the queue is empty.
 Why: no CLI in the reference.
 
-**A8. Post events.** `transition_post_status` and `before_delete_post`
-put the post's external id in the queue (push or delete, latest wins, which
-also debounces rapid saves) and schedule the worker 30 seconds out. The
-document body is built when the worker runs, so it reflects the final
-saved state.
-Why: no content sync in the reference.
+**A8. Post events.** Hooks only queue the post id; the body is built when
+the worker sends it, from the post and its meta as they are then. Hooked:
+`transition_post_status` and `before_delete_post` (status changes and
+deletes); `wp_after_insert_post` (the block editor, Classic editor, Quick
+Edit, REST and `wp_update_post()`, once meta and terms are written);
+`added_post_meta`, `updated_post_meta` and `deleted_post_meta` for the
+storage keys of the page builders (each adapter lists its own, filter
+`SAMOMIND/sync/builder_meta_keys`); and, as extras nothing depends on,
+`elementor/document/after_save` and `fl_builder_after_save_layout`
+(published layouts only). A queued item records its earliest send time,
+the last enqueue plus 30 seconds (filter `SAMOMIND/sync/debounce_seconds`);
+every new save of the post restarts the wait. A worker run that happens
+earlier, for any reason, leaves the item alone and reschedules itself for
+the first due item. Several saves in a row therefore become one push of the
+final content. Full sync, reconcile pushes and settings changes (untick,
+tick again) are not delayed.
+Why: builders write their layout after the post itself is saved
+(Elementor's `Document::save()` calls `wp_update_post()` first and
+`update_metadata( '_elementor_data' )` afterwards), so a push triggered by
+the status hook alone could read the old layout, and nothing re-queued it.
 
 **A9. Tooling.** Composer (dev only): PHPCS with WordPress Coding
 Standards and PHPCompatibilityWP, PHPUnit 9.6, Brain Monkey. Unit tests
@@ -219,6 +240,80 @@ without the paths in `.distignore`, and refuses when the header `Version`
 and readme `Stable tag` differ; the Release workflow attaches that zip to
 a GitHub release on a `v*` tag.
 Why: the reference has no tests or tooling.
+
+**A10. Page builder adapters.** `SAMOMIND_Builders` picks one adapter per
+post by its stored data, in this order: Elementor, Beaver Builder, Bricks,
+Oxygen, Divi (4 and 5), WPBakery, Avada / Fusion Builder, then core (block
+and Classic editor, which claims everything else). Each adapter implements
+`SAMOMIND_Builder_Adapter`: `detect()` reads the post's meta or content,
+`is_active()` says whether the builder is loaded now, `render()` returns
+HTML (or null when there is no public renderer), `meta_keys()` lists the
+keys its saves write, `fallback_source()` names the stored text the
+fallback uses. `extract()` runs it, and nothing it does can fatal:
+
+1. the builder is not loaded: reason `builder_inactive`, fallback;
+2. `render()` throws (any `Throwable`): reason `adapter_failed`, fallback;
+3. `render()` returns null: reason `no_renderer`, fallback;
+4. it returns an empty string for a builder page: fallback.
+
+The fallback removes shortcode tags (any tag, registered or not, with its
+attributes; `[[escaped]]` and ordinary bracketed words stay), keeps the
+text between them, and `to_text()` strips the HTML and collapses
+whitespace. A rendered result that still shows shortcode tokens gets the
+same treatment and the reason `unrendered_shortcodes`. Raw shortcodes are
+never sent.
+
+Quality check, when the document is built: a page is listed as "may be
+incomplete" (Status page, `samomind_incomplete`) when its reasons include
+`adapter_failed`, `builder_inactive` or `unrendered_shortcodes`, or when
+the stored content is 300 characters or more (the larger of `post_content`,
+the fallback source and the builder's meta) and the text that came out is
+under 40 characters (`little_text`). `no_renderer` alone does not list a
+page: it is the designed path for Bricks and Oxygen. The list changes only
+when a post's reasons change, so a failure is recorded once per post, and a
+post leaves it when a later build is clean or it is deleted. The filter
+`SAMOMIND/content/text` receives the final text, the post and the
+collected data, and its result is what is sent (cut to the API's limit);
+the quality check runs after it.
+
+What each adapter rests on (checked 2026-11-05):
+
+| Builder | Detection and keys | Renderer | How verified |
+|---|---|---|---|
+| Core (block, Classic) | none, claims the rest | `apply_filters( 'the_content' )` with the global post set | WordPress core behaviour |
+| Elementor | `_elementor_edit_mode` = `builder`; layout in `_elementor_data` | `Plugin::$instance->frontend->get_builder_content( $post_id )`, as the front end does on `the_content` | read in Elementor's source (GitHub `main`): `core/base/document.php`, `includes/frontend.php`; `Document::save()` writes the post, then the meta |
+| Beaver Builder | `_fl_builder_enabled`; published layout `_fl_builder_data` (a draft is `_fl_builder_draft`, ignored) | `FLBuilder::render_content_by_id( $post_id )`, which echoes its output (captured with a buffer) | read in the wordpress.org Lite source (`classes/class-fl-builder.php`, `class-fl-builder-model.php`) |
+| Bricks | `_bricks_page_content_2` (older `_bricks_page_content`), `_bricks_editor_mode` | none: Bricks' Academy documents a render filter, not a function that renders a post | key from the Bricks forum and third-party docs; closed source, not verified |
+| Oxygen (classic) | `ct_builder_shortcodes`, `ct_builder_json`; `_ct_builder_*` since 4.8.3 | none; the fallback reads the shortcode meta | keys from Oxygen documentation as quoted by third parties; closed source, not verified. Oxygen 6 is not detected |
+| Divi 4 | `_et_pb_use_builder` = `on`, shortcodes in `post_content` | the_content, only when `et_pb_section` is registered; else fallback | meta key and format from Divi documentation; closed source, whether the shortcodes load under WP-Cron is not verified |
+| Divi 5 | same meta; `<!-- wp:divi/... {JSON} -->` blocks in `post_content` | the_content when `divi/section` is registered; else the text under each block's `innerContent` is read from the JSON | format from third-party Divi 5 documentation; not verified against Divi's code |
+| WPBakery | `[vc_row` in `post_content`, `_wpb_vc_js_status` = `true` | `WPBMap::addAllMappedShortcodes()` when `vc_row` is missing, then the_content | the call is the one WPBakery support threads give for AJAX and similar requests; closed source, not verified |
+| Avada / Fusion Builder | `fusion_builder_status` = `active`, `[fusion_builder_container` | the_content when the `fusion_*` shortcodes are registered; else fallback | closed source, not verified |
+
+Why: a page builder keeps its content in its own storage and renders it
+with its own code, so reading `post_content` alone sent empty or raw pages.
+
+**A11. Status page.** Loading the Status page makes a lightweight
+`/checkin` at most once a minute (`SAMOMIND_Connection::refresh_status()`),
+with a fresh key and without moving the daily check-in time, so a
+disconnect made in the SamoMind dashboard or a deleted source shows within
+a page load. It never calls `/connect`, and it is skipped when a bad key
+paused the site. The page also shows "Included on this site": published,
+unprotected posts of the ticked types after filters, less the ids listed
+by `SAMOMIND/content/excluded_ids` (hidden WooCommerce products are not
+subtracted); it is separate from the last full sync's counts.
+
+**A12. Ticking a post type again, and what reconcile reports.** Ticking a
+type on the settings page queues pushes for its published, unprotected
+items at once (replacing any delete still queued for them), through the
+same worker and batching as any push. Reconcile does not compute "missing"
+on the site: it sends the inventory (every eligible id with its modified
+time, in byte order, in pages of the server's entry limit) and SamoMind
+answers with `missing` (listed ids it has no live item for, which includes
+items it deleted) and `stale` (listed with a newer modified time than it
+holds). The plugin queues a push for each, replacing a delete still queued
+for the same id, and the push turns back into a delete at send time if the
+post stopped being eligible meanwhile.
 
 ## 6. Request flows (contract section 5)
 
@@ -256,6 +351,9 @@ drop the request and record the error.
 |---|---|---|
 | `SAMOMIND/content/post_types` | post, page, public custom post types, `product` with WooCommerce, minus the types unticked on the settings page | add or remove post types; runs after the setting |
 | `SAMOMIND/content/excluded_ids` | `array()` | post ids never sent |
+| `SAMOMIND/content/text` | the extracted plain text | replace the text sent for one post (receives the text, the `WP_Post`, the collected data) |
+| `SAMOMIND/sync/debounce_seconds` | `30` | seconds a saved post waits before it is pushed |
+| `SAMOMIND/sync/builder_meta_keys` | the built-in builders' keys | add the storage meta key of another builder |
 | `SAMOMIND/settings/get_plugin_name` | `SamoMind AI Assistant` | same as the reference |
 
 Action: `SAMOMIND/plugin_loaded` after setup.

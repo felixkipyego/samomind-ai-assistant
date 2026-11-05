@@ -55,11 +55,25 @@ command.
 
 ## 3. Edit a page and see the update
 
+Do this once for **every editor the site uses**: the block editor, the
+Classic editor if used, and each page builder installed (Elementor,
+Beaver Builder, Bricks, Oxygen, Divi, WPBakery, Avada). Use a published
+page built with that editor.
+
 | Step | Expected |
 |---|---|
-| Edit a published page's text, click Update | within about 30 seconds plus the next cron run: `/documents` 200 |
-| API response | the page's item `queued` |
-| Chat | within minutes, the answer reflects the new text |
+| Edit the page and add a sentence with a **unique word** that appears nowhere else (for example "zebrafruit"), click Update / Publish | nothing is sent for about 30 seconds (the save is queued, "Waiting to send" 1), then `/documents` 200 with the page's item `queued` |
+| Edit the page twice more within 30 seconds (change the unique word each time) | still one `/documents` request, carrying the last word |
+| Ask the widget a question that needs the unique word ("what is zebrafruit?") | within a few minutes the answer uses the new sentence, without clicking Sync now |
+| Status page, "Pages that may be incomplete" | the page is not listed (a Bricks or Oxygen JSON layout, or a Divi/Avada page on a host where the builder is not loaded for background requests, can be listed: note the reason shown) |
+
+Record the builder, its version and the result for each:
+
+| Editor | Version | Unique word answered? | Listed as incomplete? |
+|---|---|---|---|
+| Block editor | | | |
+| Elementor | | | |
+| (other builders installed) | | | |
 
 - [ ] Done
 
@@ -90,7 +104,9 @@ And nothing at all for:
 | Untick Posts, Save Settings | `/documents/delete` 200 (one request per 500 ids) with every published post id; items `queued` (or `not_found` for any SamoMind never had) |
 | Chat / dashboard | posts are no longer cited; the page count drops by the number of posts |
 | Publish a new post | no request |
-| Tick Posts again, Save, then **Reconcile now** | `/reconcile` reports the posts as `missing`; `/documents` 200 sends them; cited again |
+| Tick Posts again, Save (no Reconcile now) | `/documents` 200 at once, pushing every published post; Status shows "Included on this site" back to the earlier number; the dashboard count is restored and the posts are cited again |
+| Status page "Included on this site" after the untick | the number of published items of the ticked types only (not the last full sync's figure) |
+| Untick and tick Posts again before the first worker run | no `/documents/delete`, one `/documents` push |
 
 - [ ] Done
 
@@ -159,6 +175,7 @@ And nothing at all for:
 | Status page | "Disconnected from the SamoMind dashboard." with a **Connect** button; source id gone; an admin notice says nothing is sent until Connect |
 | Edit another page, wait past the next hourly cron | no request at all; never a `/connect` |
 | Click **Connect** | `/connect` 200, a new full sync |
+| After a dashboard disconnect, just open the Status page (no edit, no button) | within one page load the page shows "Disconnected from the SamoMind dashboard." (a single `/checkin` 409 in the log; at most one per minute); never a `/connect` |
 
 - [ ] Done
 
