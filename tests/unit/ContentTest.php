@@ -8,6 +8,25 @@
 use Brain\Monkey\Filters;
 use Brain\Monkey\Functions;
 
+/**
+ * Content with fixed database answers, to test the counts.
+ */
+class SAMOMIND_Counting_Content extends SAMOMIND_Content {
+
+	public $candidates = 0;
+	public $among      = 0;
+	public $among_ids  = null;
+
+	public function count_candidates() {
+		return $this->candidates;
+	}
+
+	public function count_candidates_among( array $ids ) {
+		$this->among_ids = $ids;
+		return $this->among;
+	}
+}
+
 class ContentTest extends SAMOMIND_TestCase {
 
 	/**
@@ -275,5 +294,24 @@ class ContentTest extends SAMOMIND_TestCase {
 			);
 
 		$this->assertSame( array( 'post', 'page', 'book' ), ( new SAMOMIND_Content() )->get_post_types() );
+	}
+
+	public function test_included_count_is_the_ticked_types_after_the_excluded_ids() {
+		Filters\expectApplied( 'SAMOMIND/content/excluded_ids' )->andReturn( array( 5, 6 ) );
+		$content             = new SAMOMIND_Counting_Content();
+		$content->candidates = 72;
+		$content->among      = 2;
+
+		$this->assertSame( 70, $content->count_included() );
+		$this->assertSame( array( 5, 6 ), $content->among_ids );
+	}
+
+	public function test_included_count_without_excluded_ids_is_the_candidate_count() {
+		$content             = new SAMOMIND_Counting_Content();
+		$content->candidates = 46;
+		$content->among      = 99;
+
+		$this->assertSame( 46, $content->count_included() );
+		$this->assertNull( $content->among_ids );
 	}
 }

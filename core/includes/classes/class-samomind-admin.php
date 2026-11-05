@@ -721,10 +721,17 @@ class SAMOMIND_Admin {
 							<span class="samomind-sync-count">
 								<?php
 								/* translators: 1: documents sent, 2: published items */
-								echo esc_html( sprintf( __( '%1$d sent of about %2$d published items', 'samomind-ai-assistant' ), $progress['sent'], $progress['total'] ) );
+								echo esc_html( sprintf( __( 'last full sync: %1$d sent of about %2$d published items', 'samomind-ai-assistant' ), $progress['sent'], $progress['total'] ) );
 								?>
 							</span>
 							<p class="description samomind-sync-message"><?php echo esc_html( $progress['message'] ); ?></p>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Included on this site', 'samomind-ai-assistant' ); ?></th>
+						<td>
+							<strong class="samomind-included-count"><?php echo esc_html( number_format_i18n( SAMOMIND()->content->count_included() ) ); ?></strong>
+							<p class="description"><?php esc_html_e( 'Published items of the post types ticked under Settings, after filters. This is what the plugin keeps in step with SamoMind; the figures below are about the last full sync.', 'samomind-ai-assistant' ); ?></p>
 						</td>
 					</tr>
 					<tr>

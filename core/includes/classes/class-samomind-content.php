@@ -525,6 +525,50 @@ class SAMOMIND_Content {
 	}
 
 	/**
+	 * Number of published items that are included right now: published,
+	 * unprotected posts of the ticked types after the filters, less the
+	 * ids the SAMOMIND/content/excluded_ids filter lists. Hidden
+	 * WooCommerce products are not subtracted, so a shop with hidden
+	 * products can show a few more than SamoMind holds.
+	 *
+	 * @since   0.2.0
+	 * @return  int
+	 */
+	public function count_included() {
+		$total    = $this->count_candidates();
+		$excluded = $this->get_excluded_ids();
+		if ( 0 === $total || empty( $excluded ) ) {
+			return $total;
+		}
+		return max( 0, $total - $this->count_candidates_among( $excluded ) );
+	}
+
+	/**
+	 * How many of the given ids are candidates (published, unprotected,
+	 * of a ticked type).
+	 *
+	 * @since   0.2.0
+	 * @param   int[] $ids  Post ids.
+	 * @return  int
+	 */
+	public function count_candidates_among( array $ids ) {
+		global $wpdb;
+
+		$types = $this->get_post_types();
+		if ( empty( $types ) || empty( $ids ) ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- same rules as count_candidates(), limited to a list of ids.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_password = '' AND post_type IN (" . implode( ',', array_fill( 0, count( $types ), '%s' ) ) . ') AND ID IN (' . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ')',
+				array_merge( $types, array_map( 'intval', $ids ) )
+			)
+		);
+	}
+
+	/**
 	 * Every eligible document as external_id => modified_at, sorted by
 	 * external_id in byte order (contract 5.6).
 	 *
