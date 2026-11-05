@@ -90,6 +90,10 @@ class SAMOMIND_Fake_Content extends SAMOMIND_Content {
 	public function get_published_ids( $post_type ) {
 		return isset( $this->published_by_type[ $post_type ] ) ? $this->published_by_type[ $post_type ] : array();
 	}
+
+	public function get_included_ids( $post_type ) {
+		return $this->get_published_ids( $post_type );
+	}
 }
 
 /**
@@ -481,12 +485,67 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertSame( 0, $this->sync->get_progress()['pending'] );
 	}
 
-	public function test_ticking_a_type_again_sends_nothing_at_once() {
+	public function test_untick_then_retick_queues_deletes_then_pushes() {
+		$this->content->posts             = array(
+			1 => true,
+			2 => true,
+		);
+		$this->content->published_by_type = array( 'book' => array( 1, 2 ) );
+		$this->client->responses          = array( $this->queued( array( 1, 2 ) ), $this->queued( array( 1, 2 ) ) );
+
+		// Untick: deletes go out.
+		$this->sync->on_excluded_post_types_updated( array(), array( 'book' ) );
+		$this->sync->run();
+		// Tick again: pushes for the same items go out at once, without a reconcile.
+		$this->sync->on_excluded_post_types_updated( array( 'book' ), array() );
+		$this->assertSame( 'push', $this->sync->get_queue()['items']['1']['op'] );
+		$this->sync->run();
+
+		$this->assertSame( array( '/documents/delete', '/documents' ), $this->endpoints() );
+		$this->assertSame( array( '1', '2' ), array_column( $this->client->calls[1]['payload']['documents'], 'external_id' ) );
+		$this->assertSame( 0, $this->sync->get_progress()['pending'] );
+		$this->assertNotSame( $this->client->calls[0]['key'], $this->client->calls[1]['key'] );
+	}
+
+	public function test_a_retick_before_the_deletes_were_sent_replaces_them() {
+		$this->content->posts             = array( 1 => true );
+		$this->content->published_by_type = array( 'book' => array( 1 ) );
+		$this->client->responses          = array( $this->queued( array( 1 ) ) );
+
+		$this->sync->on_excluded_post_types_updated( array(), array( 'book' ) );
+		$this->sync->on_excluded_post_types_updated( array( 'book' ), array() );
+		$this->sync->run();
+
+		$this->assertSame( array( '/documents' ), $this->endpoints() );
+	}
+
+	public function test_a_retick_queues_nothing_while_not_connected() {
+		unset( $this->options['samomind_connection'] );
 		$this->content->published_by_type = array( 'book' => array( 1, 2 ) );
 
 		$this->sync->on_excluded_post_types_updated( array( 'book' ), array() );
 
 		$this->assertSame( array(), $this->sync->get_queue()['items'] );
+	}
+
+	public function test_reconcile_after_a_retick_pushes_the_items_the_server_lacks() {
+		// The untick's deletes went out earlier; the server now lists both
+		// items as missing because their rows are marked deleted.
+		$this->content->posts    = array(
+			1 => true,
+			2 => true,
+		);
+		$this->client->responses = array(
+			array( 'missing' => array( '1', '2' ), 'stale' => array(), 'deleted' => array() ),
+			$this->queued( array( 1, 2 ) ),
+		);
+
+		$this->sync->request_reconcile( 'manual-1' );
+		$this->sync->run();
+
+		$this->assertSame( array( '/reconcile', '/documents' ), $this->endpoints() );
+		$this->assertSame( array( '1', '2' ), array_column( $this->client->calls[1]['payload']['documents'], 'external_id' ) );
+		$this->assertSame( 2, $this->sync->get_progress()['reconcile']['missing'] );
 	}
 
 	public function test_unticking_while_not_connected_queues_nothing() {

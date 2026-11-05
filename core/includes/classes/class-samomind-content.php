@@ -478,6 +478,29 @@ class SAMOMIND_Content {
 	}
 
 	/**
+	 * Ids of the published, unprotected posts of one type. Used to send a
+	 * type again after it was ticked; per-post rules are checked when the
+	 * push is built.
+	 *
+	 * @since   0.2.0
+	 * @param   string $post_type  Post type name.
+	 * @return  int[]
+	 */
+	public function get_included_ids( $post_type ) {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- ids only, read once per settings change.
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status = 'publish' AND post_password = '' ORDER BY ID ASC",
+				$post_type
+			)
+		);
+
+		return array_map( 'intval', $ids );
+	}
+
+	/**
 	 * Number of published, unprotected posts of the tracked types: the
 	 * progress total of a full sync, before per-post exclusions.
 	 *

@@ -409,9 +409,10 @@ class SAMOMIND_Sync {
 
 	/**
 	 * Hooked to update_option_samomind_excluded_post_types: queue deletes
-	 * for every published item of a type that was just unticked. Ticking a
-	 * type again needs no request here; the next reconcile reports its
-	 * items as missing, or "Sync now" sends them.
+	 * for every published item of a type that was just unticked, and pushes
+	 * for every published item of a type that was just ticked again. A
+	 * later change replaces an earlier queued one for the same item, so an
+	 * untick followed quickly by a re-tick ends as a push.
 	 *
 	 * @since   0.1.0
 	 * @param   mixed $old_value  Previous exclusions.
@@ -423,12 +424,13 @@ class SAMOMIND_Sync {
 			return;
 		}
 		$unticked = array_diff( (array) $new_value, (array) $old_value );
-		if ( empty( $unticked ) ) {
+		$reticked = array_diff( (array) $old_value, (array) $new_value );
+		if ( empty( $unticked ) && empty( $reticked ) ) {
 			return;
 		}
 
 		// The settings change is the event: its time keeps the keys stable
-		// across worker re-runs and distinct from an earlier untick.
+		// across worker re-runs and distinct from an earlier change.
 		$changed = 'excluded@' . time();
 		$queue   = $this->get_queue();
 		foreach ( $unticked as $post_type ) {
@@ -436,6 +438,14 @@ class SAMOMIND_Sync {
 				$queue['items'][ (string) $post_id ] = array(
 					'op'    => 'delete',
 					'event' => self::event_id( 'delete', $post_id, $changed ),
+				);
+			}
+		}
+		foreach ( $reticked as $post_type ) {
+			foreach ( SAMOMIND()->content->get_included_ids( (string) $post_type ) as $post_id ) {
+				$queue['items'][ (string) $post_id ] = array(
+					'op'    => 'push',
+					'event' => self::event_id( 'push', $post_id, 'included@' . time() ),
 				);
 			}
 		}
@@ -914,7 +924,11 @@ class SAMOMIND_Sync {
 	}
 
 	/**
-	 * Queue pushes the reconcile asked for, keeping any push already queued.
+	 * Queue pushes the reconcile asked for. A push already queued stays; a
+	 * delete queued for the same id is replaced, because the server lists
+	 * the id as missing or stale only when this site still has it as
+	 * included, and the push turns back into a delete at send time if the
+	 * post is no longer eligible.
 	 *
 	 * @since   0.1.0
 	 * @param   string[] $external_ids  Ids to push.
@@ -928,7 +942,10 @@ class SAMOMIND_Sync {
 		$queue = $this->get_queue();
 		foreach ( $external_ids as $external_id ) {
 			$external_id = (string) $external_id;
-			if ( ! ctype_digit( $external_id ) || isset( $queue['items'][ $external_id ] ) ) {
+			if ( ! ctype_digit( $external_id ) ) {
+				continue;
+			}
+			if ( isset( $queue['items'][ $external_id ] ) && 'push' === $queue['items'][ $external_id ]['op'] ) {
 				continue;
 			}
 			$queue['items'][ $external_id ] = array(
