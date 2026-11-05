@@ -1,6 +1,30 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-05)
+
+Fix round after the live acceptance run on a production site built with
+Elementor (step 7.6.b2).
+
+- Fixed: an edit could reach SamoMind with the old text. Saves were queued
+  only from the status hook, which fires before a page builder writes its
+  layout, and a worker run for any reason sent the queued id at once. Now
+  `wp_after_insert_post` (block editor, Classic, Quick Edit, REST) and
+  changes to the storage meta keys of Elementor, Beaver Builder, Bricks,
+  Oxygen, Divi, WPBakery and Avada queue the post id; the worker sends an id
+  30 seconds after its last save (filter `SAMOMIND/sync/debounce_seconds`)
+  and reads the post fresh then. Each save gets its own Idempotency-Key.
+- New: page builder adapters (Elementor, Beaver Builder, Divi 4 and 5,
+  WPBakery, Avada; Bricks and Oxygen by fallback), a shortcode-stripping
+  fallback that never sends raw shortcodes, "Pages that may be incomplete"
+  on the Status page, and the `SAMOMIND/content/text` filter.
+- Fixed: ticking a post type again did not send its items; only Sync now
+  did. It now queues pushes at once and replaces any queued delete.
+- Fixed: the Status page kept showing "Connected" after a disconnect in the
+  SamoMind dashboard. Opening it now checks in (at most once a minute).
+- Changed: the Status page shows "Included on this site" (published items of
+  the ticked types), separate from the last full sync's counts.
+
+Also since 0.1.0 (never released separately):
 
 - `docs/API_CONTRACT.md` refreshed to SamoMind `ba44704` (7.6.a1: deactivation
   does nothing server-side, a dashboard disconnect wins, indexed count is an

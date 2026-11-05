@@ -4,7 +4,7 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -64,9 +64,13 @@ Yes. The plugin is free, but it sends your content to your SamoMind knowledge ba
 
 Only published, public content that is not password-protected, and only the post types ticked under SamoMind > Settings > What is synced. Drafts, private content, users, comments, orders and customers are never sent. See "What is sent" above for the full list. SamoMind > Status shows the last 200 requests (time, endpoint, HTTP status and error code); request bodies and credentials are never logged.
 
+= Does it work with Elementor, Divi and other page builders? =
+
+Yes. For each page the plugin finds the builder it was made with and asks that builder to render it, so the assistant gets the text visitors see. Elementor, Beaver Builder, Divi, WPBakery and Avada are supported, as are the block and Classic editors. Bricks and Oxygen keep their text in a form the plugin cannot render, so those pages may be sent with less text. If a builder fails or is switched off, the plugin sends the page's stored text instead and never sends raw shortcodes. SamoMind > Status lists any pages that may be incomplete and why; a developer can supply the text of a page with the `SAMOMIND/content/text` filter.
+
 = How quickly do changes show up in the assistant? =
 
-A change is sent within a minute or so of publishing, editing, trashing or unpublishing it, then SamoMind indexes it. A daily check-in and reconcile catches anything missed. WP-Cron only runs when the site gets visits, so on a quiet site set up a real cron job that runs `wp cron event run --due-now`, or install WooCommerce, whose Action Scheduler runs the work.
+A change is sent about 30 seconds after the last save (so several quick edits become one update), then SamoMind indexes it. A daily check-in and reconcile catches anything missed. WP-Cron only runs when the site gets visits, so on a quiet site set up a real cron job that runs `wp cron event run --due-now`, or install WooCommerce, whose Action Scheduler runs the work.
 
 = Will it slow down my site? =
 
@@ -83,10 +87,19 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Changelog ==
 
+= 0.2.0 =
+* Edits now reach the assistant: saves from any editor or page builder are queued, sent 30 seconds after the last save, and read fresh when sent.
+* Page builder support: Elementor, Beaver Builder, Divi, WPBakery, Avada; Bricks and Oxygen read from stored content. Pages that may be incomplete are listed on the Status page.
+* Ticking a post type again sends its items at once.
+* The Status page checks in when opened, so a disconnect made in the SamoMind dashboard shows immediately, and shows how many items are included on this site.
+
 = 0.1.0 =
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.2.0 =
+Fixes edits that did not reach the assistant, adds page builder support and re-sends a post type when you tick it again.
 
 = 0.1.0 =
 First release.
