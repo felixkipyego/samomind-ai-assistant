@@ -13,6 +13,7 @@ class WP_Post {
 	public $post_password     = '';
 	public $post_modified_gmt = '2026-11-01 00:00:00';
 	public $post_date_gmt     = '2026-11-01 00:00:00';
+	public $post_content      = '';
 
 	public function __construct( array $fields = array() ) {
 		foreach ( $fields as $name => $value ) {

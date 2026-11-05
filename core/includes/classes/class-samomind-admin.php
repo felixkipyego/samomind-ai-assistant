@@ -614,6 +614,62 @@ class SAMOMIND_Admin {
 	}
 
 	/**
+	 * The posts whose text may be incomplete, with the reason for each.
+	 *
+	 * @since   0.2.0
+	 * @return  void
+	 */
+	private function render_incomplete_card() {
+		$adapters = array();
+		foreach ( SAMOMIND()->builders->get_adapters() as $adapter ) {
+			$adapters[ $adapter->get_slug() ] = $adapter->get_label();
+		}
+
+		$rows = array();
+		foreach ( SAMOMIND()->builders->get_incomplete() as $post_id => $entry ) {
+			$post = get_post( (int) $post_id );
+			if ( ! $post || 'publish' !== $post->post_status ) {
+				continue;
+			}
+			$rows[ (int) $post_id ] = array( $post, $entry );
+		}
+		?>
+		<div class="samomind-card" id="samomind-incomplete">
+			<h2><?php esc_html_e( 'Pages that may be incomplete', 'samomind-ai-assistant' ); ?></h2>
+			<?php if ( empty( $rows ) ) : ?>
+				<p><?php esc_html_e( 'None. The text of every page the plugin has read looked complete.', 'samomind-ai-assistant' ); ?></p>
+			<?php else : ?>
+				<p>
+					<strong class="samomind-incomplete-count"><?php echo esc_html( number_format_i18n( count( $rows ) ) ); ?></strong>
+					<?php esc_html_e( 'pages were sent with text that may be missing something, because the plugin could not read their page builder layout fully. Open the page to check what the assistant can say about it. A developer can supply the text with the SAMOMIND/content/text filter.', 'samomind-ai-assistant' ); ?>
+				</p>
+				<table class="wp-list-table widefat fixed striped">
+					<thead>
+						<tr>
+							<th><?php esc_html_e( 'Page', 'samomind-ai-assistant' ); ?></th>
+							<th><?php esc_html_e( 'Built with', 'samomind-ai-assistant' ); ?></th>
+							<th><?php esc_html_e( 'Why', 'samomind-ai-assistant' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( array_slice( $rows, 0, 50, true ) as $post_id => $row ) : ?>
+							<tr>
+								<td>
+									<a href="<?php echo esc_url( (string) get_edit_post_link( $post_id ) ); ?>"><?php echo esc_html( get_the_title( $row[0] ) ); ?></a>
+									<code>#<?php echo esc_html( (string) $post_id ); ?></code>
+								</td>
+								<td><?php echo esc_html( isset( $adapters[ $row[1]['builder'] ] ) ? $adapters[ $row[1]['builder'] ] : $row[1]['builder'] ); ?></td>
+								<td><?php echo esc_html( implode( '; ', array_map( array( 'SAMOMIND_Builders', 'reason_label' ), $row[1]['reasons'] ) ) ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
 	 * Render the Status admin page.
 	 *
 	 * @since   0.1.0
@@ -784,6 +840,8 @@ class SAMOMIND_Admin {
 					<?php endif; ?>
 				</table>
 			</div>
+
+			<?php $this->render_incomplete_card(); ?>
 
 			<div class="samomind-card">
 				<h2><?php esc_html_e( 'Request log', 'samomind-ai-assistant' ); ?></h2>

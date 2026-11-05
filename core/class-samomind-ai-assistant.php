@@ -53,6 +53,15 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		public $log;
 
 		/**
+		 * SAMOMIND page builder adapters.
+		 *
+		 * @access  public
+		 * @since   0.2.0
+		 * @var     object|SAMOMIND_Builders
+		 */
+		public $builders;
+
+		/**
 		 * SAMOMIND content object.
 		 *
 		 * @access  public
@@ -130,6 +139,7 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 				self::$instance->helpers    = new SAMOMIND_Helpers();
 				self::$instance->settings   = new SAMOMIND_Settings();
 				self::$instance->log        = new SAMOMIND_Log();
+				self::$instance->builders   = new SAMOMIND_Builders();
 				self::$instance->content    = new SAMOMIND_Content();
 				self::$instance->scheduler  = new SAMOMIND_Scheduler();
 				self::$instance->connection = new SAMOMIND_Connection();
@@ -160,6 +170,12 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-settings.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-log.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-client.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/builders/interface-samomind-builder-adapter.php';
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/builders/class-samomind-builder-base.php';
+			foreach ( array( 'core', 'elementor', 'beaver', 'bricks', 'oxygen', 'divi', 'wpbakery', 'avada' ) as $samomind_builder ) {
+				require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/builders/class-samomind-builder-' . $samomind_builder . '.php';
+			}
+			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-builders.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-content.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-embed.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-scheduler.php';

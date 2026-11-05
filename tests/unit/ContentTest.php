@@ -27,6 +27,34 @@ class SAMOMIND_Counting_Content extends SAMOMIND_Content {
 	}
 }
 
+/**
+ * Content with a fixed collected post, to test get_document().
+ */
+class SAMOMIND_Doc_Content extends SAMOMIND_Content {
+
+	public $data = array();
+
+	public function is_eligible( $post ) {
+		return true;
+	}
+
+	public function collect( $post ) {
+		return $this->data;
+	}
+}
+
+/**
+ * Records what the quality check was told.
+ */
+class SAMOMIND_Recording_Builders {
+
+	public $noted = array();
+
+	public function note_quality( $post_id, $builder, array $reasons ) {
+		$this->noted[] = array( $post_id, $builder, $reasons );
+	}
+}
+
 class ContentTest extends SAMOMIND_TestCase {
 
 	/**
@@ -313,5 +341,61 @@ class ContentTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( 46, $content->count_included() );
 		$this->assertNull( $content->among_ids );
+	}
+
+	private function document_content( array $overrides = array() ) {
+		$content       = new SAMOMIND_Doc_Content();
+		$content->data = array_merge(
+			$this->page_data(),
+			array(
+				'builder'    => 'bricks',
+				'reasons'    => array( 'no_renderer' ),
+				'source_len' => 4000,
+				'content_html' => '',
+				'excerpt'    => '',
+			),
+			$overrides
+		);
+		Functions\when( 'get_post' )->alias(
+			function ( $id ) {
+				return new WP_Post( array( 'ID' => $id ) );
+			}
+		);
+		return $content;
+	}
+
+	public function test_a_site_developer_can_override_the_text_of_a_post() {
+		$recorder                        = new SAMOMIND_Recording_Builders();
+		$GLOBALS['samomind_test_plugin']->builders = $recorder;
+		Filters\expectApplied( 'SAMOMIND/content/text' )->once()->andReturnUsing(
+			function ( $text, $post ) {
+				return 42 === $post->ID ? 'Written by the site developer for the Bricks page, long enough to count.' : $text;
+			}
+		);
+
+		$document = $this->document_content()->get_document( 42, 200000 );
+
+		$this->assertSame( 'Written by the site developer for the Bricks page, long enough to count.', $document['text'] );
+		// The supplied text clears the "little text" flag.
+		$this->assertSame( array( array( 42, 'bricks', array( 'no_renderer' ) ) ), $recorder->noted );
+	}
+
+	public function test_an_empty_extraction_from_a_large_page_is_reported_as_little_text() {
+		$recorder                        = new SAMOMIND_Recording_Builders();
+		$GLOBALS['samomind_test_plugin']->builders = $recorder;
+
+		$document = $this->document_content()->get_document( 42, 200000 );
+
+		$this->assertSame( '', $document['text'] );
+		$this->assertSame( array( 'no_renderer', 'little_text' ), $recorder->noted[0][2] );
+	}
+
+	public function test_the_overridden_text_is_cut_to_the_api_limit() {
+		$GLOBALS['samomind_test_plugin']->builders = new SAMOMIND_Recording_Builders();
+		Filters\expectApplied( 'SAMOMIND/content/text' )->andReturn( str_repeat( 'x', 50 ) );
+
+		$document = $this->document_content()->get_document( 42, 10 );
+
+		$this->assertSame( 10, strlen( $document['text'] ) );
 	}
 }

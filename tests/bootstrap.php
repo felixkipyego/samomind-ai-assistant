@@ -21,6 +21,11 @@ require_once __DIR__ . '/stubs/class-wp-post.php';
 require_once __DIR__ . '/stubs/samomind-function.php';
 require_once __DIR__ . '/class-samomind-testcase.php';
 
+require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/builders/interface-samomind-builder-adapter.php';
+require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/builders/class-samomind-builder-base.php';
+foreach ( glob( SAMOMIND_PLUGIN_DIR . 'core/includes/classes/builders/class-samomind-builder-*.php' ) as $samomind_class_file ) {
+	require_once $samomind_class_file;
+}
 foreach ( glob( SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-*.php' ) as $samomind_class_file ) {
 	require_once $samomind_class_file;
 }

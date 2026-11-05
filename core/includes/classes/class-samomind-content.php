@@ -199,7 +199,29 @@ class SAMOMIND_Content {
 		if ( ! $this->is_eligible( $post ) ) {
 			return null;
 		}
-		return self::build_document( $this->collect( $post ), $max_text_chars );
+
+		$data     = $this->collect( $post );
+		$document = self::build_document( $data, $max_text_chars );
+
+		/**
+		 * Filter the text sent for a post, after extraction. Use it to supply
+		 * the text of a page the plugin cannot read, or to correct one.
+		 *
+		 * @since 0.2.0
+		 * @param string  $text  Extracted plain text.
+		 * @param WP_Post $post  The post.
+		 * @param array   $data  What was collected: builder (adapter slug), reasons.
+		 */
+		$text             = (string) apply_filters( 'SAMOMIND/content/text', $document['text'], $post, $data );
+		$document['text'] = self::truncate( $text, (int) $max_text_chars );
+
+		SAMOMIND()->builders->note_quality(
+			$post->ID,
+			$data['builder'],
+			SAMOMIND_Builders::quality_reasons( $data['reasons'], $document['text'], $data['source_len'] )
+		);
+
+		return $document;
 	}
 
 	/**
@@ -313,6 +335,8 @@ class SAMOMIND_Content {
 	 * @return  array
 	 */
 	public function collect( $post ) {
+		$extracted = SAMOMIND()->builders->extract( $post );
+
 		$data = array(
 			'id'           => (int) $post->ID,
 			'post_type'    => $post->post_type,
@@ -320,7 +344,10 @@ class SAMOMIND_Content {
 			'password'     => $post->post_password,
 			'url'          => (string) get_permalink( $post ),
 			'title'        => get_the_title( $post ),
-			'content_html' => $this->render_content( $post ),
+			'content_html' => $extracted['html'],
+			'builder'      => $extracted['builder'],
+			'reasons'      => $extracted['reasons'],
+			'source_len'   => $extracted['source_len'],
 			'excerpt'      => $post->post_excerpt,
 			'modified_gmt' => self::modified_gmt( $post ),
 			'terms'        => $this->get_term_names( $post ),
@@ -352,32 +379,6 @@ class SAMOMIND_Content {
 	 */
 	public static function modified_gmt( $post ) {
 		return ( '0000-00-00 00:00:00' === $post->post_modified_gmt ) ? $post->post_date_gmt : $post->post_modified_gmt;
-	}
-
-	/**
-	 * Run the_content filters for a post, so shortcodes and blocks render.
-	 *
-	 * @since   0.1.0
-	 * @param   WP_Post $item  Post.
-	 * @return  string
-	 */
-	private function render_content( $item ) {
-		global $post;
-
-		// Shortcodes and blocks read the global post while rendering.
-		$previous = $post;
-		$post     = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restored below.
-		setup_postdata( $item );
-
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- core filter, rendering as the theme would.
-		$html = (string) apply_filters( 'the_content', $item->post_content );
-
-		$post = $previous; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring the original.
-		if ( $previous instanceof WP_Post ) {
-			setup_postdata( $previous );
-		}
-
-		return $html;
 	}
 
 	/**
