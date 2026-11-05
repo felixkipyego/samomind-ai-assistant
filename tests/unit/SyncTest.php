@@ -198,6 +198,7 @@ class SyncTest extends SAMOMIND_TestCase {
 			}
 		);
 		Functions\when( 'wp_generate_uuid4' )->justReturn( 'run-0001' );
+		Functions\when( 'sanitize_text_field' )->returnArg( 1 );
 		Functions\when( 'wp_is_post_revision' )->justReturn( false );
 		Functions\when( 'wp_is_post_autosave' )->justReturn( false );
 
@@ -461,6 +462,66 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertSame( array( '/checkin' ), $this->endpoints() );
 		$this->assertFalse( SAMOMIND()->connection->is_connected() );
 		$this->assertSame( 'unknown_source', SAMOMIND()->connection->get_block()['code'] );
+	}
+
+	public function test_status_page_refresh_checks_in_once_a_minute() {
+		Functions\when( 'get_bloginfo' )->justReturn( '7.1' );
+		$counter = 0;
+		Functions\when( 'wp_generate_uuid4' )->alias(
+			function () use ( &$counter ) {
+				return 'uuid-' . ( ++$counter );
+			}
+		);
+		$this->client->responses = array( array( 'status' => 'active', 'checkin_interval_seconds' => 86400 ) );
+		$this->options['samomind_connection']['last_checkin_at'] = 1000;
+
+		$first  = SAMOMIND()->connection->refresh_status();
+		$second = SAMOMIND()->connection->refresh_status();
+
+		$this->assertSame( 'active', $first['status'] );
+		$this->assertNull( $second );
+		$this->assertSame( array( '/checkin' ), $this->endpoints() );
+		// It does not move the daily check-in, so the daily reconcile still runs.
+		$this->assertSame( 1000, SAMOMIND()->connection->get_state()['last_checkin_at'] );
+
+		// A minute later it checks in again, with a fresh key.
+		$this->options['samomind_connection']['status_checked_at'] = time() - 61;
+		SAMOMIND()->connection->refresh_status();
+		$this->assertSame( array( '/checkin', '/checkin' ), $this->endpoints() );
+		$this->assertNotSame( $this->client->calls[0]['key'], $this->client->calls[1]['key'] );
+	}
+
+	public function test_status_page_refresh_shows_a_dashboard_disconnect_and_never_connects() {
+		Functions\when( 'get_bloginfo' )->justReturn( '7.1' );
+		$this->client->responses = array( $this->error( 409, 'source_disconnected' ) );
+
+		$result = SAMOMIND()->connection->refresh_status();
+
+		$this->assertSame( 'source_disconnected', $result->get_error_code() );
+		$this->assertFalse( SAMOMIND()->connection->is_connected() );
+		$this->assertSame( 'Disconnected from the SamoMind dashboard.', SAMOMIND()->connection->get_block()['message'] );
+
+		// Not connected any more: loading the page again sends nothing.
+		$this->assertNull( SAMOMIND()->connection->refresh_status() );
+		$this->assertSame( array( '/checkin' ), $this->endpoints() );
+	}
+
+	public function test_status_page_refresh_handles_a_deleted_source() {
+		Functions\when( 'get_bloginfo' )->justReturn( '7.1' );
+		$this->client->responses = array( $this->error( 404, 'unknown_source' ) );
+
+		SAMOMIND()->connection->refresh_status();
+
+		$this->assertFalse( SAMOMIND()->connection->is_connected() );
+		$this->assertSame( 'unknown_source', SAMOMIND()->connection->get_block()['code'] );
+		$this->assertSame( array( '/checkin' ), $this->endpoints() );
+	}
+
+	public function test_status_page_refresh_stays_quiet_after_a_key_problem() {
+		$this->options['samomind_connection']['blocked'] = array( 'code' => 'key_revoked', 'message' => 'x', 'at' => 1 );
+
+		$this->assertNull( SAMOMIND()->connection->refresh_status() );
+		$this->assertSame( array(), $this->endpoints() );
 	}
 
 	public function test_unticking_a_type_queues_deletes_in_batches() {

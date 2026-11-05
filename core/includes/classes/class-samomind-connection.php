@@ -39,6 +39,13 @@ class SAMOMIND_Connection {
 	const FAILING_NOTICE_AFTER = 86400;
 
 	/**
+	 * Seconds between check-ins made by loading the Status page.
+	 *
+	 * @var int
+	 */
+	const STATUS_CHECK_INTERVAL = 60;
+
+	/**
 	 * Limits used until connect returns the server's own (contract 6).
 	 *
 	 * @var array
@@ -73,6 +80,7 @@ class SAMOMIND_Connection {
 				'last_error'         => '',
 				'blocked'            => array(),
 				'failing_since'      => 0,
+				'status_checked_at'  => 0,
 			)
 		);
 		$state['limits'] = wp_parse_args( (array) $state['limits'], self::DEFAULT_LIMITS );
@@ -390,9 +398,12 @@ class SAMOMIND_Connection {
 	 * @param   bool $manual  True for a button or CLI check-in (fresh key),
 	 *                        false for the scheduled one (key per hour, so a
 	 *                        WP-Cron re-run is not applied twice).
+	 * @param   bool $schedule  False to leave the last check-in time alone,
+	 *                          so a status refresh does not push the daily
+	 *                          check-in and reconcile back.
 	 * @return  array|WP_Error
 	 */
-	public function checkin( $manual ) {
+	public function checkin( $manual, $schedule = true ) {
 		if ( ! $this->is_connected() ) {
 			return new WP_Error( 'not_connected', __( 'This site is not connected.', 'samomind-ai-assistant' ) );
 		}
@@ -422,7 +433,7 @@ class SAMOMIND_Connection {
 
 		$versions = isset( $result['supported_api_versions'] ) ? array_map( 'strval', (array) $result['supported_api_versions'] ) : $state['supported_versions'];
 		$changes  = array(
-			'last_checkin_at'    => time(),
+			'last_checkin_at'    => $schedule ? time() : $state['last_checkin_at'],
 			'server_status'      => isset( $result['status'] ) ? sanitize_text_field( $result['status'] ) : $state['server_status'],
 			'checkin_interval'   => isset( $result['checkin_interval_seconds'] ) ? max( HOUR_IN_SECONDS, (int) $result['checkin_interval_seconds'] ) : $state['checkin_interval'],
 			'supported_versions' => $versions,
@@ -440,5 +451,33 @@ class SAMOMIND_Connection {
 		$this->update_state( $changes );
 
 		return $result;
+	}
+
+	/**
+	 * Check in for the Status page, so a disconnect made in the SamoMind
+	 * dashboard, or a deleted source, shows within a page load. At most
+	 * once a minute per site, never calls /connect, and does nothing when
+	 * the site is not connected or a bad key already paused it.
+	 *
+	 * @since   0.2.0
+	 * @return  array|WP_Error|null  Null when it did not check in.
+	 */
+	public function refresh_status() {
+		if ( ! $this->is_connected() ) {
+			return null;
+		}
+		$block = $this->get_block();
+		// A suspended tenant or disabled source can still check in (5.4), a bad key cannot.
+		if ( ! empty( $block['code'] ) && ! in_array( $block['code'], array( 'tenant_suspended', 'source_disabled' ), true ) ) {
+			return null;
+		}
+		$state = $this->get_state();
+		if ( time() - (int) $state['status_checked_at'] < self::STATUS_CHECK_INTERVAL ) {
+			return null;
+		}
+
+		// Stamp first, so a second page load during a slow request does not repeat it.
+		$this->update_state( array( 'status_checked_at' => time() ) );
+		return $this->checkin( true, false );
 	}
 }

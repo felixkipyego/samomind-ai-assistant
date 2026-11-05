@@ -624,6 +624,10 @@ class SAMOMIND_Admin {
 			return;
 		}
 
+		// A lightweight check-in (at most once a minute) so a disconnect made
+		// in the SamoMind dashboard shows now, not at the next background call.
+		SAMOMIND()->connection->refresh_status();
+
 		$helpers    = SAMOMIND()->helpers;
 		$connection = SAMOMIND()->connection;
 		$state      = $connection->get_state();
