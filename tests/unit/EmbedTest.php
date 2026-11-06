@@ -255,7 +255,7 @@ class EmbedTest extends SAMOMIND_TestCase {
 
 		new SAMOMIND_Embed();
 
-		foreach ( array( 'wphb_delay_js_exclusions', 'perfmatters_delay_js_exclusions', 'perfmatters_defer_js_exclusions', 'perfmatters_minify_js_exclusions', 'flying_press_exclude_from_minify:js' ) as $hook ) {
+		foreach ( array( 'wphb_delay_js_exclusions', 'perfmatters_delay_js_exclusions', 'perfmatters_defer_js_exclusions', 'perfmatters_minify_js_exclusions', 'flying_press_exclude_from_minify:js', 'flying_press_exclude_from_defer:js', 'flying_press_exclude_from_delay:js' ) as $hook ) {
 			$this->assertSame( 'exclude_widget_url', $hooks[ $hook ], $hook );
 		}
 		$this->assertSame( 'exclude_handle_from_hummingbird', $hooks['wphb_dont_combine_handles'] );

@@ -68,6 +68,8 @@ class SAMOMIND_Embed {
 		add_filter( 'perfmatters_defer_js_exclusions', array( $this, 'exclude_widget_url' ) );
 		add_filter( 'perfmatters_minify_js_exclusions', array( $this, 'exclude_widget_url' ) );
 		add_filter( 'flying_press_exclude_from_minify:js', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'flying_press_exclude_from_defer:js', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'flying_press_exclude_from_delay:js', array( $this, 'exclude_widget_url' ) );
 	}
 
 	/**
