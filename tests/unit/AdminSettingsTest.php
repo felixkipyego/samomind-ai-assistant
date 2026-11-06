@@ -44,7 +44,7 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 				$saved = array(
 					'samomind_api_base_url'  => 'https://api.samomind.com',
 					'samomind_key_id'        => '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10',
-					'samomind_embed_snippet' => '',
+					'samomind_site_key'      => 'pk_live_Jc3x9Qw2Lm8Vb5Nt0Zr7Yh4Kd1Sf6Ua-_Gp8eTqWcA',
 					'samomind_excluded_post_types' => array( 'retired_type', 'event' ),
 				);
 				return isset( $saved[ $name ] ) ? $saved[ $name ] : $default;
@@ -117,29 +117,77 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 		$this->assertSame( array( 'samomind_key_id' ), $this->errors );
 	}
 
-	public function test_bad_snippet_keeps_the_previous_one() {
-		$this->assertSame( '', $this->admin->sanitize_embed_snippet( '<script>alert(1)</script>' ) );
-		$this->assertSame( array( 'samomind_embed_snippet' ), $this->errors );
+	const GOOD_KEY = 'pk_live_Jc3x9Qw2Lm8Vb5Nt0Zr7Yh4Kd1Sf6Ua-_Gp8eTqWcA';
+
+	public function test_site_key_is_saved_trimmed() {
+		$new = 'pk_live_' . str_repeat( 'b', 30 );
+
+		$this->assertSame( $new, $this->admin->sanitize_site_key( "  $new \n" ) );
+		$this->assertSame( array(), $this->errors );
+	}
+
+	public function test_empty_site_key_clears_it() {
+		$this->assertSame( '', $this->admin->sanitize_site_key( '   ' ) );
+		$this->assertSame( array(), $this->errors );
+	}
+
+	/**
+	 * Red-proof: before the strict check, a key wrapped in markup was
+	 * cleaned by sanitize_text_field() and saved. It must be refused.
+	 *
+	 * @dataProvider markup_in_a_key
+	 */
+	public function test_site_key_with_markup_is_refused_and_the_previous_key_kept( $value ) {
+		$this->assertSame( self::GOOD_KEY, $this->admin->sanitize_site_key( $value ) );
+		$this->assertSame( array( 'samomind_site_key' ), $this->errors );
+	}
+
+	public function markup_in_a_key() {
+		$new = 'pk_live_' . str_repeat( 'b', 30 );
+		return array(
+			'script tag'          => array( '<script>alert(1)</script>' ),
+			'key inside a tag'    => array( "<script>$new</script>" ),
+			'full dashboard tag'  => array( '<script src="https://widget.samomind.com/widget.js" data-site-key="' . $new . '" async></script>' ),
+			'bold'                => array( "<b>$new</b>" ),
+			'quote breakout'      => array( $new . '" onload="alert(1)' ),
+			'not a key'           => array( 'hello' ),
+			'array'               => array( array( $new ) ),
+		);
+	}
+
+	public function test_site_key_message_is_escaped() {
+		$this->admin->sanitize_site_key( '<script>' );
+
+		$this->assertStringNotContainsString( '<', $this->messages['samomind_site_key'] );
+	}
+
+	public function test_widget_switch_is_on_only_for_a_ticked_box() {
+		$this->assertSame( '1', $this->admin->sanitize_widget_enabled( '1' ) );
+		$this->assertSame( '1', $this->admin->sanitize_widget_enabled( 'on' ) );
+		$this->assertSame( '0', $this->admin->sanitize_widget_enabled( '0' ) );
+		$this->assertSame( '0', $this->admin->sanitize_widget_enabled( '' ) );
+		$this->assertSame( '0', $this->admin->sanitize_widget_enabled( null ) );
+		$this->assertSame( '0', $this->admin->sanitize_widget_enabled( array( '1' ) ) );
 	}
 
 	public function test_settings_error_messages_are_escaped() {
-		// settings_errors() prints messages as HTML; the shape message quotes "<script>".
-		$this->admin->sanitize_embed_snippet( '<p>not a script</p>' );
 		$this->admin->sanitize_api_base_url( 'http://example.com' );
 		$this->admin->sanitize_key_id( 'nope' );
+		$this->admin->sanitize_site_key( 'nope' );
 
 		$this->assertCount( 3, $this->messages );
 		foreach ( $this->messages as $message ) {
 			$this->assertStringNotContainsString( '<', $message );
 		}
-		$this->assertStringContainsString( '&lt;script&gt;', $this->messages['samomind_embed_snippet'] );
 	}
 
-	public function test_good_snippet_is_saved() {
-		$snippet = '<script src="https://widget.samomind.com/widget.js" data-site-key="pk_live_abc" async></script>';
+	public function test_origin_comes_from_home_url_without_a_path() {
+		$helpers = new SAMOMIND_Helpers();
+		Functions\when( 'home_url' )->justReturn( 'https://Example.com/blog' );
+		$this->assertSame( 'https://example.com', $helpers->get_site_origin() );
 
-		$this->assertSame( $snippet, $this->admin->sanitize_embed_snippet( "\n" . $snippet . "\n" ) );
-		$this->assertSame( array(), $this->errors );
+		Functions\when( 'home_url' )->justReturn( 'http://localhost:8888' );
+		$this->assertSame( 'http://localhost:8888', $helpers->get_site_origin() );
 	}
 
 	public function test_checklist_is_stored_as_exclusions() {

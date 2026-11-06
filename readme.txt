@@ -1,10 +1,10 @@
 === SamoMind AI Assistant ===
 Contributors: softwareske
 Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
-Requires at least: 6.0
+Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -37,11 +37,17 @@ This plugin connects to the SamoMind API, a service of SoftwaresKe Ltd, to keep 
 * What and when: on Connect, the site address, "wordpress", and the plugin and WordPress versions; on Connect and "Sync now", the public content described above, in batches; when public content is published, changed or removed, that item or its id; once a day, a check-in (plugin and WordPress versions, last error) and the list of public item ids with their modified times; on Disconnect or uninstall, a disconnect request. Deactivating the plugin sends nothing.
 * Every request is signed with your ingest key. The secret itself is never sent.
 
-If you paste the chat widget snippet, visitors' browsers load the widget from `https://widget.samomind.com`, and the widget talks to the SamoMind API.
+**SamoMind chat widget (`https://widget.samomind.com`)**
+
+Only if an administrator turns on "Show the SamoMind chat widget on this site" and saves a site key. The plugin then loads one script, `https://widget.samomind.com/widget.js`, on the pages visitors see (never in the admin, the login page, feeds or REST responses).
+
+* What it is: the SamoMind chat widget, served by SamoMind from `widget.samomind.com`.
+* What is sent: every visitor's browser requests the script from `widget.samomind.com`, which sees the visitor's IP address, browser details and the page that requested it. When a visitor opens the chat, the widget sends the visitor's messages and the site key to the SamoMind API (`https://api.samomind.com` by default, or the API base URL set in the plugin).
+* When: on each page view while the widget is on. With the setting off, nothing is loaded and nothing is sent.
 
 Service: https://samomind.com
-<!-- TODO(7.6.d): Terms of service URL. No terms page exists yet; add the real link here before the WordPress.org submission. -->
-<!-- TODO(7.6.d): Privacy policy URL. No privacy page exists yet; add the real link here before the WordPress.org submission. -->
+Terms of service: https://samomind.com/terms-and-conditions/
+Privacy policy: https://samomind.com/privacy-policy/
 
 No other outbound requests are made. There is no telemetry.
 
@@ -52,7 +58,7 @@ No other outbound requests are made. There is no telemetry.
 3. In the SamoMind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret (the secret is shown only once).
 4. In WordPress, open SamoMind > Settings. Save the secret, then the key id. You can define `SAMOMIND_API_SECRET` in `wp-config.php` instead of saving the secret.
 5. Open SamoMind > Status and click Connect. The first sync starts in the background.
-6. Optional: paste the widget snippet from the dashboard's Widget screen into SamoMind > Settings > Embed snippet.
+6. Optional: to show the chat, add your site address to Allowed origins in the SamoMind dashboard, then in SamoMind > Settings > Chat widget tick "Show the SamoMind chat widget on this site" and enter the site key from the dashboard's Widget screen. There is nothing to paste into your theme or pages.
 
 == Frequently Asked Questions ==
 
@@ -74,7 +80,11 @@ A change is sent about 30 seconds after the last save (so several quick edits be
 
 = Will it slow down my site? =
 
-No. All syncing runs in the background in small batches, never while a visitor loads a page. The only thing added to the front end is the chat widget, and only if you paste its snippet.
+No. All syncing runs in the background in small batches, never while a visitor loads a page. The only thing added to the front end is the chat widget script, and only if you turn it on under SamoMind > Settings > Chat widget. It loads deferred in the footer.
+
+= The chat widget does not show. What do I check? =
+
+The setting is on and a site key is saved; your site address (shown under the setting) is in Allowed origins in the SamoMind dashboard; and you are looking at a page on the front end, not the admin or a preview. The plugin keeps WP Rocket, LiteSpeed Cache and Autoptimize from combining or minifying the widget script. With another optimisation plugin, exclude `widget.samomind.com` from its JavaScript combine, minify and delay options.
 
 = What happens when I deactivate, delete or disconnect? =
 
@@ -83,9 +93,15 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 == Screenshots ==
 
 1. SamoMind > Status: connection, sync progress and the request log.
-2. SamoMind > Settings: ingest key, the post types that are synced, and the widget embed snippet.
+2. SamoMind > Settings: ingest key, the post types that are synced, and the chat widget switch and site key.
 
 == Changelog ==
+
+= 0.3.0 =
+* The chat widget is now a setting: tick "Show the SamoMind chat widget on this site" and enter the site key. The plugin loads the widget script itself, so nothing is pasted into the site and security scanners no longer flag an inline script.
+* Sites that had pasted the old embed snippet keep their widget: the key is moved to the new setting on the first page load after the update.
+* The widget script is kept out of WP Rocket, LiteSpeed Cache and Autoptimize combine, minify and delay options.
+* Requires WordPress 6.4.
 
 = 0.2.0 =
 * Edits now reach the assistant: saves from any editor or page builder are queued, sent 30 seconds after the last save, and read fresh when sent.
@@ -97,6 +113,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+The chat widget is now a setting under SamoMind > Settings > Chat widget. If you pasted the old snippet, it is converted for you. Requires WordPress 6.4.
 
 = 0.2.0 =
 Fixes edits that did not reach the assistant, adds page builder support and re-sends a post type when you tick it again.

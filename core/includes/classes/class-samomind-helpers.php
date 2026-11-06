@@ -111,13 +111,50 @@ class SAMOMIND_Helpers {
 	}
 
 	/**
-	 * Get the stored widget embed snippet.
+	 * Whether the admin turned the chat widget on.
 	 *
-	 * @since   0.1.0
+	 * @since   0.3.0
+	 * @return  bool
+	 */
+	public function is_widget_enabled() {
+		return '1' === (string) get_option( 'samomind_widget_enabled', '0' );
+	}
+
+	/**
+	 * Get the saved site key, or an empty string when it is missing or
+	 * malformed (so a bad value in the database is never printed).
+	 *
+	 * @since   0.3.0
 	 * @return  string
 	 */
-	public function get_embed_snippet() {
-		return (string) get_option( 'samomind_embed_snippet', '' );
+	public function get_site_key() {
+		$key = get_option( 'samomind_site_key', '' );
+		return SAMOMIND_Embed::is_valid_site_key( $key ) ? $key : '';
+	}
+
+	/**
+	 * Whether the widget should load: switched on and a valid key saved.
+	 *
+	 * @since   0.3.0
+	 * @return  bool
+	 */
+	public function widget_is_active() {
+		return $this->is_widget_enabled() && '' !== $this->get_site_key();
+	}
+
+	/**
+	 * The site's origin (scheme, host and port, no path), as SamoMind's
+	 * "Allowed origins" list expects it.
+	 *
+	 * @since   0.3.0
+	 * @return  string
+	 */
+	public function get_site_origin() {
+		$parts = wp_parse_url( home_url() );
+		if ( ! is_array( $parts ) || empty( $parts['scheme'] ) || empty( $parts['host'] ) ) {
+			return '';
+		}
+		return strtolower( $parts['scheme'] ) . '://' . strtolower( $parts['host'] ) . ( isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '' );
 	}
 
 	/**

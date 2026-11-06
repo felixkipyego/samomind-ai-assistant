@@ -131,11 +131,22 @@ Another builder's storage meta key can be added with
 
 ## Chat widget
 
-Paste the snippet from the dashboard's **Widget** screen into
-**SamoMind > Settings > Embed snippet**. It prints in the footer of every
-front-end page. Only a single `<script>` tag from
-`https://widget.samomind.com` with `data-*` attributes and `async` or
-`defer` is accepted. Empty means off (the default).
+Under **SamoMind > Settings > Chat widget**, tick "Show the SamoMind chat
+widget on this site" and enter the site key from the dashboard's **Widget**
+screen. The plugin enqueues `https://widget.samomind.com/widget.js` in the
+footer with the `defer` strategy and adds the key as `data-site-key` through
+the `wp_script_attributes` filter, so there is no inline script and nothing
+to paste. It is off by default, and never loads in the admin, on the login
+page, in feeds, REST responses or previews. Add the site address shown under
+the setting to **Allowed origins** in the SamoMind dashboard first.
+
+The script is excluded from combine, minify and delay in WP Rocket
+(`rocket_exclude_js`, `rocket_exclude_defer_js`, `rocket_delay_js_exclusions`),
+LiteSpeed Cache (`litespeed_optimize_js_excludes`,
+`litespeed_optm_js_defer_exc`) and Autoptimize
+(`autoptimize_filter_js_exclude`), and its tag carries `data-no-optimize`,
+`data-noptimize` and `data-cfasync="false"`. For any other optimiser, exclude
+`widget.samomind.com` by hand.
 
 ## WP-CLI
 

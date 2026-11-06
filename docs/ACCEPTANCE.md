@@ -136,9 +136,11 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| Paste the dashboard's Widget snippet into SamoMind > Settings > Embed snippet, Save | saved without an error |
-| View any front-end page source | one `<script src="https://widget.samomind.com/widget.js" data-site-key=... data-base-url=... async>` before `</body>` |
-| Paste `<script>alert(1)</script>` instead | refused with a message; the previous snippet is kept |
+| Settings > Chat widget: tick "Show the SamoMind chat widget on this site", enter the dashboard's site key, Save | saved without an error; the note shows this site's address for Allowed origins |
+| View any front-end page source | one `<script src="https://widget.samomind.com/widget.js" defer data-site-key=... data-base-url=...>` near `</body>`, and no inline script from the plugin |
+| Enter `<script>alert(1)</script>` or `pk_live_x"><b>` as the site key | refused with a message; the previous key is kept |
+| Untick the box, Save; reload a page | no widget script in the source |
+| Open wp-admin, wp-login.php, a feed and `/wp-json/` | no widget script |
 
 - [ ] Done
 
@@ -159,7 +161,7 @@ And nothing at all for:
 |---|---|
 | SamoMind > Status > **Disconnect**, confirm | `/disconnect` 200 |
 | API response (5.5) | `state` `disconnected`; every document of the source is removed |
-| Status page | Not connected; settings (key id, secret, snippet) kept |
+| Status page | Not connected; settings (key id, secret, widget switch and site key) kept |
 | Dashboard | the site shows "disconnected" |
 | Edit a page | no request |
 | Connect again | `/connect` 200, a new full sync |

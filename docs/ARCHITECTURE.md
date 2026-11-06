@@ -41,7 +41,7 @@ differ, the contract wins.
 | Admin assets | `core/includes/assets/css/backend-styles.css`, `js/backend-scripts.js`, handles `otce-backend-*`, loaded only on screens whose id contains `otce` | same paths, handles `samomind-backend-*`, loaded only on screens whose id contains `samomind` |
 | CSS class prefix | `otce-` (`otce-admin-wrap`, `otce-card`) | `samomind-` |
 | Plugin action link | "Settings" link via `plugin_action_links_` + base | same, to the status page |
-| Front end output | shortcode class `OTCE_Shortcode` | `SAMOMIND_Embed` on `wp_footer` |
+| Front end output | shortcode class `OTCE_Shortcode` | `SAMOMIND_Embed`: `wp_enqueue_script` on `wp_enqueue_scripts` (A13) |
 | Outbound HTTP | `OTCE_Distance`: endpoint URLs as class constants, `wp_remote_get`, returns `array` or `WP_Error` | `SAMOMIND_Client`: path prefix as a class constant, `wp_remote_post`, returns `array` or `WP_Error` |
 | i18n | text domain `onsite-training-cost-estimator`, `load_plugin_textdomain` on `plugins_loaded`, `/languages` | `samomind-ai-assistant`, `/languages` holds the `.pot`; no `load_plugin_textdomain` call, because WordPress loads translations for a WordPress.org plugin itself since 4.6 and Plugin Check flags the call |
 | Docblocks | class docblock with `@package`, `@subpackage Classes/<Class>`, `@since`; method docblocks with `@since`, `@param`, `@return` | same |
@@ -89,7 +89,7 @@ samomind-ai-assistant/
         class-samomind-connection.php  connect, disconnect, checkin, connection state
         class-samomind-sync.php        queue, full sync, reconcile, worker (A1)
         class-samomind-scheduler.php   Action Scheduler or WP-Cron (A1)
-        class-samomind-embed.php       widget snippet sanitiser and footer output
+        class-samomind-embed.php       widget enqueue, script attributes, optimiser exclusions
         class-samomind-cli.php         WP-CLI commands (A7)
       assets/
         index.php
@@ -110,7 +110,7 @@ samomind-ai-assistant/
    `sync`, and finally `new SAMOMIND_Run()`, then fires
    `SAMOMIND/plugin_loaded`.
 3. `SAMOMIND_Run::add_hooks()` registers every WordPress hook: action link,
-   assets, the footer embed (`new SAMOMIND_Embed()`), the admin
+   assets, the widget loader (`new SAMOMIND_Embed()`), the admin
    (`new SAMOMIND_Admin()`), AJAX, post events, cron hooks and, under
    WP-CLI, the `samomind` command.
 
@@ -128,7 +128,8 @@ two read on every front-end request.
 | `samomind_api_base_url` | no | API base URL, default `https://api.samomind.com` |
 | `samomind_key_id` | no | ingest key id (UUID) |
 | `samomind_api_secret` | no | ingest secret; ignored when `SAMOMIND_API_SECRET` is defined |
-| `samomind_embed_snippet` | yes | validated widget `<script>` tag, empty by default |
+| `samomind_widget_enabled` | yes | `1` or `0`, chat widget on or off, default `0` |
+| `samomind_site_key` | yes | the widget site key (`pk_live_...`), empty by default; validated on save and again before use |
 | `samomind_excluded_post_types` | no | post types unticked on the settings page; an exclusion list, so a newly registered type is synced until unticked |
 | `samomind_connection` | no | source id, connected time, limits, check-in interval and time, last error, block state, failure start |
 | `samomind_sync` | no | full sync state and progress, reconcile state |
@@ -314,6 +315,37 @@ items it deleted) and `stale` (listed with a newer modified time than it
 holds). The plugin queues a push for each, replacing a delete still queued
 for the same id, and the push turns back into a delete at send time if the
 post stopped being eligible meanwhile.
+
+**A13. Chat widget.** The widget is a setting, not a pasted script: security
+scanners (Wordfence, Sucuri) flagged the pasted inline snippet. With
+`samomind_widget_enabled` on and a valid `samomind_site_key`,
+`SAMOMIND_Embed::enqueue_widget()` calls `wp_enqueue_script()` for
+`https://widget.samomind.com/widget.js` (handle `samomind-widget`, footer,
+`defer` strategy, no version). The loader reads `data-site-key` and
+`data-base-url` from its own tag (SamoMind `widget/loader/src/config.js`), so
+`add_widget_attributes()` adds both through `wp_script_attributes`, only for
+the tag whose id is `samomind-widget-js`. The base URL is the configured API
+base URL. Nothing is echoed. It never loads in wp-admin, AJAX, the login
+page, feeds, embeds, previews, the Customizer or REST/JSON requests.
+The contract has no endpoint that returns the site key (`/connect` and
+`/checkin` answer with `source_id`, interval, limits, state), and the
+ingest key is not a site key, so the key is typed in and validated against
+`pk_live_` + 20 to 128 URL-safe characters (what SamoMind's
+`generate_site_key()` produces); the value is checked as typed, never
+stripped of markup first. The key's origin must be in the dashboard's
+Allowed origins; the settings page shows the exact origin from
+`home_url()`. Optimisers: the script is excluded from WP Rocket
+(`rocket_exclude_js`, `rocket_exclude_defer_js`, `rocket_delay_js_exclusions`),
+LiteSpeed Cache (`litespeed_optimize_js_excludes`, `litespeed_optm_js_defer_exc`)
+and Autoptimize (`autoptimize_filter_js_exclude`), and the tag carries
+`data-no-optimize`, `data-noptimize` and `data-cfasync="false"`. The
+LiteSpeed and Autoptimize hooks were checked in their source; the WP Rocket
+names are from its documentation and not verified (its source is private).
+`wp_script_attributes` reaches enqueued scripts from WordPress 6.4, so the
+plugin requires 6.4. A site that pasted the 0.2.x snippet is migrated once
+on `init`: the key is read from the snippet, the widget is turned on and the
+old option is deleted.
+Why: the reference has no front-end script.
 
 ## 6. Request flows (contract section 5)
 
