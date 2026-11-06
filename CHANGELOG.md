@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.1 (2026-11-06)
+
+Step 7.6.f.
+
+- Fixed: keeps the chat widget working when SiteGround Speed Optimizer
+  combines JavaScript files. Combine copied `widget.js` into its own file
+  and removed our tag, so `data-site-key` and `data-base-url` were lost and
+  no chat showed. The script is now excluded from Speed Optimizer's combine
+  (by tag id and by URL) and from its defer option.
+
 ## 0.3.0 (2026-11-06)
 
 Step 7.6.e: the chat widget is a plugin setting, no pasted script.
