@@ -145,8 +145,10 @@ The script is excluded from combine, minify and delay in WP Rocket
 LiteSpeed Cache (`litespeed_optimize_js_excludes`,
 `litespeed_optm_js_defer_exc`) and Autoptimize
 (`autoptimize_filter_js_exclude`), and its tag carries `data-no-optimize`,
-`data-noptimize` and `data-cfasync="false"`. For any other optimiser, exclude
-`widget.samomind.com` by hand.
+`data-noptimize` and `data-cfasync="false"`. Since 0.3.2 it is also kept out of Hummingbird, Perfmatters and
+FlyingPress (minify only), and the tag carries `data-jetpack-boost="ignore"`
+and `nitro-exclude`. For any other optimiser, exclude `widget.samomind.com`
+by hand.
 
 ## WP-CLI
 

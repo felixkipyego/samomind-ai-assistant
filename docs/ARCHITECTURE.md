@@ -371,6 +371,21 @@ entries removed again (priority 999) the tag is gone and the combined file
 is 3.7 KB bigger and contains the loader's `data-site-key` string. Speed
 Optimizer's front-end features ran in wp-env without SiteGround hosting.
 Verified on softwareske.com: not yet.
+More optimisers (7.6.g). Every hook below was found in the plugin's
+source (free plugins) or its official documentation (paid plugins).
+"Run" means checked in wp-env with the plugin's JavaScript features on,
+logged-out request, jQuery enqueued so there is work to do.
+
+| Plugin | Version | Hook or attribute | Where | Status |
+|---|---|---|---|---|
+| Jetpack Boost | 4.8.2 | attribute `data-jetpack-boost="ignore"` (added in `add_widget_attributes()`) | `app/modules/optimizations/render-blocking-js/class-render-blocking-js.php:65` (value), `:91` (attribute name, filterable), `:462` (the lookahead that skips such tags). Its concatenate step already skips external URLs. | run. Red-proof: without the attribute Boost keeps one intact tag but moves it to the end of the page; the attributes are not lost. `jetpack_boost_render_blocking_js_exclude_handles` is not used: the plugin only registers a callback for it (`compatibility/jetpack.php:45`) and never applies it. |
+| Hummingbird | 4.0.0 | filter `wphb_delay_js_exclusions` (array, each entry is a pattern on the whole tag and, in minify, a quoted URL part, so the URL text works for both) | `core/modules/class-exclusions.php:636`; used at `core/modules/class-delayjs.php:342-358` | run, with membership stubbed (Delay JS needs a WPMU DEV membership, `core/class-utils.php:77`). Red-proof: without the entry the tag gets `type="wphb-delay-type"` and waits for user input. |
+| Hummingbird | 4.0.0 | filter `wphb_dont_combine_handles` (`$dont_combine, $handle, $type`: a yes/no answer, so we return true for our handle and keep an earlier true) | `core/modules/class-minify.php:1472` | unit-tested only. Its combine step reads files from disk, so an external script is not a case I could produce. |
+| Perfmatters | not checked | filters `perfmatters_delay_js_exclusions`, `perfmatters_defer_js_exclusions`, `perfmatters_minify_js_exclusions` (arrays) | https://perfmatters.io/docs/filters/ | documented, not run. The docs do not say what an entry is matched against; their examples are file names and fragments, so we add the URL. |
+| FlyingPress | not checked | filter `flying_press_exclude_from_minify:js` (array of keywords; matched as a partial, case-sensitive part of the URL) | https://docs.flyingpress.com/en/articles/11405981-exclude-files-from-javascript-minification | documented, not run. The defer and delay filters are not added: the filter names are not in the public docs (its changelog says they exist since 4.16.0), and its Delay page describes only the settings box. Until the names are confirmed, FlyingPress sites must add `widget.samomind.com` to its Delay and Defer exclusions. |
+| NitroPack | 1.20.4 | bare attribute `nitro-exclude` (`'nitro-exclude' => true` in `wp_script_attributes`) | the connector plugin puts it on its own tags: `functions.php:299`, `classes/WordPress/Scripts.php:74`, and builds one from an array the same way at `classes/Feature/AjaxShortcodes.php:170`. NitroPack optimises on its own servers, so what its service does with it is from third-party guides only. | documented in the connector's own use, not run (SaaS) |
+| W3 Total Cache | 2.11.0 | none needed | `Minify_Plugin.php:1428-1464`: an external script is only touched when it matches `minify.cache.files`, which is empty by default | run: minify and combine on, the page's local scripts went into three bundles with no widget code, our tag untouched, no delay. A site that lists the widget in `minify.cache.files` has to remove it. |
+
 Why: the reference has no front-end script.
 
 ## 6. Request flows (contract section 5)
