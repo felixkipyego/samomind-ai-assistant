@@ -19,7 +19,7 @@ class PluginHeaderTest extends SAMOMIND_TestCase {
 	public function test_header_declares_minimum_versions_and_licence() {
 		$main = file_get_contents( SAMOMIND_PLUGIN_DIR . 'samomind-ai-assistant.php' );
 
-		$this->assertMatchesRegularExpression( '/^ \* Requires at least: 6\.0$/m', $main );
+		$this->assertMatchesRegularExpression( '/^ \* Requires at least: 6\.4$/m', $main );
 		$this->assertMatchesRegularExpression( '/^ \* Requires PHP:\s+7\.4$/m', $main );
 		$this->assertMatchesRegularExpression( '/^ \* License:\s+GPL-2\.0-or-later$/m', $main );
 	}

@@ -164,10 +164,19 @@ class SAMOMIND_Admin {
 		);
 		register_setting(
 			self::SETTINGS_GROUP,
-			'samomind_embed_snippet',
+			'samomind_widget_enabled',
 			array(
 				'type'              => 'string',
-				'sanitize_callback' => array( $this, 'sanitize_embed_snippet' ),
+				'sanitize_callback' => array( $this, 'sanitize_widget_enabled' ),
+				'default'           => '0',
+			)
+		);
+		register_setting(
+			self::SETTINGS_GROUP,
+			'samomind_site_key',
+			array(
+				'type'              => 'string',
+				'sanitize_callback' => array( $this, 'sanitize_site_key' ),
 				'default'           => '',
 			)
 		);
@@ -248,21 +257,32 @@ class SAMOMIND_Admin {
 	}
 
 	/**
-	 * Sanitize the widget snippet with SAMOMIND_Embed::parse().
+	 * Sanitize the widget switch: "1" when ticked, otherwise "0".
 	 *
-	 * @since   0.1.0
+	 * @since   0.3.0
 	 * @param   mixed $value  Submitted value.
 	 * @return  string
 	 */
-	public function sanitize_embed_snippet( $value ) {
-		$value  = trim( (string) $value );
-		$result = SAMOMIND_Embed::parse( $value );
-		if ( is_wp_error( $result ) ) {
-			// settings_errors() prints messages as HTML, and this one quotes "<script>".
-			add_settings_error( self::SETTINGS_GROUP, 'samomind_embed_snippet', esc_html( $result->get_error_message() . ' ' . __( 'The previous snippet was kept.', 'samomind-ai-assistant' ) ) );
-			return SAMOMIND()->helpers->get_embed_snippet();
+	public function sanitize_widget_enabled( $value ) {
+		return in_array( $value, array( '1', 1, true, 'on' ), true ) ? '1' : '0';
+	}
+
+	/**
+	 * Sanitize the site key. The value must match the key format as typed;
+	 * it is never stripped of markup first, because that would turn
+	 * "<script>pk_live_...</script>" into something that passes.
+	 *
+	 * @since   0.3.0
+	 * @param   mixed $value  Submitted value.
+	 * @return  string
+	 */
+	public function sanitize_site_key( $value ) {
+		$value = is_string( $value ) ? trim( $value ) : $value;
+		if ( '' === $value || SAMOMIND_Embed::is_valid_site_key( $value ) ) {
+			return $value;
 		}
-		return $value;
+		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from the Widget screen of the SamoMind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
+		return SAMOMIND()->helpers->get_site_key();
 	}
 
 	/**
@@ -994,10 +1014,36 @@ class SAMOMIND_Admin {
 					<h2><?php esc_html_e( 'Chat widget', 'samomind-ai-assistant' ); ?></h2>
 					<table class="form-table" role="presentation">
 						<tr>
-							<th scope="row"><label for="samomind_embed_snippet"><?php esc_html_e( 'Embed snippet', 'samomind-ai-assistant' ); ?></label></th>
+							<th scope="row"><?php esc_html_e( 'Show the chat', 'samomind-ai-assistant' ); ?></th>
 							<td>
-								<textarea id="samomind_embed_snippet" name="samomind_embed_snippet" class="large-text code" rows="6" spellcheck="false"><?php echo esc_textarea( $helpers->get_embed_snippet() ); ?></textarea>
-								<p class="description"><?php esc_html_e( 'Paste the snippet from the Widget screen of the SamoMind dashboard to show the chat on every page. Leave empty to turn the widget off. Only a script tag from widget.samomind.com is accepted.', 'samomind-ai-assistant' ); ?></p>
+								<input type="hidden" name="samomind_widget_enabled" value="0">
+								<label>
+									<input type="checkbox" id="samomind_widget_enabled" name="samomind_widget_enabled" value="1"<?php checked( $helpers->is_widget_enabled() ); ?>>
+									<?php esc_html_e( 'Show the SamoMind chat widget on this site', 'samomind-ai-assistant' ); ?>
+								</label>
+								<p class="description">
+									<?php
+									echo wp_kses(
+										/* translators: %s: the site address, for example https://example.com */
+										sprintf( __( 'Before you turn this on, add <code>%s</code> to <strong>Allowed origins</strong> in the SamoMind dashboard. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
+										array(
+											'code'   => array(),
+											'strong' => array(),
+										)
+									);
+									?>
+								</p>
+								<?php if ( $helpers->is_widget_enabled() && '' === $helpers->get_site_key() ) : ?>
+									<p class="description"><strong><?php esc_html_e( 'The chat is not showing yet: save a site key below.', 'samomind-ai-assistant' ); ?></strong></p>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="samomind_site_key"><?php esc_html_e( 'Site key', 'samomind-ai-assistant' ); ?></label></th>
+							<td>
+								<input type="text" id="samomind_site_key" name="samomind_site_key" class="regular-text code" spellcheck="false" autocomplete="off"
+									value="<?php echo esc_attr( $helpers->get_site_key() ); ?>" placeholder="pk_live_...">
+								<p class="description"><?php esc_html_e( 'Copy the site key from the Widget screen of the SamoMind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>

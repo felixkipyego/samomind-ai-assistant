@@ -96,6 +96,8 @@ class UninstallTest extends SAMOMIND_TestCase {
 				'samomind_api_base_url',
 				'samomind_key_id',
 				'samomind_api_secret',
+				'samomind_widget_enabled',
+				'samomind_site_key',
 				'samomind_embed_snippet',
 				'samomind_excluded_post_types',
 				'samomind_incomplete',

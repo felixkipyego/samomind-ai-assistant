@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.0 (2026-11-06)
+
+Step 7.6.e: the chat widget is a plugin setting, no pasted script.
+
+- Changed: SamoMind > Settings > Chat widget has a switch ("Show the
+  SamoMind chat widget on this site", off by default) and a Site key field.
+  The plugin enqueues `https://widget.samomind.com/widget.js` in the footer
+  with the `defer` strategy and adds `data-site-key` and `data-base-url`
+  through `wp_script_attributes`. No inline script, so Wordfence and Sucuri
+  have nothing to flag. It never loads in wp-admin, the login page, feeds,
+  REST responses, embeds or previews.
+- Changed: the site key is checked against the `pk_live_` format as typed;
+  markup is refused, the previous key is kept.
+- New: the settings page shows the exact address to add to Allowed origins
+  in the SamoMind dashboard, computed from `home_url()`.
+- New: the script is excluded from combine, minify and delay in WP Rocket,
+  LiteSpeed Cache and Autoptimize.
+- Removed: the Embed snippet field. A site that had pasted a snippet is
+  migrated once (key moved, widget turned on, old option deleted).
+- Changed: requires WordPress 6.4 (`wp_script_attributes` reaches enqueued
+  scripts from 6.4).
+- readme.txt: External services names `widget.samomind.com`, what is sent,
+  and links the terms and privacy pages.
+
 ## 0.2.0 (2026-11-05)
 
 Fix round after the live acceptance run on a production site built with

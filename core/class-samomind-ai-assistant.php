@@ -199,7 +199,8 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			add_option( 'samomind_api_base_url', SAMOMIND_Helpers::DEFAULT_API_BASE_URL, '', false );
 			add_option( 'samomind_key_id', '', '', false );
 			add_option( 'samomind_api_secret', '', '', false );
-			add_option( 'samomind_embed_snippet', '', '', true );
+			add_option( 'samomind_widget_enabled', '0', '', true );
+			add_option( 'samomind_site_key', '', '', true );
 			add_option( 'samomind_excluded_post_types', array(), '', false );
 			$this->scheduler->ensure_hourly();
 		}

@@ -8,10 +8,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class SAMOMIND_Embed
  *
- * Validates the widget snippet pasted from the SamoMind dashboard and
- * prints it in the front-end footer. Only one shape is accepted: a single
- * empty <script> tag whose src is on the widget host, with data-*
- * attributes and async or defer. Anything else is refused.
+ * Loads the chat widget on the front end with wp_enqueue_script(), when the
+ * admin turned it on and saved a valid site key. The site key travels as a
+ * data attribute added through the wp_script_attributes filter, so the
+ * plugin never prints a script tag of its own and no inline code exists for
+ * a security scanner to flag.
  *
  * @package     SAMOMIND
  * @subpackage  Classes/SAMOMIND_Embed
@@ -20,11 +21,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SAMOMIND_Embed {
 
 	/**
-	 * The only host a widget script may load from.
+	 * Script handle. WordPress prints the tag with the id "samomind-widget-js".
 	 *
 	 * @var string
 	 */
-	const WIDGET_HOST = 'widget.samomind.com';
+	const HANDLE = 'samomind-widget';
+
+	/**
+	 * The only script this class loads.
+	 *
+	 * @var string
+	 */
+	const WIDGET_URL = 'https://widget.samomind.com/widget.js';
+
+	/**
+	 * Shape of a site key: "pk_live_" and the URL-safe token the SamoMind
+	 * backend generates (generate_site_key(), 256 bits, 43 characters).
+	 *
+	 * @var string
+	 */
+	const SITE_KEY_PATTERN = '/^pk_live_[A-Za-z0-9_-]{20,128}\z/';
 
 	/**
 	 * Our SAMOMIND_Embed constructor to run the plugin logic.
@@ -32,123 +48,164 @@ class SAMOMIND_Embed {
 	 * @since 0.1.0
 	 */
 	public function __construct() {
-		add_action( 'wp_footer', array( $this, 'print_snippet' ), 100 );
+		add_action( 'init', array( $this, 'migrate_pasted_snippet' ) );
+		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_widget' ) );
+		add_filter( 'wp_script_attributes', array( $this, 'add_widget_attributes' ) );
+
+		// Keep optimisation plugins from combining, minifying or delaying the loader.
+		add_filter( 'rocket_exclude_js', array( $this, 'exclude_from_rocket' ) );
+		add_filter( 'rocket_exclude_defer_js', array( $this, 'exclude_from_rocket' ) );
+		add_filter( 'rocket_delay_js_exclusions', array( $this, 'exclude_from_rocket' ) );
+		add_filter( 'litespeed_optimize_js_excludes', array( $this, 'exclude_from_litespeed' ) );
+		add_filter( 'litespeed_optm_js_defer_exc', array( $this, 'exclude_from_litespeed' ) );
+		add_filter( 'autoptimize_filter_js_exclude', array( $this, 'exclude_from_autoptimize' ) );
 	}
 
 	/**
-	 * Print the widget script tag, rebuilt from the validated attributes.
+	 * Whether a value is a well-formed site key. Markup, spaces and quotes
+	 * never match.
 	 *
-	 * @since   0.1.0
+	 * @since   0.3.0
+	 * @param   mixed $key  Candidate key.
+	 * @return  bool
+	 */
+	public static function is_valid_site_key( $key ) {
+		return is_string( $key ) && 1 === preg_match( self::SITE_KEY_PATTERN, $key );
+	}
+
+	/**
+	 * Whether the current request is a page a visitor sees. Admin screens,
+	 * AJAX, the login page, feeds, REST and JSON responses, embeds and
+	 * previews (block editor, Customizer) are not.
+	 *
+	 * @since   0.3.0
+	 * @return  bool
+	 */
+	public function is_visitor_page() {
+		if ( is_admin() || is_feed() || is_embed() || is_preview() || is_customize_preview() ) {
+			return false;
+		}
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			return false;
+		}
+		if ( wp_is_json_request() ) {
+			return false;
+		}
+		$page = isset( $GLOBALS['pagenow'] ) ? $GLOBALS['pagenow'] : '';
+		return 'wp-login.php' !== $page;
+	}
+
+	/**
+	 * Enqueue the widget script in the footer with the defer strategy.
+	 *
+	 * @since   0.3.0
 	 * @return  void
 	 */
-	public function print_snippet() {
-		if ( is_admin() ) {
+	public function enqueue_widget() {
+		if ( ! SAMOMIND()->helpers->widget_is_active() || ! $this->is_visitor_page() ) {
 			return;
 		}
-		$attributes = self::parse( SAMOMIND()->helpers->get_embed_snippet() );
-		if ( is_wp_error( $attributes ) || empty( $attributes ) ) {
-			return;
-		}
-		wp_print_script_tag( $attributes );
+		// No version: the loader has its own URL and cache rules, and "?ver=" would show the WordPress version.
+		wp_enqueue_script(
+			self::HANDLE,
+			self::WIDGET_URL,
+			array(),
+			null, // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- see above.
+			array(
+				'in_footer' => true,
+				'strategy'  => 'defer',
+			)
+		);
 	}
 
 	/**
-	 * Parse and validate a snippet.
+	 * Add the site key and API address the loader reads from its own script
+	 * tag, plus markers that optimisation plugins and Cloudflare honour.
 	 *
-	 * @since   0.1.0
-	 * @param   string $snippet  Pasted snippet.
-	 * @return  array|WP_Error  Attributes for wp_print_script_tag(), an empty
-	 *                          array for an empty snippet, or the reason it
-	 *                          was refused.
+	 * @since   0.3.0
+	 * @param   array $attributes  Script tag attributes.
+	 * @return  array
 	 */
-	public static function parse( $snippet ) {
-		$snippet = trim( (string) $snippet );
-		if ( '' === $snippet ) {
-			return array();
+	public function add_widget_attributes( $attributes ) {
+		if ( ! is_array( $attributes ) || ! isset( $attributes['id'] ) || self::HANDLE . '-js' !== $attributes['id'] ) {
+			return $attributes;
 		}
-
-		if ( ! preg_match( '#^<script\b([^<>]*)>\s*</script>$#i', $snippet, $tag ) ) {
-			return self::error( 'invalid_shape', __( 'Paste the single <script> tag exactly as the SamoMind dashboard shows it. Inline code and other tags are not accepted.', 'samomind-ai-assistant' ) );
+		$helpers = SAMOMIND()->helpers;
+		if ( ! $helpers->widget_is_active() ) {
+			return $attributes;
 		}
-
-		$pattern = '/\s+([a-zA-Z][a-zA-Z0-9_:.-]*)(?:\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s"\'=<>`]+)))?/';
-		preg_match_all( $pattern, $tag[1], $matches, PREG_SET_ORDER );
-
-		// Whatever the pattern did not consume is malformed markup.
-		if ( '' !== trim( (string) preg_replace( $pattern, '', $tag[1] ) ) ) {
-			return self::error( 'invalid_shape', __( 'The script tag has malformed attributes.', 'samomind-ai-assistant' ) );
-		}
-
-		$attributes = array();
-		foreach ( $matches as $match ) {
-			$name      = strtolower( $match[1] );
-			$has_value = false !== strpos( $match[0], '=' );
-			// Only one of the three value groups (double, single, unquoted) matched.
-			$value = ( isset( $match[2] ) ? $match[2] : '' ) . ( isset( $match[3] ) ? $match[3] : '' ) . ( isset( $match[4] ) ? $match[4] : '' );
-
-			if ( isset( $attributes[ $name ] ) ) {
-				/* translators: %s: attribute name */
-				return self::error( 'duplicate_attribute', sprintf( __( 'The attribute "%s" appears twice.', 'samomind-ai-assistant' ), $name ) );
-			}
-
-			if ( 'src' === $name ) {
-				if ( ! self::is_widget_url( $value ) ) {
-					/* translators: %s: widget host name */
-					return self::error( 'invalid_src', sprintf( __( 'The script must load from https://%s.', 'samomind-ai-assistant' ), self::WIDGET_HOST ) );
-				}
-				$attributes['src'] = $value;
-			} elseif ( 'async' === $name || 'defer' === $name ) {
-				if ( $has_value && '' !== $value && strtolower( $value ) !== $name ) {
-					/* translators: %s: attribute name */
-					return self::error( 'invalid_attribute', sprintf( __( 'The attribute "%s" takes no value.', 'samomind-ai-assistant' ), $name ) );
-				}
-				$attributes[ $name ] = true;
-			} elseif ( preg_match( '/^data-[a-z0-9]+(?:-[a-z0-9]+)*$/', $name ) ) {
-				$attributes[ $name ] = $value;
-			} else {
-				/* translators: %s: attribute name */
-				return self::error( 'attribute_not_allowed', sprintf( __( 'The attribute "%s" is not allowed. Only src, async, defer and data-* attributes are accepted.', 'samomind-ai-assistant' ), $name ) );
-			}
-		}
-
-		if ( ! isset( $attributes['src'] ) ) {
-			return self::error( 'invalid_src', __( 'The script tag has no src.', 'samomind-ai-assistant' ) );
-		}
-
+		$attributes['data-site-key']    = $helpers->get_site_key();
+		$attributes['data-base-url']    = $helpers->get_api_base_url();
+		$attributes['data-no-optimize'] = '1'; // LiteSpeed Cache, SiteGround Optimizer.
+		$attributes['data-noptimize']   = '1'; // Autoptimize.
+		$attributes['data-cfasync']     = 'false'; // Cloudflare Rocket Loader.
 		return $attributes;
 	}
 
 	/**
-	 * Whether a URL is an https URL on the widget host, with no user,
-	 * password or port.
+	 * WP Rocket: exclusion patterns are matched against script URLs.
 	 *
-	 * @since   0.1.0
-	 * @param   string $url  URL.
-	 * @return  bool
+	 * @since   0.3.0
+	 * @param   mixed $excluded  Patterns.
+	 * @return  array
 	 */
-	public static function is_widget_url( $url ) {
-		if ( preg_match( '/[\s\\\\]/', $url ) ) {
-			return false;
-		}
-		$parts = wp_parse_url( $url );
-		return is_array( $parts )
-			&& isset( $parts['scheme'], $parts['host'] )
-			&& 'https' === strtolower( $parts['scheme'] )
-			&& self::WIDGET_HOST === strtolower( $parts['host'] )
-			&& ! isset( $parts['user'] )
-			&& ! isset( $parts['pass'] )
-			&& ! isset( $parts['port'] );
+	public function exclude_from_rocket( $excluded ) {
+		$excluded   = is_array( $excluded ) ? $excluded : array();
+		$excluded[] = 'widget.samomind.com/widget.js';
+		return $excluded;
 	}
 
 	/**
-	 * Build a refusal.
+	 * LiteSpeed Cache: a list of URL fragments.
 	 *
-	 * @since   0.1.0
-	 * @param   string $code     Code.
-	 * @param   string $message  Message shown to the admin.
-	 * @return  WP_Error
+	 * @since   0.3.0
+	 * @param   mixed $excluded  Fragments.
+	 * @return  array
 	 */
-	private static function error( $code, $message ) {
-		return new WP_Error( $code, $message );
+	public function exclude_from_litespeed( $excluded ) {
+		$excluded   = is_array( $excluded ) ? $excluded : array();
+		$excluded[] = 'widget.samomind.com';
+		return $excluded;
+	}
+
+	/**
+	 * Autoptimize: a comma separated string, or an array keyed by fragment.
+	 *
+	 * @since   0.3.0
+	 * @param   mixed $excluded  Exclusions.
+	 * @return  mixed
+	 */
+	public function exclude_from_autoptimize( $excluded ) {
+		if ( is_array( $excluded ) ) {
+			$excluded['widget.samomind.com'] = '';
+			return $excluded;
+		}
+		$excluded = trim( (string) $excluded );
+		return ( '' === $excluded ? '' : $excluded . ', ' ) . 'widget.samomind.com';
+	}
+
+	/**
+	 * One time: a site that pasted the old embed snippet keeps its widget.
+	 * The site key is read from the snippet, the setting is turned on, and
+	 * the snippet option is deleted. A snippet without a usable key is just
+	 * deleted.
+	 *
+	 * @since   0.3.0
+	 * @return  void
+	 */
+	public function migrate_pasted_snippet() {
+		$snippet = get_option( 'samomind_embed_snippet', false );
+		if ( false === $snippet ) {
+			return;
+		}
+		$key = '';
+		if ( preg_match( '/data-site-key\s*=\s*["\']?([A-Za-z0-9_-]+)/', (string) $snippet, $match ) && self::is_valid_site_key( $match[1] ) ) {
+			$key = $match[1];
+		}
+		if ( '' !== $key && '' === SAMOMIND()->helpers->get_site_key() ) {
+			update_option( 'samomind_site_key', $key );
+			update_option( 'samomind_widget_enabled', '1' );
+		}
+		delete_option( 'samomind_embed_snippet' );
 	}
 }
