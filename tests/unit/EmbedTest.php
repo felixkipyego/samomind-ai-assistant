@@ -221,6 +221,31 @@ class EmbedTest extends SAMOMIND_TestCase {
 		$this->assertSame( array( 'a' => '', 'widget.samomind.com' => '' ), $this->embed->exclude_from_autoptimize( array( 'a' => '' ) ) );
 	}
 
+	public function test_siteground_exclusions_add_to_the_existing_lists() {
+		$this->assertSame( array( 'scripts.sirv.com', 'widget.samomind.com/widget.js' ), $this->embed->exclude_from_siteground( array( 'scripts.sirv.com' ) ) );
+		$this->assertSame( array( 'widget.samomind.com/widget.js' ), $this->embed->exclude_from_siteground( null ) );
+		$this->assertSame( array( 'other-js', 'samomind-widget-js' ), $this->embed->exclude_id_from_siteground( array( 'other-js' ) ) );
+		$this->assertSame( array( 'samomind-widget-js' ), $this->embed->exclude_id_from_siteground( '' ) );
+		$this->assertSame( array( 'jquery', 'samomind-widget' ), $this->embed->exclude_handle_from_siteground( array( 'jquery' ) ) );
+		$this->assertSame( array( 'samomind-widget' ), $this->embed->exclude_handle_from_siteground( false ) );
+	}
+
+	public function test_siteground_filters_are_registered() {
+		$hooks = array();
+		Functions\when( 'add_filter' )->alias(
+			function ( $hook, $callback ) use ( &$hooks ) {
+				$hooks[ $hook ] = $callback[1];
+				return true;
+			}
+		);
+
+		new SAMOMIND_Embed();
+
+		$this->assertSame( 'exclude_id_from_siteground', $hooks['sgo_javascript_combine_exclude_ids'] );
+		$this->assertSame( 'exclude_from_siteground', $hooks['sgo_javascript_combine_excluded_external_paths'] );
+		$this->assertSame( 'exclude_handle_from_siteground', $hooks['sgo_js_async_exclude'] );
+	}
+
 	/**
 	 * @dataProvider good_keys
 	 */

@@ -59,6 +59,9 @@ class SAMOMIND_Embed {
 		add_filter( 'litespeed_optimize_js_excludes', array( $this, 'exclude_from_litespeed' ) );
 		add_filter( 'litespeed_optm_js_defer_exc', array( $this, 'exclude_from_litespeed' ) );
 		add_filter( 'autoptimize_filter_js_exclude', array( $this, 'exclude_from_autoptimize' ) );
+		add_filter( 'sgo_javascript_combine_exclude_ids', array( $this, 'exclude_id_from_siteground' ) );
+		add_filter( 'sgo_javascript_combine_excluded_external_paths', array( $this, 'exclude_from_siteground' ) );
+		add_filter( 'sgo_js_async_exclude', array( $this, 'exclude_handle_from_siteground' ) );
 	}
 
 	/**
@@ -182,6 +185,47 @@ class SAMOMIND_Embed {
 		}
 		$excluded = trim( (string) $excluded );
 		return ( '' === $excluded ? '' : $excluded . ', ' ) . 'widget.samomind.com';
+	}
+
+	/**
+	 * SiteGround Speed Optimizer, combine: external scripts are matched by a
+	 * fragment of their URL. A combined file would copy the loader and drop
+	 * our tag with its data attributes.
+	 *
+	 * @since   0.3.1
+	 * @param   mixed $excluded  URL fragments.
+	 * @return  array
+	 */
+	public function exclude_from_siteground( $excluded ) {
+		$excluded   = is_array( $excluded ) ? $excluded : array();
+		$excluded[] = 'widget.samomind.com/widget.js';
+		return $excluded;
+	}
+
+	/**
+	 * SiteGround Speed Optimizer, combine: script tag ids that are left alone.
+	 *
+	 * @since   0.3.1
+	 * @param   mixed $excluded  Tag ids.
+	 * @return  array
+	 */
+	public function exclude_id_from_siteground( $excluded ) {
+		$excluded   = is_array( $excluded ) ? $excluded : array();
+		$excluded[] = self::HANDLE . '-js';
+		return $excluded;
+	}
+
+	/**
+	 * SiteGround Speed Optimizer, defer: script handles it leaves alone.
+	 *
+	 * @since   0.3.1
+	 * @param   mixed $excluded  Handles.
+	 * @return  array
+	 */
+	public function exclude_handle_from_siteground( $excluded ) {
+		$excluded   = is_array( $excluded ) ? $excluded : array();
+		$excluded[] = self::HANDLE;
+		return $excluded;
 	}
 
 	/**
