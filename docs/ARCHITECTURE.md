@@ -345,6 +345,32 @@ names are from its documentation and not verified (its source is private).
 plugin requires 6.4. A site that pasted the 0.2.x snippet is migrated once
 on `init`: the key is read from the snippet, the widget is turned on and the
 old option is deleted.
+
+SiteGround Speed Optimizer (`sg-cachepress` 7.8.6, read in source,
+7.6.f). Its JavaScript features are Combine, Minify and Defer
+(`siteground_optimizer_combine_javascript`, `_optimize_javascript`,
+`_optimize_javascript_async`); it has no delay or load-on-interaction
+feature. Combine copied our `widget.js` into
+`siteground-optimizer-combined-js-<hash>.js` and removed our tag, which lost
+the data attributes (found on softwareske.com, 0.3.0). Hooks:
+
+| Hook | File:line | Used |
+|---|---|---|
+| `sgo_javascript_combine_exclude_ids` | `core/Combinator/Js_Combinator.php:741` | yes, adds `samomind-widget-js` (the tag id, checked per tag in `parse()` before the script is read) |
+| `sgo_javascript_combine_excluded_external_paths` | `core/Combinator/Js_Combinator.php:894` | yes, adds `widget.samomind.com/widget.js` (substring of the src; this is the only list `is_excluded()` reads for an external script) |
+| `sgo_js_async_exclude` | `core/Front_End_Optimization/Front_End_Optimization.php:226` | yes, adds the handle `samomind-widget`; without it Speed Optimizer adds a second `defer` (harmless) |
+| `sgo_javascript_combine_exclude` (handles) | `core/Combinator/Js_Combinator.php:646` | no: the handles become `excluded_urls`, which only the internal branch of `is_excluded()` (line 903) reads, so it does nothing for an external script |
+| `sgo_js_minify_exclude` (handles) | `core/Minifier/Minifier.php:145` | no: `minify_scripts()` skips every external source (the host check just below it), so Minify never touches the widget |
+
+Each filter adds to the list it receives. Verified in wp-env (WordPress
+7.1.4, Speed Optimizer 7.8.6, Combine, Minify and Defer on, logged-out
+request, jQuery enqueued so the combiner has work): with the exclusions the
+page has one `<script id="samomind-widget-js" defer ... data-site-key
+data-base-url>` and the combined file holds no widget code; with the three
+entries removed again (priority 999) the tag is gone and the combined file
+is 3.7 KB bigger and contains the loader's `data-site-key` string. Speed
+Optimizer's front-end features ran in wp-env without SiteGround hosting.
+Verified on softwareske.com: not yet.
 Why: the reference has no front-end script.
 
 ## 6. Request flows (contract section 5)

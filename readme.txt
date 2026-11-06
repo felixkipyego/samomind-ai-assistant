@@ -4,7 +4,7 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.0
+Stable tag: 0.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -84,7 +84,7 @@ No. All syncing runs in the background in small batches, never while a visitor l
 
 = The chat widget does not show. What do I check? =
 
-The setting is on and a site key is saved; your site address (shown under the setting) is in Allowed origins in the SamoMind dashboard; and you are looking at a page on the front end, not the admin or a preview. The plugin keeps WP Rocket, LiteSpeed Cache and Autoptimize from combining or minifying the widget script. With another optimisation plugin, exclude `widget.samomind.com` from its JavaScript combine, minify and delay options.
+The setting is on and a site key is saved; your site address (shown under the setting) is in Allowed origins in the SamoMind dashboard; and you are looking at a page on the front end, not the admin or a preview. The plugin keeps WP Rocket, LiteSpeed Cache, Autoptimize and SiteGround Speed Optimizer from combining or minifying the widget script. With another optimisation plugin, exclude `widget.samomind.com` from its JavaScript combine, minify and delay options.
 
 = What happens when I deactivate, delete or disconnect? =
 
@@ -96,6 +96,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 2. SamoMind > Settings: ingest key, the post types that are synced, and the chat widget switch and site key.
 
 == Changelog ==
+
+= 0.3.1 =
+* Keeps the chat widget working when SiteGround Speed Optimizer combines JavaScript files.
 
 = 0.3.0 =
 * The chat widget is now a setting: tick "Show the SamoMind chat widget on this site" and enter the site key. The plugin loads the widget script itself, so nothing is pasted into the site and security scanners no longer flag an inline script.
@@ -113,6 +116,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.3.1 =
+Fixes the chat widget disappearing on sites where SiteGround Speed Optimizer combines JavaScript files.
 
 = 0.3.0 =
 The chat widget is now a setting under SamoMind > Settings > Chat widget. If you pasted the old snippet, it is converted for you. Requires WordPress 6.4.
