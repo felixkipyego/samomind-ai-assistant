@@ -187,6 +187,8 @@ class EmbedTest extends SAMOMIND_TestCase {
 		$this->assertSame( '1', $attributes['data-no-optimize'] );
 		$this->assertSame( '1', $attributes['data-noptimize'] );
 		$this->assertSame( 'false', $attributes['data-cfasync'] );
+		$this->assertSame( 'ignore', $attributes['data-jetpack-boost'] );
+		$this->assertTrue( $attributes['nitro-exclude'] );
 
 		$other = array(
 			'src' => 'https://example.com/other.js',
@@ -228,6 +230,35 @@ class EmbedTest extends SAMOMIND_TestCase {
 		$this->assertSame( array( 'samomind-widget-js' ), $this->embed->exclude_id_from_siteground( '' ) );
 		$this->assertSame( array( 'jquery', 'samomind-widget' ), $this->embed->exclude_handle_from_siteground( array( 'jquery' ) ) );
 		$this->assertSame( array( 'samomind-widget' ), $this->embed->exclude_handle_from_siteground( false ) );
+	}
+
+	public function test_url_exclusions_add_to_the_existing_lists() {
+		$this->assertSame( array( 'jquery.min.js', 'widget.samomind.com/widget.js' ), $this->embed->exclude_widget_url( array( 'jquery.min.js' ) ) );
+		$this->assertSame( array( 'widget.samomind.com/widget.js' ), $this->embed->exclude_widget_url( null ) );
+	}
+
+	public function test_hummingbird_combine_answer_is_kept_or_set_for_our_handle() {
+		$this->assertTrue( $this->embed->exclude_handle_from_hummingbird( false, 'samomind-widget' ) );
+		$this->assertTrue( $this->embed->exclude_handle_from_hummingbird( true, 'samomind-widget' ) );
+		$this->assertFalse( $this->embed->exclude_handle_from_hummingbird( false, 'jquery' ) );
+		$this->assertTrue( $this->embed->exclude_handle_from_hummingbird( true, 'jquery' ) );
+	}
+
+	public function test_optimiser_filters_are_registered() {
+		$hooks = array();
+		Functions\when( 'add_filter' )->alias(
+			function ( $hook, $callback ) use ( &$hooks ) {
+				$hooks[ $hook ] = $callback[1];
+				return true;
+			}
+		);
+
+		new SAMOMIND_Embed();
+
+		foreach ( array( 'wphb_delay_js_exclusions', 'perfmatters_delay_js_exclusions', 'perfmatters_defer_js_exclusions', 'perfmatters_minify_js_exclusions', 'flying_press_exclude_from_minify:js', 'flying_press_exclude_from_defer:js', 'flying_press_exclude_from_delay:js' ) as $hook ) {
+			$this->assertSame( 'exclude_widget_url', $hooks[ $hook ], $hook );
+		}
+		$this->assertSame( 'exclude_handle_from_hummingbird', $hooks['wphb_dont_combine_handles'] );
 	}
 
 	public function test_siteground_filters_are_registered() {

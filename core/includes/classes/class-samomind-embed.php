@@ -62,6 +62,14 @@ class SAMOMIND_Embed {
 		add_filter( 'sgo_javascript_combine_exclude_ids', array( $this, 'exclude_id_from_siteground' ) );
 		add_filter( 'sgo_javascript_combine_excluded_external_paths', array( $this, 'exclude_from_siteground' ) );
 		add_filter( 'sgo_js_async_exclude', array( $this, 'exclude_handle_from_siteground' ) );
+		add_filter( 'wphb_delay_js_exclusions', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'wphb_dont_combine_handles', array( $this, 'exclude_handle_from_hummingbird' ), 10, 2 );
+		add_filter( 'perfmatters_delay_js_exclusions', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'perfmatters_defer_js_exclusions', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'perfmatters_minify_js_exclusions', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'flying_press_exclude_from_minify:js', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'flying_press_exclude_from_defer:js', array( $this, 'exclude_widget_url' ) );
+		add_filter( 'flying_press_exclude_from_delay:js', array( $this, 'exclude_widget_url' ) );
 	}
 
 	/**
@@ -137,11 +145,13 @@ class SAMOMIND_Embed {
 		if ( ! $helpers->widget_is_active() ) {
 			return $attributes;
 		}
-		$attributes['data-site-key']    = $helpers->get_site_key();
-		$attributes['data-base-url']    = $helpers->get_api_base_url();
-		$attributes['data-no-optimize'] = '1'; // LiteSpeed Cache, SiteGround Optimizer.
-		$attributes['data-noptimize']   = '1'; // Autoptimize.
-		$attributes['data-cfasync']     = 'false'; // Cloudflare Rocket Loader.
+		$attributes['data-site-key']      = $helpers->get_site_key();
+		$attributes['data-base-url']      = $helpers->get_api_base_url();
+		$attributes['data-no-optimize']   = '1'; // LiteSpeed Cache, SiteGround Optimizer.
+		$attributes['data-noptimize']     = '1'; // Autoptimize.
+		$attributes['data-cfasync']       = 'false'; // Cloudflare Rocket Loader.
+		$attributes['data-jetpack-boost'] = 'ignore'; // Jetpack Boost.
+		$attributes['nitro-exclude']      = true; // NitroPack, a bare attribute.
 		return $attributes;
 	}
 
@@ -226,6 +236,34 @@ class SAMOMIND_Embed {
 		$excluded   = is_array( $excluded ) ? $excluded : array();
 		$excluded[] = self::HANDLE;
 		return $excluded;
+	}
+
+	/**
+	 * Hummingbird, Perfmatters and FlyingPress: a list of URL fragments
+	 * (Hummingbird also uses each entry as a pattern on the whole tag, where
+	 * this text matches itself).
+	 *
+	 * @since   0.3.2
+	 * @param   mixed $excluded  Fragments.
+	 * @return  array
+	 */
+	public function exclude_widget_url( $excluded ) {
+		$excluded   = is_array( $excluded ) ? $excluded : array();
+		$excluded[] = 'widget.samomind.com/widget.js';
+		return $excluded;
+	}
+
+	/**
+	 * Hummingbird, combine: the filter answers "do not combine this handle",
+	 * so an earlier "yes" stays a yes.
+	 *
+	 * @since   0.3.2
+	 * @param   mixed  $dont_combine  Answer so far.
+	 * @param   string $handle        Script or style handle.
+	 * @return  mixed
+	 */
+	public function exclude_handle_from_hummingbird( $dont_combine, $handle = '' ) {
+		return self::HANDLE === $handle ? true : $dont_combine;
 	}
 
 	/**
