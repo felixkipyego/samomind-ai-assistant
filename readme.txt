@@ -84,7 +84,7 @@ No. All syncing runs in the background in small batches, never while a visitor l
 
 = The chat widget does not show. What do I check? =
 
-The setting is on and a site key is saved; your site address (shown under the setting) is in Allowed origins in the SamoMind dashboard; and you are looking at a page on the front end, not the admin or a preview. The plugin keeps WP Rocket, LiteSpeed Cache, Autoptimize, SiteGround Speed Optimizer, Jetpack Boost, Hummingbird, Perfmatters, FlyingPress and NitroPack from combining, minifying, deferring or delaying the widget script. W3 Total Cache leaves the script alone unless you list it under its minify external files. With any other optimisation plugin, exclude `widget.samomind.com` from its JavaScript combine, minify, defer and delay options.
+The setting is on and a site key is saved; your site address (shown under the setting) is in Allowed origins in the SamoMind dashboard; and you are looking at a page on the front end, not the admin or a preview. The plugin keeps WP Rocket, LiteSpeed Cache, Autoptimize, SiteGround Speed Optimizer, Jetpack Boost, Hummingbird, Perfmatters and NitroPack from combining, minifying, deferring or delaying the widget script, and FlyingPress from minifying it. If you use FlyingPress, also add `widget.samomind.com` to its Delay JavaScript and Defer JavaScript exclusions. W3 Total Cache leaves the script alone unless you list it under its minify external files. With any other optimisation plugin, exclude `widget.samomind.com` from its JavaScript combine, minify, defer and delay options.
 
 = What happens when I deactivate, delete or disconnect? =
 
@@ -121,7 +121,7 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 == Upgrade Notice ==
 
 = 0.3.2 =
-Keeps the chat widget working with more optimisation plugins.
+Keeps the chat widget working with more optimisation plugins. If you use FlyingPress, also add widget.samomind.com to its Delay JavaScript and Defer JavaScript exclusions.
 
 = 0.3.1 =
 Fixes the chat widget disappearing on sites where SiteGround Speed Optimizer combines JavaScript files.
