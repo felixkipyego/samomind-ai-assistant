@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.2 (2026-11-07)
+
+Step 7.6.g.
+
+- Fixed: keeps the chat widget working with Jetpack Boost, Hummingbird,
+  Perfmatters, FlyingPress and NitroPack optimisation. The script is added
+  to Hummingbird's delay exclusions and its combine answer, Perfmatters'
+  delay, defer and minify exclusions and FlyingPress' minify exclusions, and
+  the tag carries `data-jetpack-boost="ignore"` and `nitro-exclude`.
+- Known gap: FlyingPress' defer and delay filters are not in its public
+  docs, so on FlyingPress add `widget.samomind.com` to its Delay JavaScript
+  and Defer exclusions.
+- W3 Total Cache needs no change: it only touches an external script that is
+  listed under its minify external files.
+
 ## 0.3.1 (2026-11-06)
 
 Step 7.6.f.

@@ -4,7 +4,7 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.1
+Stable tag: 0.3.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -97,6 +97,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Changelog ==
 
+= 0.3.2 =
+* Keeps the chat widget working with Jetpack Boost, Hummingbird, Perfmatters, FlyingPress and NitroPack optimisation.
+
 = 0.3.1 =
 * Keeps the chat widget working when SiteGround Speed Optimizer combines JavaScript files.
 
@@ -116,6 +119,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.3.2 =
+Keeps the chat widget working with more optimisation plugins. On FlyingPress, also add widget.samomind.com to its Delay JavaScript and Defer exclusions.
 
 = 0.3.1 =
 Fixes the chat widget disappearing on sites where SiteGround Speed Optimizer combines JavaScript files.
