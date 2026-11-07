@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.3 (2026-11-07)
+
+Step 7.6.h.
+
+- Changed: new installs now sync only posts, pages and WooCommerce products by
+  default; other content types can be ticked in Settings. Existing sites keep
+  their current selection.
+- The selection is now stored as a list of ticked types (`samomind_post_types`)
+  instead of a list of unticked ones, so a type registered later, or
+  WooCommerce activated later, is listed but starts unticked. On the first
+  page load after the update, a site that had no saved list gets the types it
+  syncs today. Nothing is queued, sent or deleted by this step.
+
 ## 0.3.2 (2026-11-07)
 
 Step 7.6.g.

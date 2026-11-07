@@ -4,7 +4,7 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.2
+Stable tag: 0.3.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -15,7 +15,7 @@ Keeps your SamoMind AI assistant's knowledge base in sync with this site's publi
 SamoMind AI Assistant connects this site to your SamoMind account. Your public content is pushed to your SamoMind knowledge base and kept up to date, so the assistant answers from your current pages, with links to them.
 
 * Full sync on connect, then updates as you publish, edit, trash or unpublish.
-* Pages, posts, public custom post types and WooCommerce products.
+* Pages, posts and WooCommerce products by default; public custom post types if you tick them.
 * Daily check-in and reconcile, so SamoMind and the site stay in step.
 * Runs in the background on Action Scheduler (with WooCommerce) or WP-Cron.
 * Optional: adds the SamoMind chat widget to every page.
@@ -27,7 +27,7 @@ Only published, public content that is not password-protected: for each page, po
 
 Never sent: drafts, scheduled, private or password-protected content, users, visitors, comments, form entries, orders, carts, customers or media files. Hidden WooCommerce products are not sent.
 
-Choose the post types under SamoMind > Settings > What is synced (all ticked by default). Unticking a type removes its items from SamoMind. Developers can also use the `SAMOMIND/content/post_types` filter (it runs after that setting) and `SAMOMIND/content/excluded_ids` to leave out single posts.
+Choose the post types under SamoMind > Settings > What is synced (posts, pages and WooCommerce products are ticked by default, other types start unticked). Unticking a type removes its items from SamoMind. Developers can also use the `SAMOMIND/content/post_types` filter (it runs after that setting) and `SAMOMIND/content/excluded_ids` to leave out single posts.
 
 = External services =
 
@@ -97,6 +97,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Changelog ==
 
+= 0.3.3 =
+* New installs now sync only posts, pages and WooCommerce products by default; other content types can be ticked in Settings. Existing sites keep their current selection.
+
 = 0.3.2 =
 * Keeps the chat widget working with Jetpack Boost, Hummingbird, Perfmatters, FlyingPress and NitroPack optimisation.
 
@@ -119,6 +122,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.3.3 =
+New installs start with posts, pages and products only. Your current selection is kept and nothing already sent is removed.
 
 = 0.3.2 =
 Keeps the chat widget working with more optimisation plugins. If you use FlyingPress, also add widget.samomind.com to its Delay JavaScript and Defer JavaScript exclusions.
