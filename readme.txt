@@ -1,5 +1,5 @@
 === SamoMind AI Assistant ===
-Contributors: softwareske
+Contributors: samomind, kipyegofelix
 Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
@@ -12,7 +12,9 @@ Keeps your SamoMind AI assistant's knowledge base in sync with this site's publi
 
 == Description ==
 
-SamoMind AI Assistant connects this site to your SamoMind account. Your public content is pushed to your SamoMind knowledge base and kept up to date, so the assistant answers from your current pages, with links to them.
+Visitors ask the same questions again and again: what do you charge, where are you, how do I book. SamoMind AI Assistant lets your site answer them for you, from your own pages, and links to the page each answer came from.
+
+The plugin connects this site to your SamoMind account. Your public pages, posts and products are pushed to your SamoMind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the SamoMind chat widget on your site with one switch and a site key. A SamoMind account is needed (see the FAQ).
 
 * Full sync on connect, then updates as you publish, edit, trash or unpublish.
 * Pages, posts and WooCommerce products by default; public custom post types if you tick them.
@@ -92,8 +94,11 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Screenshots ==
 
-1. SamoMind > Status: connection, sync progress and the request log.
-2. SamoMind > Settings: ingest key, the post types that are synced, and the chat widget switch and site key.
+1. SamoMind > Settings: the ingest key, the content types that are synced and the chat widget switch with its site key.
+2. The content types list and the sync status, with the number of items kept in step with SamoMind.
+3. The chat widget's welcome screen on a live site, with suggested questions.
+4. An answer from the chat widget, with a link to the source page.
+5. The chat widget on a phone-sized screen.
 
 == Changelog ==
 
