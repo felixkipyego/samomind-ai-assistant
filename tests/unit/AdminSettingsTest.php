@@ -213,4 +213,34 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 		$this->assertSame( array( 'post', 'retired_type', 'event' ), $this->admin->sanitize_post_types( array( 'included' => array( 'page' ) ) ) );
 		$this->assertSame( array(), $this->admin->sanitize_post_types( array() ) );
 	}
+
+	public function test_a_missing_key_id_row_is_created_without_autoload_before_saving() {
+		Functions\when( 'get_option' )->alias(
+			function ( $name, $default = false ) {
+				return $default;
+			}
+		);
+		Functions\expect( 'add_option' )->once()->with( 'samomind_key_id', '', '', false );
+
+		$this->assertSame( '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10', $this->admin->sanitize_key_id( '3F2B6C1E-8D4A-4F0B-9A7E-2C5D1B6E9F10' ) );
+	}
+
+	public function test_a_missing_base_url_row_is_created_without_autoload_before_saving() {
+		Functions\when( 'get_option' )->alias(
+			function ( $name, $default = false ) {
+				return $default;
+			}
+		);
+		Functions\expect( 'add_option' )->once()->with( 'samomind_api_base_url', '', '', false );
+
+		$this->admin->sanitize_api_base_url( 'https://api.samomind.com' );
+		$this->addToAssertionCount( 1 ); // The add_option() expectation above is the check.
+	}
+
+	public function test_an_existing_key_id_row_is_left_alone() {
+		Functions\expect( 'add_option' )->never();
+
+		$this->admin->sanitize_key_id( '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10' );
+		$this->addToAssertionCount( 1 ); // The never() expectation above is the check.
+	}
 }
