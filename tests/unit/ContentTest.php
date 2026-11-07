@@ -321,7 +321,7 @@ class ContentTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( array( 'post', 'page' ), $content->get_post_types() );
 
-		$content->seed_post_types();
+		$content->save_default_post_types();
 		$this->assertSame( array( 'samomind_post_types' => array( 'post', 'page' ) ), $this->added );
 	}
 
@@ -331,7 +331,7 @@ class ContentTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( array( 'post', 'page', 'product' ), $content->get_post_types() );
 
-		$content->seed_post_types();
+		$content->save_default_post_types();
 		$this->assertSame( array( 'post', 'page', 'product' ), $this->added['samomind_post_types'] );
 	}
 
@@ -353,16 +353,20 @@ class ContentTest extends SAMOMIND_TestCase {
 		$this->assertSame( array( 'post', 'page' ), $content->get_post_types() );
 	}
 
-	public function test_an_existing_install_keeps_its_current_types_after_upgrade() {
-		// 0.3.2 and earlier: everything available was synced except the exclusions.
-		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
+	public function test_an_existing_install_syncs_the_same_types_and_writes_nothing() {
+		// 0.3.2 and earlier: every available type except the exclusions, worked out at runtime.
 		$this->legacy_excluded = array( 'event', 'retired_type' );
 		$content               = $this->content_with_woocommerce( false );
-		$before                = array( 'post', 'page', 'book' );
 
-		$content->seed_post_types();
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
+		$this->assertSame( array( 'post', 'page', 'book' ), $content->get_post_types() );
 
-		$this->assertSame( $before, $this->added['samomind_post_types'] );
+		// A custom type registered late in init is still synced, as before.
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event', 'late' => 'late' ) );
+		$this->assertSame( array( 'post', 'page', 'book', 'late' ), $content->get_post_types() );
+
+		$content->save_default_post_types();
+		$this->assertSame( array(), $this->added );
 	}
 
 	public function test_a_saved_selection_is_left_untouched() {
@@ -371,7 +375,7 @@ class ContentTest extends SAMOMIND_TestCase {
 		$this->legacy_excluded = array();
 		$content               = $this->content_with_woocommerce( true );
 
-		$content->seed_post_types();
+		$content->save_default_post_types();
 
 		$this->assertSame( array(), $this->added );
 		$this->assertSame( array( 'book' ), $content->get_post_types() );
@@ -380,7 +384,7 @@ class ContentTest extends SAMOMIND_TestCase {
 	public function test_an_empty_saved_selection_stays_empty() {
 		$this->selected_types = array();
 
-		$this->content_with_woocommerce( true )->seed_post_types();
+		$this->content_with_woocommerce( true )->save_default_post_types();
 
 		$this->assertSame( array(), $this->added );
 		$this->assertSame( array(), $this->content_with_woocommerce( true )->get_selected_post_types() );

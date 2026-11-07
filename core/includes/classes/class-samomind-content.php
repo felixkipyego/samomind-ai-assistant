@@ -109,37 +109,48 @@ class SAMOMIND_Content {
 	}
 
 	/**
-	 * The ticked post types: the saved selection, or the default while
-	 * nothing is saved.
+	 * What a site that never saved a selection syncs: every available type
+	 * minus the old exclusion list (0.3.2 and earlier), or null when there is
+	 * no old list. Worked out at runtime, so a type registered late in init
+	 * is included exactly as before.
+	 *
+	 * @since   0.3.3
+	 * @return  string[]|null
+	 */
+	public function get_legacy_selection() {
+		$excluded = SAMOMIND()->helpers->get_legacy_excluded_post_types();
+		return null === $excluded ? null : array_values( array_diff( $this->get_available_post_types(), $excluded ) );
+	}
+
+	/**
+	 * The ticked post types: the saved selection, else what an existing site
+	 * synced before, else the default.
 	 *
 	 * @since   0.3.3
 	 * @return  string[]
 	 */
 	public function get_selected_post_types() {
 		$saved = SAMOMIND()->helpers->get_selected_post_types();
-		return null === $saved ? $this->get_default_post_types() : $saved;
+		if ( null !== $saved ) {
+			return $saved;
+		}
+		$legacy = $this->get_legacy_selection();
+		return null === $legacy ? $this->get_default_post_types() : $legacy;
 	}
 
 	/**
-	 * Save the selection once, when none is saved. A new install gets the
-	 * default. A site that already had the plugin (it has the old exclusion
-	 * list) gets the types that are synced today, so nothing changes for it.
-	 * add_option() runs no queue hook: this never deletes or re-sends anything.
+	 * Activation on a new install: save the default selection. A site that
+	 * has a saved selection, or the old exclusion list, is left alone.
 	 *
 	 * @since   0.3.3
 	 * @return  void
 	 */
-	public function seed_post_types() {
-		if ( null !== SAMOMIND()->helpers->get_selected_post_types() ) {
+	public function save_default_post_types() {
+		$helpers = SAMOMIND()->helpers;
+		if ( null !== $helpers->get_selected_post_types() || null !== $helpers->get_legacy_excluded_post_types() ) {
 			return;
 		}
-		$legacy = get_option( 'samomind_excluded_post_types', null );
-		if ( is_array( $legacy ) ) {
-			$selection = array_values( array_diff( $this->get_available_post_types(), array_map( 'strval', $legacy ) ) );
-		} else {
-			$selection = $this->get_default_post_types();
-		}
-		add_option( 'samomind_post_types', $selection, '', true );
+		add_option( 'samomind_post_types', $this->get_default_post_types(), '', true );
 	}
 
 	/**

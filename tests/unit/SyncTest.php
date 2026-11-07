@@ -720,19 +720,36 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertSame( 0, $this->sync->get_progress()['pending'] );
 	}
 
-	public function test_the_upgrade_saves_the_selection_without_any_remote_call() {
-		// A connected site from 0.3.2 with one exclusion and a lot of published items.
+	private function existing_site() {
+		// A connected 0.3.2 site: no saved selection, one old exclusion.
 		$this->options['samomind_excluded_post_types'] = array( 'event' );
-		$this->content->published_by_type              = array( 'book' => range( 1, 50 ) );
+		$this->content->published_by_type              = array(
+			'book'  => range( 1, 50 ),
+			'event' => array( 900 ),
+		);
 		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
 		$GLOBALS['samomind_test_plugin']->helpers = new SAMOMIND_Helpers();
-		$content                                  = new SAMOMIND_Content();
+	}
 
-		$content->seed_post_types();
+	public function test_saving_an_existing_sites_form_without_changes_queues_no_delete() {
+		$this->existing_site();
 
-		$this->assertSame( array( 'post', 'page', 'book' ), $this->options['samomind_post_types'] );
+		// The form showed post, page, book ticked and posted exactly that.
+		$this->sync->on_post_types_added( 'samomind_post_types', array( 'post', 'page', 'book' ) );
+
 		$this->assertSame( array(), $this->sync->get_queue()['items'] );
 		$this->assertSame( array(), $this->client->calls );
+	}
+
+	public function test_unticking_one_type_on_an_existing_site_deletes_only_that_type() {
+		$this->existing_site();
+
+		$this->sync->on_post_types_added( 'samomind_post_types', array( 'post', 'page' ) );
+
+		$items = $this->sync->get_queue()['items'];
+		$this->assertCount( 50, $items );
+		$this->assertArrayNotHasKey( '900', $items );
+		$this->assertSame( 'delete', $items['1']['op'] );
 	}
 
 	public function test_untick_then_retick_queues_deletes_then_pushes() {

@@ -60,7 +60,7 @@ add price and stock status.
 **SamoMind > Settings > What is synced** lists these post types. Posts,
 pages and (with WooCommerce) products are ticked on a new install; the rest
 start unticked. Sites that updated from 0.3.2 or earlier keep the types they
-already sync. Untick a type to stop syncing it: its published items
+already sync, until the owner saves the settings form. Untick a type to stop syncing it: its published items
 are queued for deletion and removed from SamoMind in the background.
 Ticking it again queues its published items to be sent again at once. A
 post type registered later, or WooCommerce activated later, is listed but

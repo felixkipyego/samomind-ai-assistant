@@ -597,6 +597,23 @@ class SAMOMIND_Sync {
 	}
 
 	/**
+	 * Hooked to add_option_samomind_post_types: the first save of the
+	 * settings form on a site that had no saved selection. It is compared
+	 * with what the form showed as ticked (the old behaviour), so saving
+	 * without changes queues nothing.
+	 *
+	 * @since   0.3.3
+	 * @param   string $option  Option name.
+	 * @param   mixed  $value   New selection.
+	 * @return  void
+	 */
+	public function on_post_types_added( $option, $value ) {
+		$content = SAMOMIND()->content;
+		$before  = $content->get_legacy_selection();
+		$this->on_post_types_updated( null === $before ? $content->get_default_post_types() : $before, $value );
+	}
+
+	/**
 	 * Hourly tick: check in when the interval has passed, then reconcile
 	 * (contract 9: "check-in then reconcile daily"). Also wakes the worker
 	 * if a scheduled run was lost.

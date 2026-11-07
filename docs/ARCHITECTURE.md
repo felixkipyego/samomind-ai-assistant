@@ -130,8 +130,8 @@ two read on every front-end request.
 | `samomind_api_secret` | no | ingest secret; ignored when `SAMOMIND_API_SECRET` is defined |
 | `samomind_widget_enabled` | yes | `1` or `0`, chat widget on or off, default `0` |
 | `samomind_site_key` | yes | the widget site key (`pk_live_...`), empty by default; validated on save and again before use |
-| `samomind_post_types` | yes | post types ticked on the settings page, a list of ticked types so a type registered later starts unticked. Saved once by activation (fresh install: post, page, product with WooCommerce) or on `init` after an update from 0.3.2 or earlier (the types synced then). `add_option()` only: no queue hook runs, so nothing is deleted or re-sent |
-| `samomind_excluded_post_types` | no | 0.3.2 and earlier: post types unticked. No longer read except once, to seed `samomind_post_types`; removed at uninstall |
+| `samomind_post_types` | yes | post types ticked on the settings page. Saved at activation on a new install (post, page, product with WooCommerce). An existing site does not get it on update: it is first written when the owner saves the settings form. Until then the synced types are worked out at runtime as in 0.3.2 |
+| `samomind_excluded_post_types` | no | 0.3.2 and earlier: post types unticked. While `samomind_post_types` does not exist, the synced types are every available type minus this list. Removed at uninstall |
 | `samomind_connection` | no | source id, connected time, limits, check-in interval and time, last error, block state, failure start |
 | `samomind_sync` | no | full sync state and progress, reconcile state |
 | `samomind_queue` | no | pending pushes and deletes per external id (op, event id, earliest send time), event counter, retry state; ids only, never content |

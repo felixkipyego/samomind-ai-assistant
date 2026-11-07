@@ -99,6 +99,18 @@ class SAMOMIND_Helpers {
 	}
 
 	/**
+	 * The unticked types saved by 0.3.2 and earlier, or null when that
+	 * option does not exist (a new install).
+	 *
+	 * @since   0.3.3
+	 * @return  string[]|null
+	 */
+	public function get_legacy_excluded_post_types() {
+		$types = get_option( 'samomind_excluded_post_types', null );
+		return is_array( $types ) ? array_values( array_map( 'strval', $types ) ) : null;
+	}
+
+	/**
 	 * Post types ticked on the settings page, or null when nothing was saved
 	 * yet. Stored as a list of ticked types, so a type registered later
 	 * (or WooCommerce activated later) stays unticked until someone ticks it.
