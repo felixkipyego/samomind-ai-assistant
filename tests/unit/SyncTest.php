@@ -705,7 +705,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		);
 		$this->client->responses          = array( array( 'results' => array() ), array( 'results' => array() ) );
 
-		$this->sync->on_excluded_post_types_updated( array( 'event' ), array( 'event', 'book' ) );
+		$this->sync->on_post_types_updated( array( 'event', 'book' ), array( 'event' ) );
 
 		$items = $this->sync->get_queue()['items'];
 		$this->assertCount( 501, $items );
@@ -720,6 +720,21 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertSame( 0, $this->sync->get_progress()['pending'] );
 	}
 
+	public function test_the_upgrade_saves_the_selection_without_any_remote_call() {
+		// A connected site from 0.3.2 with one exclusion and a lot of published items.
+		$this->options['samomind_excluded_post_types'] = array( 'event' );
+		$this->content->published_by_type              = array( 'book' => range( 1, 50 ) );
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
+		$GLOBALS['samomind_test_plugin']->helpers = new SAMOMIND_Helpers();
+		$content                                  = new SAMOMIND_Content();
+
+		$content->seed_post_types();
+
+		$this->assertSame( array( 'post', 'page', 'book' ), $this->options['samomind_post_types'] );
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
+		$this->assertSame( array(), $this->client->calls );
+	}
+
 	public function test_untick_then_retick_queues_deletes_then_pushes() {
 		$this->content->posts             = array(
 			1 => true,
@@ -729,10 +744,10 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->client->responses          = array( $this->queued( array( 1, 2 ) ), $this->queued( array( 1, 2 ) ) );
 
 		// Untick: deletes go out.
-		$this->sync->on_excluded_post_types_updated( array(), array( 'book' ) );
+		$this->sync->on_post_types_updated( array( 'book' ), array() );
 		$this->sync->run();
 		// Tick again: pushes for the same items go out at once, without a reconcile.
-		$this->sync->on_excluded_post_types_updated( array( 'book' ), array() );
+		$this->sync->on_post_types_updated( array(), array( 'book' ) );
 		$this->assertSame( 'push', $this->sync->get_queue()['items']['1']['op'] );
 		$this->sync->run();
 
@@ -747,8 +762,8 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->content->published_by_type = array( 'book' => array( 1 ) );
 		$this->client->responses          = array( $this->queued( array( 1 ) ) );
 
-		$this->sync->on_excluded_post_types_updated( array(), array( 'book' ) );
-		$this->sync->on_excluded_post_types_updated( array( 'book' ), array() );
+		$this->sync->on_post_types_updated( array( 'book' ), array() );
+		$this->sync->on_post_types_updated( array(), array( 'book' ) );
 		$this->sync->run();
 
 		$this->assertSame( array( '/documents' ), $this->endpoints() );
@@ -758,7 +773,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		unset( $this->options['samomind_connection'] );
 		$this->content->published_by_type = array( 'book' => array( 1, 2 ) );
 
-		$this->sync->on_excluded_post_types_updated( array( 'book' ), array() );
+		$this->sync->on_post_types_updated( array(), array( 'book' ) );
 
 		$this->assertSame( array(), $this->sync->get_queue()['items'] );
 	}
@@ -787,7 +802,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		unset( $this->options['samomind_connection'] );
 		$this->content->published_by_type = array( 'book' => array( 1, 2 ) );
 
-		$this->sync->on_excluded_post_types_updated( array(), array( 'book' ) );
+		$this->sync->on_post_types_updated( array( 'book' ), array() );
 
 		$this->assertSame( array(), $this->sync->get_queue()['items'] );
 	}

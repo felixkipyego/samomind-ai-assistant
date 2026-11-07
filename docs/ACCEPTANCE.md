@@ -100,7 +100,7 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| SamoMind > Settings > What is synced: all types ticked by default | checklist shows Pages, Posts, any public custom types, Products (with WooCommerce) |
+| SamoMind > Settings > What is synced: new install: Posts, Pages and (with WooCommerce) Products ticked, public custom types listed but unticked | checklist shows Pages, Posts, any public custom types, Products (with WooCommerce); the hint "We start with posts, pages and products..." is under the list |
 | Untick Posts, Save Settings | `/documents/delete` 200 (one request per 500 ids) with every published post id; items `queued` (or `not_found` for any SamoMind never had) |
 | Chat / dashboard | posts are no longer cited; the page count drops by the number of posts |
 | Publish a new post | no request |

@@ -69,8 +69,9 @@ class SAMOMIND_Run {
 		// A builder's own "layout saved" action; nothing depends on these.
 		add_action( 'elementor/document/after_save', array( $this, 'on_elementor_saved' ) );
 		add_action( 'fl_builder_after_save_layout', array( $this, 'on_beaver_saved' ), 10, 2 );
-		add_action( 'update_option_samomind_excluded_post_types', array( $sync, 'on_excluded_post_types_updated' ), 10, 2 );
-		add_action( 'add_option_samomind_excluded_post_types', array( $sync, 'on_excluded_post_types_added' ), 10, 2 );
+		add_action( 'update_option_samomind_post_types', array( $sync, 'on_post_types_updated' ), 10, 2 );
+		// Upgrade from 0.3.2: save the selection in effect today (no queue hook runs).
+		add_action( 'init', array( SAMOMIND()->content, 'seed_post_types' ), 99 );
 
 		// Background work (docs/ARCHITECTURE.md A1).
 		add_action( SAMOMIND_Scheduler::WORKER_HOOK, array( $sync, 'run' ) );

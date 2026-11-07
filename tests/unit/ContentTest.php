@@ -58,27 +58,57 @@ class SAMOMIND_Recording_Builders {
 class ContentTest extends SAMOMIND_TestCase {
 
 	/**
-	 * Value of the samomind_excluded_post_types option.
+	 * Value of the samomind_post_types option; null while nothing is saved.
 	 *
-	 * @var string[]
+	 * @var string[]|null
 	 */
-	private $excluded_types = array();
+	private $selected_types = null;
+
+	/**
+	 * Value of the old samomind_excluded_post_types option; null when absent.
+	 *
+	 * @var string[]|null
+	 */
+	private $legacy_excluded = null;
+
+	/**
+	 * Options written with add_option(), by name.
+	 *
+	 * @var array
+	 */
+	private $added = array();
 
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->excluded_types = array();
-		$test                 = $this;
+		$this->selected_types  = null;
+		$this->legacy_excluded = null;
+		$this->added           = array();
+		$test                  = $this;
 		Functions\when( 'get_option' )->alias(
 			function ( $name, $default = false ) use ( $test ) {
-				return 'samomind_excluded_post_types' === $name ? $test->excluded_types() : $default;
+				$values = $test->options();
+				return array_key_exists( $name, $values ) && null !== $values[ $name ] ? $values[ $name ] : $default;
+			}
+		);
+		Functions\when( 'add_option' )->alias(
+			function ( $name, $value ) use ( $test ) {
+				$test->record_added( $name, $value );
+				return true;
 			}
 		);
 		$GLOBALS['samomind_test_plugin'] = (object) array( 'helpers' => new SAMOMIND_Helpers() );
 	}
 
-	public function excluded_types() {
-		return $this->excluded_types;
+	public function options() {
+		return array(
+			'samomind_post_types'          => $this->selected_types,
+			'samomind_excluded_post_types' => $this->legacy_excluded,
+		);
+	}
+
+	public function record_added( $name, $value ) {
+		$this->added[ $name ] = $value;
 	}
 
 	private function page_data( array $overrides = array() ) {
@@ -257,13 +287,15 @@ class ContentTest extends SAMOMIND_TestCase {
 
 	public function test_post_types_are_posts_pages_and_public_custom_types() {
 		Functions\expect( 'get_post_types' )->once()->andReturn( array( 'book' => 'book', 'product' => 'product', 'attachment' => 'attachment' ) );
+		$this->selected_types = array( 'post', 'page', 'book', 'product' );
 
 		$this->assertSame( array( 'post', 'page', 'book' ), ( new SAMOMIND_Content() )->get_post_types() );
 	}
 
 	public function test_products_are_included_when_woocommerce_is_active() {
 		Functions\when( 'get_post_types' )->justReturn( array( 'product' => 'product' ) );
-		$content = $this->getMockBuilder( SAMOMIND_Content::class )->onlyMethods( array( 'woocommerce_active' ) )->getMock();
+		$this->selected_types = array( 'post', 'page', 'product' );
+		$content              = $this->getMockBuilder( SAMOMIND_Content::class )->onlyMethods( array( 'woocommerce_active' ) )->getMock();
 		$content->method( 'woocommerce_active' )->willReturn( true );
 
 		$this->assertSame( array( 'post', 'page', 'product' ), $content->get_post_types() );
@@ -271,9 +303,87 @@ class ContentTest extends SAMOMIND_TestCase {
 
 	public function test_filter_can_remove_types_but_never_add_media() {
 		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book' ) );
+		$this->selected_types = array( 'post', 'page', 'book' );
 		Filters\expectApplied( 'SAMOMIND/content/post_types' )->once()->andReturn( array( 'page', 'book', 'attachment' ) );
 
 		$this->assertSame( array( 'page', 'book' ), ( new SAMOMIND_Content() )->get_post_types() );
+	}
+
+	private function content_with_woocommerce( $active ) {
+		$content = $this->getMockBuilder( SAMOMIND_Content::class )->onlyMethods( array( 'woocommerce_active' ) )->getMock();
+		$content->method( 'woocommerce_active' )->willReturn( $active );
+		return $content;
+	}
+
+	public function test_a_fresh_install_defaults_to_posts_and_pages() {
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'product' => 'product' ) );
+		$content = $this->content_with_woocommerce( false );
+
+		$this->assertSame( array( 'post', 'page' ), $content->get_post_types() );
+
+		$content->seed_post_types();
+		$this->assertSame( array( 'samomind_post_types' => array( 'post', 'page' ) ), $this->added );
+	}
+
+	public function test_a_fresh_install_with_woocommerce_also_ticks_products() {
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'product' => 'product' ) );
+		$content = $this->content_with_woocommerce( true );
+
+		$this->assertSame( array( 'post', 'page', 'product' ), $content->get_post_types() );
+
+		$content->seed_post_types();
+		$this->assertSame( array( 'post', 'page', 'product' ), $this->added['samomind_post_types'] );
+	}
+
+	public function test_a_custom_type_is_listed_but_unticked() {
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book' ) );
+		$content = $this->content_with_woocommerce( false );
+
+		$this->assertContains( 'book', $content->get_available_post_types() );
+		$this->assertNotContains( 'book', $content->get_selected_post_types() );
+		$this->assertNotContains( 'book', $content->get_post_types() );
+	}
+
+	public function test_woocommerce_activated_later_lists_products_unticked() {
+		Functions\when( 'get_post_types' )->justReturn( array( 'product' => 'product' ) );
+		$this->selected_types = array( 'post', 'page' );
+		$content              = $this->content_with_woocommerce( true );
+
+		$this->assertContains( 'product', $content->get_available_post_types() );
+		$this->assertSame( array( 'post', 'page' ), $content->get_post_types() );
+	}
+
+	public function test_an_existing_install_keeps_its_current_types_after_upgrade() {
+		// 0.3.2 and earlier: everything available was synced except the exclusions.
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
+		$this->legacy_excluded = array( 'event', 'retired_type' );
+		$content               = $this->content_with_woocommerce( false );
+		$before                = array( 'post', 'page', 'book' );
+
+		$content->seed_post_types();
+
+		$this->assertSame( $before, $this->added['samomind_post_types'] );
+	}
+
+	public function test_a_saved_selection_is_left_untouched() {
+		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book' ) );
+		$this->selected_types  = array( 'book' );
+		$this->legacy_excluded = array();
+		$content               = $this->content_with_woocommerce( true );
+
+		$content->seed_post_types();
+
+		$this->assertSame( array(), $this->added );
+		$this->assertSame( array( 'book' ), $content->get_post_types() );
+	}
+
+	public function test_an_empty_saved_selection_stays_empty() {
+		$this->selected_types = array();
+
+		$this->content_with_woocommerce( true )->seed_post_types();
+
+		$this->assertSame( array(), $this->added );
+		$this->assertSame( array(), $this->content_with_woocommerce( true )->get_selected_post_types() );
 	}
 
 	public function test_filter_excludes_ids() {
@@ -298,7 +408,7 @@ class ContentTest extends SAMOMIND_TestCase {
 	public function test_unticked_types_are_not_sent() {
 		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
 		Functions\when( 'get_post' )->justReturn( new WP_Post( array( 'ID' => 3, 'post_type' => 'book' ) ) );
-		$this->excluded_types = array( 'book', 'page' );
+		$this->selected_types = array( 'post', 'event' );
 		$content              = new SAMOMIND_Content();
 
 		$this->assertSame( array( 'post', 'event' ), $content->get_post_types() );
@@ -310,7 +420,7 @@ class ContentTest extends SAMOMIND_TestCase {
 
 	public function test_filter_runs_after_the_setting() {
 		Functions\when( 'get_post_types' )->justReturn( array( 'book' => 'book', 'event' => 'event' ) );
-		$this->excluded_types = array( 'book' );
+		$this->selected_types = array( 'post', 'page', 'event' );
 		Filters\expectApplied( 'SAMOMIND/content/post_types' )
 			->once()
 			->with( array( 'post', 'page', 'event' ) )

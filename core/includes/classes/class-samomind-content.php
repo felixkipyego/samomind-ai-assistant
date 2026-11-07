@@ -44,14 +44,14 @@ class SAMOMIND_Content {
 	const MAX_URL_CHARS      = 2048;
 
 	/**
-	 * Post types whose published items are sent: the available types
-	 * minus those unticked on the settings page, then the filter.
+	 * Post types whose published items are sent: the available types that
+	 * are ticked on the settings page, then the filter.
 	 *
 	 * @since   0.1.0
 	 * @return  string[]
 	 */
 	public function get_post_types() {
-		$types = array_values( array_diff( $this->get_available_post_types(), SAMOMIND()->helpers->get_excluded_post_types() ) );
+		$types = array_values( array_intersect( $this->get_available_post_types(), $this->get_selected_post_types() ) );
 
 		/**
 		 * Filter the post types sent to SamoMind. Runs after the settings
@@ -91,6 +91,55 @@ class SAMOMIND_Content {
 		}
 
 		return array_values( array_diff( array_unique( $types ), self::NEVER_SENT_TYPES ) );
+	}
+
+	/**
+	 * What a new install ticks: posts, pages, and products when WooCommerce
+	 * is active.
+	 *
+	 * @since   0.3.3
+	 * @return  string[]
+	 */
+	public function get_default_post_types() {
+		$types = array( 'post', 'page' );
+		if ( $this->woocommerce_active() ) {
+			$types[] = 'product';
+		}
+		return $types;
+	}
+
+	/**
+	 * The ticked post types: the saved selection, or the default while
+	 * nothing is saved.
+	 *
+	 * @since   0.3.3
+	 * @return  string[]
+	 */
+	public function get_selected_post_types() {
+		$saved = SAMOMIND()->helpers->get_selected_post_types();
+		return null === $saved ? $this->get_default_post_types() : $saved;
+	}
+
+	/**
+	 * Save the selection once, when none is saved. A new install gets the
+	 * default. A site that already had the plugin (it has the old exclusion
+	 * list) gets the types that are synced today, so nothing changes for it.
+	 * add_option() runs no queue hook: this never deletes or re-sends anything.
+	 *
+	 * @since   0.3.3
+	 * @return  void
+	 */
+	public function seed_post_types() {
+		if ( null !== SAMOMIND()->helpers->get_selected_post_types() ) {
+			return;
+		}
+		$legacy = get_option( 'samomind_excluded_post_types', null );
+		if ( is_array( $legacy ) ) {
+			$selection = array_values( array_diff( $this->get_available_post_types(), array_map( 'strval', $legacy ) ) );
+		} else {
+			$selection = $this->get_default_post_types();
+		}
+		add_option( 'samomind_post_types', $selection, '', true );
 	}
 
 	/**

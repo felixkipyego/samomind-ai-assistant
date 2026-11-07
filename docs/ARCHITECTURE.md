@@ -130,7 +130,8 @@ two read on every front-end request.
 | `samomind_api_secret` | no | ingest secret; ignored when `SAMOMIND_API_SECRET` is defined |
 | `samomind_widget_enabled` | yes | `1` or `0`, chat widget on or off, default `0` |
 | `samomind_site_key` | yes | the widget site key (`pk_live_...`), empty by default; validated on save and again before use |
-| `samomind_excluded_post_types` | no | post types unticked on the settings page; an exclusion list, so a newly registered type is synced until unticked |
+| `samomind_post_types` | yes | post types ticked on the settings page, a list of ticked types so a type registered later starts unticked. Saved once by activation (fresh install: post, page, product with WooCommerce) or on `init` after an update from 0.3.2 or earlier (the types synced then). `add_option()` only: no queue hook runs, so nothing is deleted or re-sent |
+| `samomind_excluded_post_types` | no | 0.3.2 and earlier: post types unticked. No longer read except once, to seed `samomind_post_types`; removed at uninstall |
 | `samomind_connection` | no | source id, connected time, limits, check-in interval and time, last error, block state, failure start |
 | `samomind_sync` | no | full sync state and progress, reconcile state |
 | `samomind_queue` | no | pending pushes and deletes per external id (op, event id, earliest send time), event counter, retry state; ids only, never content |
@@ -423,7 +424,7 @@ drop the request and record the error.
 
 | Filter | Default | Use |
 |---|---|---|
-| `SAMOMIND/content/post_types` | post, page, public custom post types, `product` with WooCommerce, minus the types unticked on the settings page | add or remove post types; runs after the setting |
+| `SAMOMIND/content/post_types` | post, page, public custom post types, `product` with WooCommerce, limited to the types ticked on the settings page (default: post, page, `product` with WooCommerce) | add or remove post types; runs after the setting |
 | `SAMOMIND/content/excluded_ids` | `array()` | post ids never sent |
 | `SAMOMIND/content/text` | the extracted plain text | replace the text sent for one post (receives the text, the `WP_Post`, the collected data) |
 | `SAMOMIND/sync/debounce_seconds` | `30` | seconds a saved post waits before it is pushed |
@@ -455,4 +456,4 @@ indexed count). Two places still read differently from what is built:
 | Contract | Built |
 |---|---|
 | 5.4: on `unknown_source`, "call `connect` again" | treated like `source_disconnected`: the plugin forgets the source and waits for the Connect button or `wp samomind connect`, so it never reconnects on its own |
-| 9: `kind` `custom` is "a public custom post type the admin selected" | every public custom post type is sent until the admin unticks it on the settings page (`samomind_excluded_post_types`, section 4) |
+| 9: `kind` `custom` is "a public custom post type the admin selected" | a public custom post type is sent only after the admin ticks it on the settings page (`samomind_post_types`, section 4); unticking queues deletes, ticking queues pushes |

@@ -551,23 +551,23 @@ class SAMOMIND_Sync {
 	}
 
 	/**
-	 * Hooked to update_option_samomind_excluded_post_types: queue deletes
+	 * Hooked to update_option_samomind_post_types: queue deletes
 	 * for every published item of a type that was just unticked, and pushes
 	 * for every published item of a type that was just ticked again. A
 	 * later change replaces an earlier queued one for the same item, so an
 	 * untick followed quickly by a re-tick ends as a push.
 	 *
 	 * @since   0.1.0
-	 * @param   mixed $old_value  Previous exclusions.
-	 * @param   mixed $new_value  New exclusions.
+	 * @param   mixed $old_value  Previous selection.
+	 * @param   mixed $new_value  New selection.
 	 * @return  void
 	 */
-	public function on_excluded_post_types_updated( $old_value, $new_value ) {
+	public function on_post_types_updated( $old_value, $new_value ) {
 		if ( ! SAMOMIND()->connection->is_connected() ) {
 			return;
 		}
-		$unticked = array_diff( (array) $new_value, (array) $old_value );
-		$reticked = array_diff( (array) $old_value, (array) $new_value );
+		$unticked = array_diff( (array) $old_value, (array) $new_value );
+		$reticked = array_diff( (array) $new_value, (array) $old_value );
 		if ( empty( $unticked ) && empty( $reticked ) ) {
 			return;
 		}
@@ -594,18 +594,6 @@ class SAMOMIND_Sync {
 		}
 		$this->save_queue( $queue );
 		SAMOMIND()->scheduler->schedule_worker( 0 );
-	}
-
-	/**
-	 * Hooked to add_option_samomind_excluded_post_types (first save).
-	 *
-	 * @since   0.1.0
-	 * @param   string $option  Option name.
-	 * @param   mixed  $value   Exclusions.
-	 * @return  void
-	 */
-	public function on_excluded_post_types_added( $option, $value ) {
-		$this->on_excluded_post_types_updated( array(), $value );
 	}
 
 	/**

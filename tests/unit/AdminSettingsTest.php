@@ -45,7 +45,7 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 					'samomind_api_base_url'  => 'https://api.samomind.com',
 					'samomind_key_id'        => '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10',
 					'samomind_site_key'      => 'pk_live_Jc3x9Qw2Lm8Vb5Nt0Zr7Yh4Kd1Sf6Ua-_Gp8eTqWcA',
-					'samomind_excluded_post_types' => array( 'retired_type', 'event' ),
+					'samomind_post_types'    => array( 'post', 'retired_type', 'event' ),
 				);
 				return isset( $saved[ $name ] ) ? $saved[ $name ] : $default;
 			}
@@ -190,27 +190,27 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 		$this->assertSame( 'http://localhost:8888', $helpers->get_site_origin() );
 	}
 
-	public function test_checklist_is_stored_as_exclusions() {
-		// Ticked: post, event. Unticked: page, book. "retired_type" is not on the form, so its exclusion stays.
-		$stored = $this->admin->sanitize_excluded_post_types(
+	public function test_checklist_is_stored_as_the_ticked_types() {
+		// Ticked: post, book. Unticked: page, event. "retired_type" is not on the form, so it stays ticked.
+		$stored = $this->admin->sanitize_post_types(
 			array(
 				'offered'  => array( 'post', 'page', 'book', 'event', 'not_a_type' ),
-				'included' => array( 'post', 'event' ),
+				'included' => array( 'post', 'book', 'not_a_type' ),
 			)
 		);
 
-		$this->assertSame( array( 'retired_type', 'page', 'book' ), $stored );
+		$this->assertSame( array( 'retired_type', 'post', 'book' ), $stored );
 	}
 
-	public function test_unticking_everything_excludes_every_offered_type() {
-		$stored = $this->admin->sanitize_excluded_post_types( array( 'offered' => array( 'post', 'page' ) ) );
+	public function test_unticking_everything_leaves_only_types_not_on_the_form() {
+		$stored = $this->admin->sanitize_post_types( array( 'offered' => array( 'post', 'event' ) ) );
 
-		$this->assertSame( array( 'retired_type', 'event', 'post', 'page' ), $stored );
+		$this->assertSame( array( 'retired_type' ), $stored );
 	}
 
 	public function test_checklist_without_offered_list_keeps_the_previous_value() {
-		$this->assertSame( array( 'retired_type', 'event' ), $this->admin->sanitize_excluded_post_types( 'junk' ) );
-		$this->assertSame( array( 'retired_type', 'event' ), $this->admin->sanitize_excluded_post_types( array( 'included' => array( 'post' ) ) ) );
-		$this->assertSame( array(), $this->admin->sanitize_excluded_post_types( array() ) );
+		$this->assertSame( array( 'post', 'retired_type', 'event' ), $this->admin->sanitize_post_types( 'junk' ) );
+		$this->assertSame( array( 'post', 'retired_type', 'event' ), $this->admin->sanitize_post_types( array( 'included' => array( 'page' ) ) ) );
+		$this->assertSame( array(), $this->admin->sanitize_post_types( array() ) );
 	}
 }

@@ -99,15 +99,16 @@ class SAMOMIND_Helpers {
 	}
 
 	/**
-	 * Post types unticked on the settings page. Stored as exclusions so a
-	 * newly registered type is synced until someone unticks it.
+	 * Post types ticked on the settings page, or null when nothing was saved
+	 * yet. Stored as a list of ticked types, so a type registered later
+	 * (or WooCommerce activated later) stays unticked until someone ticks it.
 	 *
-	 * @since   0.1.0
-	 * @return  string[]
+	 * @since   0.3.3
+	 * @return  string[]|null
 	 */
-	public function get_excluded_post_types() {
-		$types = get_option( 'samomind_excluded_post_types', array() );
-		return is_array( $types ) ? array_values( array_map( 'strval', $types ) ) : array();
+	public function get_selected_post_types() {
+		$types = get_option( 'samomind_post_types', null );
+		return is_array( $types ) ? array_values( array_map( 'strval', $types ) ) : null;
 	}
 
 	/**
