@@ -1,16 +1,19 @@
 # WordPress.org assets
 
-This folder holds the images for the plugin's WordPress.org page. They go
-to the SVN `assets/` folder, not into the plugin zip (`.distignore` leaves
-this folder out). No images are here yet; add them with exactly these names.
+These images go to the SVN `assets/` folder (a sibling of `trunk/`), not into
+the plugin zip: `.distignore` leaves this folder out. Names and sizes are the
+ones WordPress.org requires.
 
-| File | What it shows | Size |
+| File | What it is | Size |
 |---|---|---|
-| `screenshot-1.png` | SamoMind > Status: connection, sync progress and the request log (readme.txt "Screenshots" entry 1) | any, 1200 px wide or more reads well |
-| `screenshot-2.png` | SamoMind > Settings: ingest key, the post types that are synced, and the chat widget switch and site key (entry 2) | same |
-| `icon-128x128.png`, `icon-256x256.png` | plugin icon | 128 and 256 px square |
-| `banner-772x250.png`, `banner-1544x500.png` | page banner | 772 x 250 and 1544 x 500 px |
+| `icon-128x128.png`, `icon-256x256.png` | plugin icon: Navy #243665 tile, white and Mint #8BD8BD mark (`mark-dark.svg` from the SamoMind brand files) | 128 and 256 px square |
+| `banner-772x250.png`, `banner-1544x500.png` | page banner: Navy background, the dark lockup (`lockup-dark.svg`) and the line "Answers your visitors from your own site" | 772 x 250 and 1544 x 500 px |
+| `screenshot-1.png` | SamoMind > Settings with the chat widget switched on (demo site, fake key) | 1280 x 1400 |
+| `screenshot-2.png` | the content types list and the sync status (demo site, fake data) | 1120 x 800 |
+| `screenshot-3.png` | the chat widget's welcome screen on https://www.softwareske.com | 1280 x 800 |
+| `screenshot-4.png` | one answer with its source link, same site | 1280 x 800 |
+| `screenshot-5.png` | the widget on a phone-sized screen (390 x 844 at 2x) | 780 x 1688 |
 
-A screenshot's number must match its line under `== Screenshots ==` in
-readme.txt. Take them from a site with demo content only, with no real
-key id visible.
+A screenshot's number matches its line under `== Screenshots ==` in
+readme.txt. The logo files are SamoMind's own artwork, copied from the
+SamoMind repository and never redrawn; the wordmark is not retyped.
