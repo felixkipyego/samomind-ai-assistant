@@ -4,7 +4,7 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.3
+Stable tag: 0.3.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Keeps your SamoMind AI assistant's knowledge base in sync with this site's publi
 
 Visitors ask the same questions again and again: what do you charge, where are you, how do I book. SamoMind AI Assistant lets your site answer them for you, from your own pages, and links to the page each answer came from.
 
-The plugin connects this site to your SamoMind account. Your public pages, posts and products are pushed to your SamoMind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the SamoMind chat widget on your site with one switch and a site key. A SamoMind account is needed (see the FAQ).
+The plugin connects this site to your SamoMind account. Your public pages, posts and products are pushed to your SamoMind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the SamoMind chat widget on your site with one switch and a site key. A SamoMind account is needed. Accounts are created at https://app.samomind.com, and access is currently by invitation; ask support@samomind.com (see the FAQ).
 
 * Full sync on connect, then updates as you publish, edit, trash or unpublish.
 * Pages, posts and WooCommerce products by default; public custom post types if you tick them.
@@ -54,11 +54,13 @@ Never sent: drafts, scheduled, private or password-protected content, users, com
 
 **2. The SamoMind chat widget, from your visitors' browsers**
 
-Only if an administrator ticks "Show the SamoMind chat widget on this site" and saves a site key. The plugin then adds one script tag to the pages visitors see (never the admin, login page, feeds or REST responses). The widget is off by default; with it off, no page loads anything from SamoMind.
+Only if an administrator ticks "Show the SamoMind chat widget on this site" and saves a site key. The plugin then adds one script tag to the pages visitors see (never the admin, login page, feeds or REST responses). The widget is off by default. No widget request of any kind happens unless an administrator switches the widget on; with it off, no page loads anything from SamoMind.
 
 * On every page view: the visitor's browser requests `widget.js` and `widget.css` from `https://widget.samomind.com`, and asks `https://api.samomind.com/api/v1/widget-appearance` for this site's colours and label, passing the site key. SamoMind therefore sees the visitor's IP address, browser details and the address of the page.
 * When a visitor opens the chat: the browser loads the chat script `chat.js` from `https://widget.samomind.com`. This is the service's own code, not a copy of a third-party library.
 * When a visitor chats: the browser sends the site key and a random visitor id to `/api/v1/session`, then each message the visitor types, with the conversation id, to `/api/v1/chat`, and reads the answer with its sources. If the visitor opens their history or asks for a human, the browser also requests their earlier conversations, or sends the name, email address or phone number they type into that form. The random visitor id and the conversation id are kept in the visitor's browser (local storage) so the conversation continues; no cookie is set.
+
+Like any web request, the visitor's browser requests to `widget.samomind.com` and `api.samomind.com` reach SamoMind's servers with the visitor's IP address and browser user agent. See the privacy policy: https://samomind.com/privacy-policy/
 
 No other outbound requests are made. There is no telemetry and no advertising. The plugin adds no "powered by" link of its own to your site.
 
@@ -75,7 +77,7 @@ No other outbound requests are made. There is no telemetry and no advertising. T
 
 = Do I need a SamoMind account? =
 
-Yes. The plugin is free, but it sends your content to your SamoMind knowledge base, so you need a SamoMind account and an ingest key from the dashboard (Sources, then the WordPress card). Your SamoMind plan sets how many pages the knowledge base holds; when the limit is reached the sync stops with `plan_page_cap` on SamoMind > Status. Upgrade the plan or remove pages in the dashboard, then click "Sync now".
+Yes. The plugin is free, but it sends your content to your SamoMind knowledge base, so you need a SamoMind account and an ingest key from the dashboard (Sources, then the WordPress card). Accounts are created at https://app.samomind.com. Access is currently by invitation: write to support@samomind.com to ask for one. Your SamoMind plan sets how many pages the knowledge base holds; when the limit is reached the sync stops with `plan_page_cap` on SamoMind > Status. Upgrade the plan or remove pages in the dashboard, then click "Sync now".
 
 = What exactly is sent to SamoMind? =
 
@@ -111,6 +113,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Changelog ==
 
+= 0.3.4 =
+* Escaping and autoload hardening for the WordPress.org review. Clearer External services section.
+
 = 0.3.3 =
 * New installs now sync only posts, pages and WooCommerce products by default; other content types can be ticked in Settings. Existing sites keep their current selection.
 
@@ -136,6 +141,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.3.4 =
+Hardening for the WordPress.org review and a clearer External services section. No change in behaviour.
 
 = 0.3.3 =
 New installs start with posts, pages and products only. Your current selection is kept and nothing already sent is removed.

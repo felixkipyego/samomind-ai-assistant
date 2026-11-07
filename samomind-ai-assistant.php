@@ -5,13 +5,13 @@
  * @package       SAMOMIND
  * @author        SoftwaresKe Ltd
  * @license       GPL-2.0-or-later
- * @version       0.1.0
+ * @version       0.3.4
  *
  * @wordpress-plugin
  * Plugin Name:       SamoMind AI Assistant
  * Plugin URI:        https://samomind.com
  * Description:       Keeps your SamoMind AI assistant's knowledge base in sync with this site's public pages, posts and products, and adds the SamoMind chat widget.
- * Version:           0.3.3
+ * Version:           0.3.4
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Author:            SoftwaresKe Ltd
@@ -34,7 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'SAMOMIND_NAME', 'SamoMind AI Assistant' );
 
 // Plugin version.
-define( 'SAMOMIND_VERSION', '0.3.3' );
+define( 'SAMOMIND_VERSION', '0.3.4' );
 
 // Plugin Root File.
 define( 'SAMOMIND_PLUGIN_FILE', __FILE__ );
