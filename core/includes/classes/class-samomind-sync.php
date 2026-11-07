@@ -551,23 +551,23 @@ class SAMOMIND_Sync {
 	}
 
 	/**
-	 * Hooked to update_option_samomind_excluded_post_types: queue deletes
+	 * Hooked to update_option_samomind_post_types: queue deletes
 	 * for every published item of a type that was just unticked, and pushes
 	 * for every published item of a type that was just ticked again. A
 	 * later change replaces an earlier queued one for the same item, so an
 	 * untick followed quickly by a re-tick ends as a push.
 	 *
 	 * @since   0.1.0
-	 * @param   mixed $old_value  Previous exclusions.
-	 * @param   mixed $new_value  New exclusions.
+	 * @param   mixed $old_value  Previous selection.
+	 * @param   mixed $new_value  New selection.
 	 * @return  void
 	 */
-	public function on_excluded_post_types_updated( $old_value, $new_value ) {
+	public function on_post_types_updated( $old_value, $new_value ) {
 		if ( ! SAMOMIND()->connection->is_connected() ) {
 			return;
 		}
-		$unticked = array_diff( (array) $new_value, (array) $old_value );
-		$reticked = array_diff( (array) $old_value, (array) $new_value );
+		$unticked = array_diff( (array) $old_value, (array) $new_value );
+		$reticked = array_diff( (array) $new_value, (array) $old_value );
 		if ( empty( $unticked ) && empty( $reticked ) ) {
 			return;
 		}
@@ -597,15 +597,20 @@ class SAMOMIND_Sync {
 	}
 
 	/**
-	 * Hooked to add_option_samomind_excluded_post_types (first save).
+	 * Hooked to add_option_samomind_post_types: the first save of the
+	 * settings form on a site that had no saved selection. It is compared
+	 * with what the form showed as ticked (the old behaviour), so saving
+	 * without changes queues nothing.
 	 *
-	 * @since   0.1.0
+	 * @since   0.3.3
 	 * @param   string $option  Option name.
-	 * @param   mixed  $value   Exclusions.
+	 * @param   mixed  $value   New selection.
 	 * @return  void
 	 */
-	public function on_excluded_post_types_added( $option, $value ) {
-		$this->on_excluded_post_types_updated( array(), $value );
+	public function on_post_types_added( $option, $value ) {
+		$content = SAMOMIND()->content;
+		$before  = $content->get_legacy_selection();
+		$this->on_post_types_updated( null === $before ? $content->get_default_post_types() : $before, $value );
 	}
 
 	/**

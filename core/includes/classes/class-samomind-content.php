@@ -44,14 +44,14 @@ class SAMOMIND_Content {
 	const MAX_URL_CHARS      = 2048;
 
 	/**
-	 * Post types whose published items are sent: the available types
-	 * minus those unticked on the settings page, then the filter.
+	 * Post types whose published items are sent: the available types that
+	 * are ticked on the settings page, then the filter.
 	 *
 	 * @since   0.1.0
 	 * @return  string[]
 	 */
 	public function get_post_types() {
-		$types = array_values( array_diff( $this->get_available_post_types(), SAMOMIND()->helpers->get_excluded_post_types() ) );
+		$types = array_values( array_intersect( $this->get_available_post_types(), $this->get_selected_post_types() ) );
 
 		/**
 		 * Filter the post types sent to SamoMind. Runs after the settings
@@ -91,6 +91,66 @@ class SAMOMIND_Content {
 		}
 
 		return array_values( array_diff( array_unique( $types ), self::NEVER_SENT_TYPES ) );
+	}
+
+	/**
+	 * What a new install ticks: posts, pages, and products when WooCommerce
+	 * is active.
+	 *
+	 * @since   0.3.3
+	 * @return  string[]
+	 */
+	public function get_default_post_types() {
+		$types = array( 'post', 'page' );
+		if ( $this->woocommerce_active() ) {
+			$types[] = 'product';
+		}
+		return $types;
+	}
+
+	/**
+	 * What a site that never saved a selection syncs: every available type
+	 * minus the old exclusion list (0.3.2 and earlier), or null when there is
+	 * no old list. Worked out at runtime, so a type registered late in init
+	 * is included exactly as before.
+	 *
+	 * @since   0.3.3
+	 * @return  string[]|null
+	 */
+	public function get_legacy_selection() {
+		$excluded = SAMOMIND()->helpers->get_legacy_excluded_post_types();
+		return null === $excluded ? null : array_values( array_diff( $this->get_available_post_types(), $excluded ) );
+	}
+
+	/**
+	 * The ticked post types: the saved selection, else what an existing site
+	 * synced before, else the default.
+	 *
+	 * @since   0.3.3
+	 * @return  string[]
+	 */
+	public function get_selected_post_types() {
+		$saved = SAMOMIND()->helpers->get_selected_post_types();
+		if ( null !== $saved ) {
+			return $saved;
+		}
+		$legacy = $this->get_legacy_selection();
+		return null === $legacy ? $this->get_default_post_types() : $legacy;
+	}
+
+	/**
+	 * Activation on a new install: save the default selection. A site that
+	 * has a saved selection, or the old exclusion list, is left alone.
+	 *
+	 * @since   0.3.3
+	 * @return  void
+	 */
+	public function save_default_post_types() {
+		$helpers = SAMOMIND()->helpers;
+		if ( null !== $helpers->get_selected_post_types() || null !== $helpers->get_legacy_excluded_post_types() ) {
+			return;
+		}
+		add_option( 'samomind_post_types', $this->get_default_post_types(), '', true );
 	}
 
 	/**

@@ -42,7 +42,8 @@ $samomind_options = array(
 	'samomind_widget_enabled',
 	'samomind_site_key',
 	'samomind_embed_snippet', // Left by 0.2.x if the site never reached the one-time migration.
-	'samomind_excluded_post_types',
+	'samomind_excluded_post_types', // Kept by 0.3.2 and earlier.
+	'samomind_post_types',
 	'samomind_incomplete',
 	'samomind_connection',
 	'samomind_sync',

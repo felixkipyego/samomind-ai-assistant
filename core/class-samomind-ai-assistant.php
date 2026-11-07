@@ -201,7 +201,7 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			add_option( 'samomind_api_secret', '', '', false );
 			add_option( 'samomind_widget_enabled', '0', '', true );
 			add_option( 'samomind_site_key', '', '', true );
-			add_option( 'samomind_excluded_post_types', array(), '', false );
+			$this->content->save_default_post_types();
 			$this->scheduler->ensure_hourly();
 		}
 
