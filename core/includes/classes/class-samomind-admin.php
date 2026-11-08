@@ -183,6 +183,22 @@ class SAMOMIND_Admin {
 	}
 
 	/**
+	 * Make sure an option row exists with autoload off before the Settings
+	 * API saves it. update_option() keeps the autoload flag of an existing
+	 * row but creates a missing one autoloaded, which would load the
+	 * connection details on every request.
+	 *
+	 * @since   0.3.4
+	 * @param   string $option  Option name.
+	 * @return  void
+	 */
+	private function keep_out_of_autoload( $option ) {
+		if ( false === get_option( $option, false ) ) {
+			add_option( $option, '', '', false );
+		}
+	}
+
+	/**
 	 * Sanitize the API base URL: https, or http for a local development
 	 * host; no query or fragment; no trailing slash.
 	 *
@@ -191,6 +207,7 @@ class SAMOMIND_Admin {
 	 * @return  string
 	 */
 	public function sanitize_api_base_url( $value ) {
+		$this->keep_out_of_autoload( 'samomind_api_base_url' );
 		$value = trim( (string) $value );
 		if ( '' === $value ) {
 			return SAMOMIND_Helpers::DEFAULT_API_BASE_URL;
@@ -219,6 +236,7 @@ class SAMOMIND_Admin {
 	 * @return  string
 	 */
 	public function sanitize_key_id( $value ) {
+		$this->keep_out_of_autoload( 'samomind_key_id' );
 		$value = strtolower( trim( sanitize_text_field( (string) $value ) ) );
 		if ( '' === $value || preg_match( '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $value ) ) {
 			return $value;
@@ -455,13 +473,15 @@ class SAMOMIND_Admin {
 	 * @return  void
 	 */
 	public function handle_replace_secret() {
-		$this->verify_action( 'replace_secret' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do this.', 'samomind-ai-assistant' ) );
+		}
+		check_admin_referer( 'samomind_replace_secret' );
 
 		if ( SAMOMIND()->helpers->secret_is_constant() ) {
 			$this->finish( self::SETTINGS_SLUG, 'error', __( 'The secret is set in wp-config.php and cannot be changed here.', 'samomind-ai-assistant' ) );
 		}
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verify_action() checked the nonce above.
 		$secret = isset( $_POST['samomind_api_secret'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['samomind_api_secret'] ) ) ) : '';
 		if ( '' === $secret ) {
 			$this->finish( self::SETTINGS_SLUG, 'warning', __( 'No secret entered; nothing changed.', 'samomind-ai-assistant' ) );
@@ -547,53 +567,42 @@ class SAMOMIND_Admin {
 		}
 
 		$state = $connection->get_state();
-		$link  = sprintf(
-			'<a href="%s">%s</a>',
-			esc_url( add_query_arg( 'page', self::STATUS_SLUG, admin_url( 'admin.php' ) ) ),
-			esc_html__( 'Open SamoMind status', 'samomind-ai-assistant' )
-		);
+		$block = $connection->get_block();
 
 		if ( ! $connection->is_connected() ) {
 			// Disconnected on the SamoMind side; only an admin reconnects.
-			$block = $connection->get_block();
-			printf(
-				'<div class="notice notice-warning"><p>%1$s %2$s</p></div>',
-				esc_html(
-					sprintf(
-						/* translators: %s: reason, for example "Disconnected from the SamoMind dashboard." */
-						__( 'SamoMind: %s Nothing is sent until you click Connect.', 'samomind-ai-assistant' ),
-						$block['message']
-					)
-				),
-				$link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above from escaped parts.
+			$class   = 'notice-warning';
+			$message = sprintf(
+				/* translators: %s: reason, for example "Disconnected from the SamoMind dashboard." */
+				__( 'SamoMind: %s Nothing is sent until you click Connect.', 'samomind-ai-assistant' ),
+				$block['message']
 			);
 		} elseif ( $connection->is_blocked() ) {
-			$block = $connection->get_block();
-			printf(
-				'<div class="notice notice-error"><p>%1$s %2$s</p></div>',
-				esc_html(
-					sprintf(
-						/* translators: 1: API message, 2: error code */
-						__( 'SamoMind sync is paused: %1$s (%2$s)', 'samomind-ai-assistant' ),
-						$block['message'],
-						$block['code']
-					)
-				),
-				$link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above from escaped parts.
+			$class   = 'notice-error';
+			$message = sprintf(
+				/* translators: 1: API message, 2: error code */
+				__( 'SamoMind sync is paused: %1$s (%2$s)', 'samomind-ai-assistant' ),
+				$block['message'],
+				$block['code']
 			);
 		} elseif ( $connection->is_failing_too_long() ) {
-			printf(
-				'<div class="notice notice-error"><p>%1$s %2$s</p></div>',
-				esc_html(
-					sprintf(
-						/* translators: %s: last error */
-						__( 'SamoMind sync has been failing for more than 24 hours. Last error: %s', 'samomind-ai-assistant' ),
-						$state['last_error']
-					)
-				),
-				$link // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built above from escaped parts.
+			$class   = 'notice-error';
+			$message = sprintf(
+				/* translators: %s: last error */
+				__( 'SamoMind sync has been failing for more than 24 hours. Last error: %s', 'samomind-ai-assistant' ),
+				$state['last_error']
 			);
+		} else {
+			return;
 		}
+
+		printf(
+			'<div class="notice %1$s"><p>%2$s <a href="%3$s">%4$s</a></p></div>',
+			esc_attr( $class ),
+			esc_html( $message ),
+			esc_url( add_query_arg( 'page', self::STATUS_SLUG, admin_url( 'admin.php' ) ) ),
+			esc_html__( 'Open SamoMind status', 'samomind-ai-assistant' )
+		);
 	}
 
 	/**

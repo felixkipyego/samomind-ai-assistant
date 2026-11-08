@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.4 (2026-11-07)
+
+Step 7.6.d-review-b.
+
+- Changed: escaping and autoload hardening for the WordPress.org review. The
+  health notice escapes every value in the output call itself, the secret
+  form handler checks its nonce in its own body, and the key id and API base
+  URL are never created as autoloaded options.
+- Clearer External services section in the readme: the widget requests the
+  visitor's browser makes, and what SamoMind servers see. How to get an
+  account (https://app.samomind.com, by invitation) is in the Description
+  and the FAQ.
+
 ## 0.3.3 (2026-11-07)
 
 Step 7.6.h.

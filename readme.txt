@@ -4,7 +4,7 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.3
+Stable tag: 0.3.4
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,7 +14,7 @@ Keeps your SamoMind AI assistant's knowledge base in sync with this site's publi
 
 Visitors ask the same questions again and again: what do you charge, where are you, how do I book. SamoMind AI Assistant lets your site answer them for you, from your own pages, and links to the page each answer came from.
 
-The plugin connects this site to your SamoMind account. Your public pages, posts and products are pushed to your SamoMind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the SamoMind chat widget on your site with one switch and a site key. A SamoMind account is needed (see the FAQ).
+The plugin connects this site to your SamoMind account. Your public pages, posts and products are pushed to your SamoMind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the SamoMind chat widget on your site with one switch and a site key. A SamoMind account is needed. Accounts are created at https://app.samomind.com, and access is currently by invitation; ask support@samomind.com (see the FAQ).
 
 * Full sync on connect, then updates as you publish, edit, trash or unpublish.
 * Pages, posts and WooCommerce products by default; public custom post types if you tick them.
@@ -33,25 +33,36 @@ Choose the post types under SamoMind > Settings > What is synced (posts, pages a
 
 = External services =
 
-This plugin connects to the SamoMind API, a service of SoftwaresKe Ltd, to keep your SamoMind assistant's knowledge base in sync. Nothing is sent until an administrator enters an ingest key and clicks Connect.
-
-* Where: `https://api.samomind.com/api/v1/ingest/...` by default, or the API base URL an administrator sets.
-* What and when: on Connect, the site address, "wordpress", and the plugin and WordPress versions; on Connect and "Sync now", the public content described above, in batches; when public content is published, changed or removed, that item or its id; once a day, a check-in (plugin and WordPress versions, last error) and the list of public item ids with their modified times; on Disconnect or uninstall, a disconnect request. Deactivating the plugin sends nothing.
-* Every request is signed with your ingest key. The secret itself is never sent.
-
-**SamoMind chat widget (`https://widget.samomind.com`)**
-
-Only if an administrator turns on "Show the SamoMind chat widget on this site" and saves a site key. The plugin then loads one script, `https://widget.samomind.com/widget.js`, on the pages visitors see (never in the admin, the login page, feeds or REST responses).
-
-* What it is: the SamoMind chat widget, served by SamoMind from `widget.samomind.com`.
-* What is sent: every visitor's browser requests the script from `widget.samomind.com`, which sees the visitor's IP address, browser details and the page that requested it. When a visitor opens the chat, the widget sends the visitor's messages and the site key to the SamoMind API (`https://api.samomind.com` by default, or the API base URL set in the plugin).
-* When: on each page view while the widget is on. With the setting off, nothing is loaded and nothing is sent.
+This plugin is the connector for SamoMind, a hosted service of SoftwaresKe Ltd. It talks to two SamoMind hosts: the SamoMind API (`https://api.samomind.com`, or the API base URL an administrator sets) and, only if the chat widget is switched on, the widget host (`https://widget.samomind.com`).
 
 Service: https://samomind.com
 Terms of service: https://samomind.com/terms-and-conditions/
 Privacy policy: https://samomind.com/privacy-policy/
 
-No other outbound requests are made. There is no telemetry.
+**1. The SamoMind API, from the server**
+
+Nothing is sent when the plugin is installed or activated. Requests start only after an administrator saves an ingest key and clicks Connect (or runs `wp samomind connect`). Every request is a signed POST to `/api/v1/ingest/...`. Each carries the API version, the key id, a timestamp, a request id and an HMAC signature in headers; the secret itself is never sent. WordPress adds its standard User-Agent, which names the WordPress version and this site's address, and SamoMind sees the server's IP address.
+
+* Connect, Reconnect (`/connect`): the site address, the word "wordpress", the plugin version and the WordPress version. Returns an id for this connection, the service's limits and the check-in interval. A first sync follows.
+* Check-in (`/checkin`): the connection id, the plugin version, the WordPress version and, if the last request failed, that error's code and message (up to 500 characters). When: about once a day from WP-Cron, when an administrator clicks "Check in now" or opens SamoMind > Status (at most once a minute), or runs `wp samomind checkin`. Returns the connection status and how often to check in.
+* Sync (`/sync` and `/documents`): when a sync starts and finishes, and in batches in between, for each published, public, not password-protected item of the post types ticked in Settings: its post id, address, title, text (the content as plain text, the excerpt and, for products, the short description), type (post, page, product or custom), last modified time and the names of its public categories and tags. Products add price and stock status. When: on Connect, on "Sync now" and `wp samomind sync`. Returns, per item, whether it was accepted, unchanged or refused.
+* Changes (`/documents` and `/documents/delete`): when an item is published, edited, unpublished, trashed or deleted, or when a post type is ticked or unticked. The first sends that item as above; the second sends only post ids. Sent about 30 seconds after the last save.
+* Reconcile (`/reconcile`): the post id and last modified time of every included item, in pages, with the id range. When: daily after the check-in, "Reconcile now", `wp samomind reconcile`. Returns the ids SamoMind lacks, holds out of date or has removed, which the plugin then sends or ignores.
+* Disconnect (`/disconnect`): the connection id and the reason, "admin" or "uninstall". When: an administrator clicks Disconnect, or the plugin is deleted while connected. Deactivating sends nothing.
+
+Never sent: drafts, scheduled, private or password-protected content, users, comments, form entries, orders, carts, customers, media files, the WordPress admin's data, or the list of other plugins.
+
+**2. The SamoMind chat widget, from your visitors' browsers**
+
+Only if an administrator ticks "Show the SamoMind chat widget on this site" and saves a site key. The plugin then adds one script tag to the pages visitors see (never the admin, login page, feeds or REST responses). The widget is off by default. No widget request of any kind happens unless an administrator switches the widget on; with it off, no page loads anything from SamoMind.
+
+* On every page view: the visitor's browser requests `widget.js` and `widget.css` from `https://widget.samomind.com`, and asks `https://api.samomind.com/api/v1/widget-appearance` for this site's colours and label, passing the site key. SamoMind therefore sees the visitor's IP address, browser details and the address of the page.
+* When a visitor opens the chat: the browser loads the chat script `chat.js` from `https://widget.samomind.com`. This is the service's own code, not a copy of a third-party library.
+* When a visitor chats: the browser sends the site key and a random visitor id to `/api/v1/session`, then each message the visitor types, with the conversation id, to `/api/v1/chat`, and reads the answer with its sources. If the visitor opens their history or asks for a human, the browser also requests their earlier conversations, or sends the name, email address or phone number they type into that form. The random visitor id and the conversation id are kept in the visitor's browser (local storage) so the conversation continues; no cookie is set.
+
+Like any web request, the visitor's browser requests to `widget.samomind.com` and `api.samomind.com` reach SamoMind's servers with the visitor's IP address and browser user agent. See the privacy policy: https://samomind.com/privacy-policy/
+
+No other outbound requests are made. There is no telemetry and no advertising. The plugin adds no "powered by" link of its own to your site.
 
 == Installation ==
 
@@ -66,7 +77,7 @@ No other outbound requests are made. There is no telemetry.
 
 = Do I need a SamoMind account? =
 
-Yes. The plugin is free, but it sends your content to your SamoMind knowledge base, so you need a SamoMind account and an ingest key from the dashboard (Sources, then the WordPress card). Your SamoMind plan sets how many pages the knowledge base holds; when the limit is reached the sync stops with `plan_page_cap` on SamoMind > Status. Upgrade the plan or remove pages in the dashboard, then click "Sync now".
+Yes. The plugin is free, but it sends your content to your SamoMind knowledge base, so you need a SamoMind account and an ingest key from the dashboard (Sources, then the WordPress card). Accounts are created at https://app.samomind.com. Access is currently by invitation: write to support@samomind.com to ask for one. Your SamoMind plan sets how many pages the knowledge base holds; when the limit is reached the sync stops with `plan_page_cap` on SamoMind > Status. Upgrade the plan or remove pages in the dashboard, then click "Sync now".
 
 = What exactly is sent to SamoMind? =
 
@@ -102,6 +113,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Changelog ==
 
+= 0.3.4 =
+* Escaping and autoload hardening for the WordPress.org review. Clearer External services section.
+
 = 0.3.3 =
 * New installs now sync only posts, pages and WooCommerce products by default; other content types can be ticked in Settings. Existing sites keep their current selection.
 
@@ -127,6 +141,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.3.4 =
+Hardening for the WordPress.org review and a clearer External services section. No change in behaviour.
 
 = 0.3.3 =
 New installs start with posts, pages and products only. Your current selection is kept and nothing already sent is removed.

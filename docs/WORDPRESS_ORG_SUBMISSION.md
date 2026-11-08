@@ -1,6 +1,6 @@
 # WordPress.org submission (Felix uploads it)
 
-Plugin: SamoMind AI Assistant, slug `samomind-ai-assistant`, version 0.3.3.
+Plugin: SamoMind AI Assistant, slug `samomind-ai-assistant`, version 0.3.4.
 Submitting account: `samomind` (registered with a samomind.com address,
 two-factor on). Felix's personal account `kipyegofelix` is added as a
 committer after approval (step 4).
@@ -9,13 +9,24 @@ committer after approval (step 4).
 
 1. Get the zip. Run `composer build` from the plugin folder on the
    merged `main` (it packs the committed tree and leaves out everything in
-   `.distignore`). The file is `build/samomind-ai-assistant-0.3.3.zip`.
+   `.distignore`). The file is `build/samomind-ai-assistant-0.3.4.zip`.
    The `.wordpress-org/` images are not in it, on purpose.
 2. Check it once: one top-level folder `samomind-ai-assistant/`, the plugin
-   header says Version 0.3.3, `readme.txt` says Stable tag 0.3.3.
+   header says Version 0.3.4, `readme.txt` says Stable tag 0.3.4.
 3. Make sure you can sign in as `samomind` at https://login.wordpress.org/
    (WordPress.com logins do not work there). Use the samomind.com email
    and the authenticator app.
+
+4. Check the contact address. WordPress.org writes to the email on the
+   `samomind` account, and the guidelines forbid auto-replies and mail
+   routed into a support ticket system. Send a test message to
+   support@samomind.com and confirm that no auto-reply comes back and that
+   it lands in a normal inbox you read. If the account email is a different
+   address, check that one the same way. Switch off any auto-responder
+   before you submit.
+5. Open `docs/WORDPRESS_ORG_REVIEWER_NOTE.md`, fill in the three
+   bracketed lines (test dashboard, site key, ingest key) in a copy, and
+   keep it ready to paste. Do not commit the filled-in copy.
 
 ## 1. Upload
 
@@ -30,22 +41,10 @@ committer after approval (step 4).
 ## 2. What to answer in the form
 
 The form is short: the zip, and a tick box to confirm you have read the
-plugin guidelines. Tick it. If the page offers a box for notes to the
-reviewers, paste this:
-
-> SamoMind AI Assistant is the WordPress connector for SamoMind, a hosted
-> AI assistant service run by SoftwaresKe Ltd (https://samomind.com). The
-> plugin needs a SamoMind account and does nothing until an administrator
-> enters an ingest key and clicks Connect. Both services it contacts are
-> documented under "External services" in readme.txt with the terms and
-> privacy links: the SamoMind API (https://api.samomind.com) and, only if
-> the administrator switches it on, the chat widget script
-> (https://widget.samomind.com/widget.js), loaded with wp_enqueue_script.
-> The widget is off by default. There is no tracking and no telemetry, and
-> the plugin adds no credit link to the site. All code is readable PHP and
-> JavaScript with no build step and no bundled libraries. The account
-> `samomind` is registered with a samomind.com address, and SamoMind is our
-> own brand and domain.
+plugin guidelines. Tick it. If the page has a note box, paste the reviewer
+note from `docs/WORDPRESS_ORG_REVIEWER_NOTE.md` (about 200 words, with the
+test account filled in). If the form has no note box, send the same text as
+the first reply to the review email, so the reviewer has it early.
 
 Check these three things match what you submit: the readme's Contributors
 line is `samomind, kipyegofelix`, the licence is GPL-2.0-or-later, and
@@ -67,13 +66,15 @@ usual ones, and how to answer:
 | Escape, sanitise, nonces, capability checks | Every admin action checks `manage_options` and a nonce; settings go through sanitize callbacks; output is escaped. Name the file and function if they flag one, and fix it if they are right. |
 | Remove a file or change a name | Do it, rebuild the zip, bump the version only if code changed. |
 
-How to reply: answer in the same email thread (do not start a new
-submission). Be short and specific, say what you changed, and attach a new
-zip only if they ask for one or you changed code. If you changed code,
-bump the version in the plugin header, `readme.txt` Stable tag and
-CHANGELOG.md first, then run `composer build` again. Never argue about a
-guideline; if you disagree, ask a question. Replies that only say "fixed"
-without detail are slow to review.
+How to reply: reply to the review email itself, so your answer stays in
+the same review thread (do not submit the plugin again; a second upload
+starts a second review). Answer within a few days, because a thread that is
+quiet for a long time can be closed. Be short and specific: say what you
+changed and where. If code changed, bump the version in the plugin header,
+the `readme.txt` Stable tag and CHANGELOG.md, run `composer build`, and
+attach the new zip to that reply (or upload it where the email tells you
+to). If only the readme or the notes changed, say so. Never argue about a
+guideline; if you disagree, ask a question.
 
 ## 4. After approval
 
@@ -88,7 +89,7 @@ svn co https://plugins.svn.wordpress.org/samomind-ai-assistant svn-samomind
 cd svn-samomind
 
 # trunk: the contents of the zip's samomind-ai-assistant/ folder
-unzip -q /path/to/samomind-ai-assistant-0.3.3.zip -d /tmp/samomind-zip
+unzip -q /path/to/samomind-ai-assistant-0.3.4.zip -d /tmp/samomind-zip
 cp -R /tmp/samomind-zip/samomind-ai-assistant/. trunk/
 
 # assets: the .wordpress-org images, a sibling of trunk (not inside it)
@@ -98,11 +99,11 @@ cp /path/to/samomind-ai-assistant/.wordpress-org/*.png assets/
 svn add --force trunk assets
 svn propset svn:mime-type image/png assets/*.png
 svn status
-svn ci -m "Add SamoMind AI Assistant 0.3.3"
+svn ci -m "Add SamoMind AI Assistant 0.3.4"
 
-# tag the release: the tag name is the version, trunk readme says Stable tag 0.3.3
-svn cp trunk tags/0.3.3
-svn ci -m "Tag 0.3.3"
+# tag the release: the tag name is the version, trunk readme says Stable tag 0.3.4
+svn cp trunk tags/0.3.4
+svn ci -m "Tag 0.3.4"
 ```
 
 Notes:
