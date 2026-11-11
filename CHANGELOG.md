@@ -13,6 +13,10 @@ Step 7.6.i.
 - Plugin URI is now https://samomind.com/help/wordpress-plugin/, and the
   Installation section links to the full guide.
 - New WordPress.org icons, banners and two settings screenshots.
+- Readme and reviewer note: the External services section now says the chat
+  window footer shows "Powered by Samomind" with a link to samomind.com when
+  the widget is on (removable on higher plans), and drops the "no telemetry"
+  wording in favour of "no tracking or usage analytics".
 - No change in behaviour.
 
 ## 0.3.4 (2026-11-07)
