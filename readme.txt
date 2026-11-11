@@ -62,7 +62,7 @@ Only if an administrator ticks "Show the Samomind chat widget on this site" and 
 
 Like any web request, the visitor's browser requests to `widget.samomind.com` and `api.samomind.com` reach Samomind's servers with the visitor's IP address and browser user agent. See the privacy policy: https://samomind.com/privacy-policy/
 
-No other outbound requests are made. There is no telemetry and no advertising. The plugin adds no "powered by" link of its own to your site.
+No other outbound requests are made. There is no tracking, usage analytics or advertising. The plugin adds no links to your site's pages. When you switch the chat widget on, the chat window's footer shows "Powered by Samomind" with a link to https://samomind.com on plans that include it; on higher plans it can be removed in the Samomind dashboard.
 
 == Installation ==
 

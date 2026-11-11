@@ -11,14 +11,19 @@ hosted AI assistant service. The service is run by SoftwaresKe Ltd, trading
 as Samomind, which owns the Samomind name and the samomind.com domain.
 The submitting account uses a samomind.com address.
 
-The plugin keeps a site's public pages, posts and products in the visitor's
-chat assistant. Nothing is sent until an administrator enters an ingest key
-and clicks Connect, and activation sends nothing. The chat widget is off by
-default; an administrator switches it on and saves a site key, and the
-plugin then loads the one declared script with wp_enqueue_script. Every
-request, with its fields, is listed under "External services" in readme.txt
-with links to our terms and privacy policy. There is no telemetry and no
-"powered by" link added to the site.
+The plugin keeps a site's public pages, posts and products in the
+visitor's chat assistant. Nothing is sent until an administrator enters an
+ingest key and clicks Connect, and activation sends nothing. The chat
+widget is off by default; an administrator switches it on and saves a site
+key, and the plugin then loads the one declared script with
+wp_enqueue_script. Every request, with its fields, is listed under
+"External services" in readme.txt with links to our terms and privacy
+policy. There is no tracking or usage analytics: the only requests are the
+ones listed under "External services", including the daily check-in. The
+plugin itself adds no links to the site. If the administrator switches the
+chat widget on, its footer shows "Powered by Samomind" with a link to
+samomind.com on plans that include it. It is part of the service's own
+chat window, described in readme.txt, and the widget is off by default.
 
 Plans, trials and message limits belong to the hosted service, as allowed
 by guideline 6. The plugin itself has no locked, time-limited or paid
