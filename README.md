@@ -1,7 +1,7 @@
-# SamoMind AI Assistant
+# Samomind AI Assistant
 
-WordPress plugin that keeps a SamoMind AI assistant's knowledge base in sync
-with the site's public content, and adds the SamoMind chat widget.
+WordPress plugin that keeps a Samomind AI assistant's knowledge base in sync
+with the site's public content, and adds the Samomind chat widget.
 
 - Requires WordPress 6.0+, PHP 7.4+. GPL-2.0-or-later.
 - Architecture and conventions: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
@@ -12,19 +12,19 @@ with the site's public content, and adds the SamoMind chat widget.
 
 1. Zip the plugin without the development files (`.distignore` lists
    them), or copy the folder to `wp-content/plugins/samomind-ai-assistant`.
-2. Activate **SamoMind AI Assistant** in Plugins. A **SamoMind** menu
+2. Activate **Samomind AI Assistant** in Plugins. A **Samomind** menu
    appears with **Status** and **Settings**.
 
 ## Connect
 
-1. In the SamoMind dashboard (app.samomind.com), open **Sources**, then the
+1. In the Samomind dashboard (app.samomind.com), open **Sources**, then the
    **WordPress** card, and click **Create an ingest key**. The dashboard
    shows a key id (a UUID) and a secret (`smik_...`). The secret is shown
    only once. Creating a new key revokes the old one at once, so every
    connected site stops until it gets the new key.
-2. In WordPress, open **SamoMind > Settings**. Paste the secret and click
+2. In WordPress, open **Samomind > Settings**. Paste the secret and click
    **Save secret**. Paste the key id and click **Save Settings**. Leave
-   the API base URL at `https://api.samomind.com` unless SamoMind gives you
+   the API base URL at `https://api.samomind.com` unless Samomind gives you
    a staging address.
 
    To keep the secret out of the database, put it in `wp-config.php`
@@ -34,7 +34,7 @@ with the site's public content, and adds the SamoMind chat widget.
    define( 'SAMOMIND_API_SECRET', 'smik_...' );
    ```
 
-3. Open **SamoMind > Status** and click **Connect**. The site appears in
+3. Open **Samomind > Status** and click **Connect**. The site appears in
    the dashboard's WordPress card, and the first full sync starts in the
    background. A refusal is shown with the API's own message and code.
 
@@ -57,11 +57,11 @@ for products, the short description), kind (page, post, product or
 custom), modified time, and the names of its public taxonomy terms. Products
 add price and stock status.
 
-**SamoMind > Settings > What is synced** lists these post types. Posts,
+**Samomind > Settings > What is synced** lists these post types. Posts,
 pages and (with WooCommerce) products are ticked on a new install; the rest
 start unticked. Sites that updated from 0.3.2 or earlier keep the types they
 already sync, until the owner saves the settings form. Untick a type to stop syncing it: its published items
-are queued for deletion and removed from SamoMind in the background.
+are queued for deletion and removed from Samomind in the background.
 Ticking it again queues its published items to be sent again at once. A
 post type registered later, or WooCommerce activated later, is listed but
 unticked until you tick it.
@@ -77,24 +77,24 @@ When content changes:
 | trash, unpublish, make private, add a password, delete | `/documents/delete` |
 | connect, "Sync now" | full sync: `/sync begin`, `/documents` batches, `/sync complete`, then reconcile |
 | daily | `/checkin`, then `/reconcile` |
-| uninstall, "Disconnect", `wp samomind disconnect` | `/disconnect` (SamoMind removes this site's documents) |
+| uninstall, "Disconnect", `wp samomind disconnect` | `/disconnect` (Samomind removes this site's documents) |
 | deactivate | nothing; scheduled work stops until you reactivate |
 
 Background work runs on Action Scheduler when WooCommerce provides it,
 otherwise on WP-Cron. WP-Cron runs when the site gets visits; on a quiet
 site, use a real cron job (`wp cron event run --due-now`).
 
-If the site is disconnected in the SamoMind dashboard, the dashboard wins:
+If the site is disconnected in the Samomind dashboard, the dashboard wins:
 the plugin forgets the connection, sends nothing more, and shows
-"Disconnected from the SamoMind dashboard." with a **Connect** button. It
+"Disconnected from the Samomind dashboard." with a **Connect** button. It
 never reconnects by itself.
 
 The **Status** page shows the connection, how many items are included on
 this site (published items of the ticked types), sync progress, the last
 full sync's counts, the pages that may be incomplete, and the last 200
 requests (time, endpoint, HTTP status, code; never bodies). Opening it
-also checks in with SamoMind (at most once a minute), so a disconnect made
-in the dashboard shows at once. The SamoMind API does not report the
+also checks in with Samomind (at most once a minute), so a disconnect made
+in the dashboard shows at once. The Samomind API does not report the
 indexed page count to the plugin; the dashboard shows it.
 
 ### Page builders
@@ -134,14 +134,14 @@ Another builder's storage meta key can be added with
 
 ## Chat widget
 
-Under **SamoMind > Settings > Chat widget**, tick "Show the SamoMind chat
+Under **Samomind > Settings > Chat widget**, tick "Show the Samomind chat
 widget on this site" and enter the site key from the dashboard's **Widget**
 screen. The plugin enqueues `https://widget.samomind.com/widget.js` in the
 footer with the `defer` strategy and adds the key as `data-site-key` through
 the `wp_script_attributes` filter, so there is no inline script and nothing
 to paste. It is off by default, and never loads in the admin, on the login
 page, in feeds, REST responses or previews. Add the site address shown under
-the setting to **Allowed origins** in the SamoMind dashboard first.
+the setting to **Allowed origins** in the Samomind dashboard first.
 
 The script is excluded from combine, minify and delay in WP Rocket
 (`rocket_exclude_js`, `rocket_exclude_defer_js`, `rocket_delay_js_exclusions`),
@@ -190,14 +190,14 @@ reconcile).
 
 ## Uninstall
 
-Deactivating sends nothing to SamoMind: it only stops the scheduled work.
-The documents stay in SamoMind and the connection is kept, so reactivating
+Deactivating sends nothing to Samomind: it only stops the scheduled work.
+The documents stay in Samomind and the connection is kept, so reactivating
 picks up where it left off, without a full sync. Edits made while the
 plugin was inactive are caught by the next daily reconcile (or click
 **Reconcile now**).
 
 Deleting the plugin disconnects the site if it is still connected
-(SamoMind removes its documents), then removes every option, notice and
+(Samomind removes its documents), then removes every option, notice and
 scheduled event it created.
 
 ## Development

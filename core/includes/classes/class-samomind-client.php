@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class SAMOMIND_Client
  *
- * The only class that talks to the SamoMind ingest API. Signs every
+ * The only class that talks to the Samomind ingest API. Signs every
  * request as docs/API_CONTRACT.md section 5.2 specifies and turns error
  * responses into WP_Error objects.
  *
@@ -366,7 +366,7 @@ class SAMOMIND_Client {
 		$code    = 'http_' . $status;
 		$message = sprintf(
 			/* translators: %d: HTTP status code */
-			__( 'Unexpected response from SamoMind (HTTP %d).', 'samomind-ai-assistant' ),
+			__( 'Unexpected response from Samomind (HTTP %d).', 'samomind-ai-assistant' ),
 			$status
 		);
 		if ( isset( $data['detail']['code'] ) && is_string( $data['detail']['code'] ) ) {

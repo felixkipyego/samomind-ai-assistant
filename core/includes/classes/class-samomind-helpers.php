@@ -156,7 +156,7 @@ class SAMOMIND_Helpers {
 	}
 
 	/**
-	 * The site's origin (scheme, host and port, no path), as SamoMind's
+	 * The site's origin (scheme, host and port, no path), as Samomind's
 	 * "Allowed origins" list expects it.
 	 *
 	 * @since   0.3.0
@@ -171,7 +171,7 @@ class SAMOMIND_Helpers {
 	}
 
 	/**
-	 * The site address reported to SamoMind on connect.
+	 * The site address reported to Samomind on connect.
 	 *
 	 * @since   0.1.0
 	 * @return  string

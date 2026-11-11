@@ -1,14 +1,14 @@
 # CLAUDE.md
 
-SamoMind AI Assistant, the WordPress connector for SamoMind's push
+Samomind AI Assistant, the WordPress connector for Samomind's push
 ingestion API.
 
 - Architecture and naming: `docs/ARCHITECTURE.md`. Follow it; do not invent
   a second convention.
-- API contract: `docs/API_CONTRACT.md` (pinned copy of SamoMind's
+- API contract: `docs/API_CONTRACT.md` (pinned copy of Samomind's
   `docs/ingest/PUSH_INGESTION_DESIGN.md`, commit in its first line). It is
   the authority for every request the plugin makes. To update it, copy the
-  file again from SamoMind's origin/main and change the header commit.
+  file again from Samomind's origin/main and change the header commit.
 - Checks before every commit: `composer lint`, `composer compat`,
   `composer test`. Each commit is phpcs-clean and test-green on its own.
 

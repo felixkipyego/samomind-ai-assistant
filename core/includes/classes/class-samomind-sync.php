@@ -421,7 +421,7 @@ class SAMOMIND_Sync {
 	 *
 	 * @since   0.2.0
 	 * @param   WP_Post $post             Post.
-	 * @param   bool    $may_have_been_sent  Whether it could be at SamoMind already
+	 * @param   bool    $may_have_been_sent  Whether it could be at Samomind already
 	 *                                       (it was or is published).
 	 * @return  void
 	 */
@@ -485,7 +485,7 @@ class SAMOMIND_Sync {
 		$delay        = $this->debounce_seconds();
 
 		if ( 'delete' === $op ) {
-			// A post that is gone from SamoMind cannot be incomplete there.
+			// A post that is gone from Samomind cannot be incomplete there.
 			SAMOMIND()->builders->forget( $post->ID );
 		}
 
@@ -1144,7 +1144,7 @@ class SAMOMIND_Sync {
 	 * @return  string
 	 */
 	public static function page_cap_message() {
-		return __( 'SamoMind refused more pages because your plan\'s page limit is reached (plan_page_cap). Sync stopped. Upgrade the plan or remove pages in the SamoMind dashboard, then click "Sync now".', 'samomind-ai-assistant' );
+		return __( 'Samomind refused more pages because your plan\'s page limit is reached (plan_page_cap). Sync stopped. Upgrade the plan or remove pages in the Samomind dashboard, then click "Sync now".', 'samomind-ai-assistant' );
 	}
 
 	/**
@@ -1160,7 +1160,7 @@ class SAMOMIND_Sync {
 			$state           = $this->get_state();
 			$state['notice'] = $counts['plan_page_cap'] > 0
 				? self::page_cap_message()
-				: __( 'SamoMind refused some updates (off_site_url: the page address is not on the connected site).', 'samomind-ai-assistant' );
+				: __( 'Samomind refused some updates (off_site_url: the page address is not on the connected site).', 'samomind-ai-assistant' );
 			$this->save_state( $state );
 		}
 	}

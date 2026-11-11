@@ -6,9 +6,9 @@ to this repository.
 
 ---
 
-SamoMind AI Assistant is the WordPress connector for SamoMind, our own
+Samomind AI Assistant is the WordPress connector for Samomind, our own
 hosted AI assistant service. The service is run by SoftwaresKe Ltd, trading
-as SamoMind, which owns the SamoMind trademark and the samomind.com domain.
+as Samomind, which owns the Samomind name and the samomind.com domain.
 The submitting account uses a samomind.com address.
 
 The plugin keeps a site's public pages, posts and products in the visitor's
@@ -30,5 +30,7 @@ A test account is provided so you can try the connection and the widget:
 Test dashboard: [Felix fills in]
 Site key: [Felix fills in]
 Ingest key: [Felix fills in]
+
+To see the widget on your test site, add that site's address to Allowed origins in the test dashboard.
 
 Thank you for the review.

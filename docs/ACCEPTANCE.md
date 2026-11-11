@@ -3,7 +3,7 @@
 Manual run on the pilot site (www.softwareske.com) against production
 (`https://api.samomind.com`), with a production ingest key. Contract
 sections refer to `docs/API_CONTRACT.md`. The plugin's request log
-(SamoMind > Status > Request log) shows one row per request: endpoint, HTTP
+(Samomind > Status > Request log) shows one row per request: endpoint, HTTP
 status, code. Bodies are never logged, so the "expected response" column
 is what the contract says the API returns; the plugin's status page shows
 the parts it stores.
@@ -16,19 +16,19 @@ command.
 
 - [ ] Plugin zip built without development files (`.distignore`), version
       0.1.0, installed and activated. No PHP notices in `debug.log`.
-- [ ] SamoMind dashboard: Sources > WordPress > **Create an ingest key**.
+- [ ] Samomind dashboard: Sources > WordPress > **Create an ingest key**.
       Copy the key id and secret (shown once).
-- [ ] SamoMind > Settings: save the secret (field shows "A secret is
+- [ ] Samomind > Settings: save the secret (field shows "A secret is
       saved", the value is never shown), then the key id. API base URL is
       `https://api.samomind.com`.
-- [ ] View the page source of SamoMind > Settings: the secret does not
+- [ ] View the page source of Samomind > Settings: the secret does not
       appear anywhere.
 
 ## 1. Connect
 
 | Step | Expected |
 |---|---|
-| SamoMind > Status > **Connect** | Notice "Connected. The first sync has started in the background." |
+| Samomind > Status > **Connect** | Notice "Connected. The first sync has started in the background." |
 | Request log | `/connect` 200 |
 | API response (5.5) | `source_id` (UUID), `checkin_interval_seconds` 86400, `limits` (`max_documents_per_push` 50, `max_body_bytes` 2097152, `max_text_chars` 200000, `max_delete_ids` 500, `max_reconcile_entries` 5000), `sync` (`state`, `cursor`) |
 | Status page | Connected, the source id, "Connected since" now |
@@ -100,8 +100,8 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| SamoMind > Settings > What is synced: new install: Posts, Pages and (with WooCommerce) Products ticked, public custom types listed but unticked | checklist shows Pages, Posts, any public custom types, Products (with WooCommerce); the hint "We start with posts, pages and products..." is under the list |
-| Untick Posts, Save Settings | `/documents/delete` 200 (one request per 500 ids) with every published post id; items `queued` (or `not_found` for any SamoMind never had) |
+| Samomind > Settings > What is synced: new install: Posts, Pages and (with WooCommerce) Products ticked, public custom types listed but unticked | checklist shows Pages, Posts, any public custom types, Products (with WooCommerce); the hint "We start with posts, pages and products..." is under the list |
+| Untick Posts, Save Settings | `/documents/delete` 200 (one request per 500 ids) with every published post id; items `queued` (or `not_found` for any Samomind never had) |
 | Chat / dashboard | posts are no longer cited; the page count drops by the number of posts |
 | Publish a new post | no request |
 | Tick Posts again, Save (no Reconcile now) | `/documents` 200 at once, pushing every published post; Status shows "Included on this site" back to the earlier number; the dashboard count is restored and the posts are cited again |
@@ -114,9 +114,9 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| SamoMind > Status > **Reconcile now** (or `wp samomind reconcile`) | `/reconcile` 200 (one per 5000 items) |
+| Samomind > Status > **Reconcile now** (or `wp samomind reconcile`) | `/reconcile` 200 (one per 5000 items) |
 | API response (5.6) | `missing`, `stale`, `deleted`, all empty when in sync |
-| Status page | Reconcile "Complete" with "0 missing, 0 stale, 0 removed by SamoMind" |
+| Status page | Reconcile "Complete" with "0 missing, 0 stale, 0 removed by Samomind" |
 
 - [ ] Done
 
@@ -124,9 +124,9 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| SamoMind > Status > **Check in now** (or `wp samomind checkin`) | `/checkin` 200 |
+| Samomind > Status > **Check in now** (or `wp samomind checkin`) | `/checkin` 200 |
 | API response (5.5) | `status` `ok`, `checkin_interval_seconds` 86400, `supported_api_versions` contains `"1"` |
-| Status page | "Last check-in" now, "(SamoMind reports: ok)" |
+| Status page | "Last check-in" now, "(Samomind reports: ok)" |
 | Dashboard | last check-in updated |
 | Next day | the hourly WP-Cron event checks in once the interval has passed, then reconciles |
 
@@ -136,7 +136,7 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| Settings > Chat widget: tick "Show the SamoMind chat widget on this site", enter the dashboard's site key, Save | saved without an error; the note shows this site's address for Allowed origins |
+| Settings > Chat widget: tick "Show the Samomind chat widget on this site", enter the dashboard's site key, Save | saved without an error; the note shows this site's address for Allowed origins |
 | View any front-end page source | one `<script src="https://widget.samomind.com/widget.js" defer data-site-key=... data-base-url=...>` near `</body>`, and no inline script from the plugin |
 | Enter `<script>alert(1)</script>` or `pk_live_x"><b>` as the site key | refused with a message; the previous key is kept |
 | Untick the box, Save; reload a page | no widget script in the source |
@@ -159,7 +159,7 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| SamoMind > Status > **Disconnect**, confirm | `/disconnect` 200 |
+| Samomind > Status > **Disconnect**, confirm | `/disconnect` 200 |
 | API response (5.5) | `state` `disconnected`; every document of the source is removed |
 | Status page | Not connected; settings (key id, secret, widget switch and site key) kept |
 | Dashboard | the site shows "disconnected" |
@@ -172,12 +172,12 @@ And nothing at all for:
 
 | Step | Expected |
 |---|---|
-| In the SamoMind dashboard, Disconnect the site | documents removed there |
+| In the Samomind dashboard, Disconnect the site | documents removed there |
 | Edit a published page on the site (or **Check in now**) | one request, answered 409 `source_disconnected` |
-| Status page | "Disconnected from the SamoMind dashboard." with a **Connect** button; source id gone; an admin notice says nothing is sent until Connect |
+| Status page | "Disconnected from the Samomind dashboard." with a **Connect** button; source id gone; an admin notice says nothing is sent until Connect |
 | Edit another page, wait past the next hourly cron | no request at all; never a `/connect` |
 | Click **Connect** | `/connect` 200, a new full sync |
-| After a dashboard disconnect, just open the Status page (no edit, no button) | within one page load the page shows "Disconnected from the SamoMind dashboard." (a single `/checkin` 409 in the log; at most one per minute); never a `/connect` |
+| After a dashboard disconnect, just open the Status page (no edit, no button) | within one page load the page shows "Disconnected from the Samomind dashboard." (a single `/checkin` 409 in the log; at most one per minute); never a `/connect` |
 
 - [ ] Done
 
@@ -187,7 +187,7 @@ And nothing at all for:
 |---|---|
 | Deactivate the plugin while connected | no request in the log; `wp cron event list` has no `SAMOMIND/*` events |
 | Dashboard | the site is still listed with its page count; documents still present (the chat still cites the site's pages) |
-| Reactivate the plugin | no request; SamoMind > Status shows Connected with the same source id; Full sync still shows the earlier "Complete" (no new full sync starts) |
+| Reactivate the plugin | no request; Samomind > Status shows Connected with the same source id; Full sync still shows the earlier "Complete" (no new full sync starts) |
 | Edit a published page | `/documents` 200, item `queued` (events work again) |
 
 - [ ] Done

@@ -96,8 +96,8 @@ class SAMOMIND_Admin {
 	 */
 	public function register_admin_menu() {
 		add_menu_page(
-			__( 'SamoMind', 'samomind-ai-assistant' ),
-			__( 'SamoMind', 'samomind-ai-assistant' ),
+			__( 'Samomind', 'samomind-ai-assistant' ),
+			__( 'Samomind', 'samomind-ai-assistant' ),
 			'manage_options',
 			self::MENU_SLUG,
 			array( $this, 'render_status_page' ),
@@ -107,7 +107,7 @@ class SAMOMIND_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'SamoMind Status', 'samomind-ai-assistant' ),
+			__( 'Samomind Status', 'samomind-ai-assistant' ),
 			__( 'Status', 'samomind-ai-assistant' ),
 			'manage_options',
 			self::STATUS_SLUG,
@@ -116,7 +116,7 @@ class SAMOMIND_Admin {
 
 		add_submenu_page(
 			self::MENU_SLUG,
-			__( 'SamoMind Settings', 'samomind-ai-assistant' ),
+			__( 'Samomind Settings', 'samomind-ai-assistant' ),
 			__( 'Settings', 'samomind-ai-assistant' ),
 			'manage_options',
 			self::SETTINGS_SLUG,
@@ -299,7 +299,7 @@ class SAMOMIND_Admin {
 		if ( '' === $value || SAMOMIND_Embed::is_valid_site_key( $value ) ) {
 			return $value;
 		}
-		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from the Widget screen of the SamoMind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
+		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from the Widget screen of the Samomind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
 		return SAMOMIND()->helpers->get_site_key();
 	}
 
@@ -379,7 +379,7 @@ class SAMOMIND_Admin {
 		$this->verify_action( 'connect' );
 
 		if ( ! SAMOMIND()->helpers->has_credentials() ) {
-			$this->finish( self::SETTINGS_SLUG, 'error', __( 'Enter the key id and secret from the SamoMind dashboard first.', 'samomind-ai-assistant' ) );
+			$this->finish( self::SETTINGS_SLUG, 'error', __( 'Enter the key id and secret from the Samomind dashboard first.', 'samomind-ai-assistant' ) );
 		}
 
 		$result = SAMOMIND()->connection->connect();
@@ -390,7 +390,7 @@ class SAMOMIND_Admin {
 	}
 
 	/**
-	 * Disconnect this site. SamoMind removes its documents.
+	 * Disconnect this site. Samomind removes its documents.
 	 *
 	 * @since   0.1.0
 	 * @return  void
@@ -402,7 +402,7 @@ class SAMOMIND_Admin {
 		if ( is_wp_error( $result ) ) {
 			$this->finish( self::STATUS_SLUG, 'error', self::error_text( __( 'Disconnect failed:', 'samomind-ai-assistant' ), $result ) );
 		}
-		$this->finish( self::STATUS_SLUG, 'success', __( 'Disconnected. SamoMind removes this site\'s documents. Your settings are kept.', 'samomind-ai-assistant' ) );
+		$this->finish( self::STATUS_SLUG, 'success', __( 'Disconnected. Samomind removes this site\'s documents. Your settings are kept.', 'samomind-ai-assistant' ) );
 	}
 
 	/**
@@ -487,7 +487,7 @@ class SAMOMIND_Admin {
 			$this->finish( self::SETTINGS_SLUG, 'warning', __( 'No secret entered; nothing changed.', 'samomind-ai-assistant' ) );
 		}
 		if ( ! preg_match( '/^smik_[A-Za-z0-9_-]+$/', $secret ) ) {
-			$this->finish( self::SETTINGS_SLUG, 'error', __( 'That does not look like a SamoMind ingest secret (it starts with smik_). Nothing changed.', 'samomind-ai-assistant' ) );
+			$this->finish( self::SETTINGS_SLUG, 'error', __( 'That does not look like a Samomind ingest secret (it starts with smik_). Nothing changed.', 'samomind-ai-assistant' ) );
 		}
 
 		update_option( 'samomind_api_secret', $secret, false );
@@ -570,18 +570,18 @@ class SAMOMIND_Admin {
 		$block = $connection->get_block();
 
 		if ( ! $connection->is_connected() ) {
-			// Disconnected on the SamoMind side; only an admin reconnects.
+			// Disconnected on the Samomind side; only an admin reconnects.
 			$class   = 'notice-warning';
 			$message = sprintf(
-				/* translators: %s: reason, for example "Disconnected from the SamoMind dashboard." */
-				__( 'SamoMind: %s Nothing is sent until you click Connect.', 'samomind-ai-assistant' ),
+				/* translators: %s: reason, for example "Disconnected from the Samomind dashboard." */
+				__( 'Samomind: %s Nothing is sent until you click Connect.', 'samomind-ai-assistant' ),
 				$block['message']
 			);
 		} elseif ( $connection->is_blocked() ) {
 			$class   = 'notice-error';
 			$message = sprintf(
 				/* translators: 1: API message, 2: error code */
-				__( 'SamoMind sync is paused: %1$s (%2$s)', 'samomind-ai-assistant' ),
+				__( 'Samomind sync is paused: %1$s (%2$s)', 'samomind-ai-assistant' ),
 				$block['message'],
 				$block['code']
 			);
@@ -589,7 +589,7 @@ class SAMOMIND_Admin {
 			$class   = 'notice-error';
 			$message = sprintf(
 				/* translators: %s: last error */
-				__( 'SamoMind sync has been failing for more than 24 hours. Last error: %s', 'samomind-ai-assistant' ),
+				__( 'Samomind sync has been failing for more than 24 hours. Last error: %s', 'samomind-ai-assistant' ),
 				$state['last_error']
 			);
 		} else {
@@ -601,7 +601,7 @@ class SAMOMIND_Admin {
 			esc_attr( $class ),
 			esc_html( $message ),
 			esc_url( add_query_arg( 'page', self::STATUS_SLUG, admin_url( 'admin.php' ) ) ),
-			esc_html__( 'Open SamoMind status', 'samomind-ai-assistant' )
+			esc_html__( 'Open Samomind status', 'samomind-ai-assistant' )
 		);
 	}
 
@@ -710,7 +710,7 @@ class SAMOMIND_Admin {
 		}
 
 		// A lightweight check-in (at most once a minute) so a disconnect made
-		// in the SamoMind dashboard shows now, not at the next background call.
+		// in the Samomind dashboard shows now, not at the next background call.
 		SAMOMIND()->connection->refresh_status();
 
 		$helpers    = SAMOMIND()->helpers;
@@ -721,7 +721,7 @@ class SAMOMIND_Admin {
 		$rows       = SAMOMIND()->log->get_rows();
 		?>
 		<div class="wrap samomind-admin-wrap">
-			<h1><?php esc_html_e( 'SamoMind Status', 'samomind-ai-assistant' ); ?></h1>
+			<h1><?php esc_html_e( 'Samomind Status', 'samomind-ai-assistant' ); ?></h1>
 			<hr class="wp-header-end">
 
 			<?php $this->render_action_notice(); ?>
@@ -762,8 +762,8 @@ class SAMOMIND_Admin {
 								<?php echo esc_html( $helpers->format_time( $state['last_checkin_at'] ) ); ?>
 								<?php if ( '' !== $state['server_status'] ) : ?>
 									<?php
-									/* translators: %s: status reported by SamoMind */
-									echo esc_html( sprintf( __( '(SamoMind reports: %s)', 'samomind-ai-assistant' ), $state['server_status'] ) );
+									/* translators: %s: status reported by Samomind */
+									echo esc_html( sprintf( __( '(Samomind reports: %s)', 'samomind-ai-assistant' ), $state['server_status'] ) );
 									?>
 								<?php endif; ?>
 							</td>
@@ -791,7 +791,7 @@ class SAMOMIND_Admin {
 						$this->render_action_button( 'checkin', __( 'Check in now', 'samomind-ai-assistant' ) );
 						$this->render_action_button( 'reconcile', __( 'Reconcile now', 'samomind-ai-assistant' ) );
 						$this->render_action_button( 'connect', __( 'Reconnect', 'samomind-ai-assistant' ) );
-						$this->render_action_button( 'disconnect', __( 'Disconnect', 'samomind-ai-assistant' ), 'button samomind-button-danger', __( 'Disconnect this site? SamoMind removes every document it received from this site. Your settings stay.', 'samomind-ai-assistant' ) );
+						$this->render_action_button( 'disconnect', __( 'Disconnect', 'samomind-ai-assistant' ), 'button samomind-button-danger', __( 'Disconnect this site? Samomind removes every document it received from this site. Your settings stay.', 'samomind-ai-assistant' ) );
 					} else {
 						$this->render_action_button( 'connect', __( 'Connect', 'samomind-ai-assistant' ), 'button button-primary' );
 					}
@@ -820,7 +820,7 @@ class SAMOMIND_Admin {
 						<th scope="row"><?php esc_html_e( 'Included on this site', 'samomind-ai-assistant' ); ?></th>
 						<td>
 							<strong class="samomind-included-count"><?php echo esc_html( number_format_i18n( SAMOMIND()->content->count_included() ) ); ?></strong>
-							<p class="description"><?php esc_html_e( 'Published items of the post types ticked under Settings, after filters. This is what the plugin keeps in step with SamoMind; the figures below are about the last full sync.', 'samomind-ai-assistant' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Published items of the post types ticked under Settings, after filters. This is what the plugin keeps in step with Samomind; the figures below are about the last full sync.', 'samomind-ai-assistant' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -834,7 +834,7 @@ class SAMOMIND_Admin {
 							/* translators: 1: queued, 2: unchanged, 3: refused */
 							echo esc_html( sprintf( __( 'Last full sync: %1$d accepted, %2$d unchanged, %3$d refused.', 'samomind-ai-assistant' ), $progress['accepted'], $progress['unchanged'], $progress['refused'] ) );
 							?>
-							<p class="description"><?php esc_html_e( 'The SamoMind API does not report a page count to the plugin; the dashboard shows the indexed count for this site.', 'samomind-ai-assistant' ); ?></p>
+							<p class="description"><?php esc_html_e( 'The Samomind API does not report a page count to the plugin; the dashboard shows the indexed count for this site.', 'samomind-ai-assistant' ); ?></p>
 						</td>
 					</tr>
 					<tr>
@@ -844,7 +844,7 @@ class SAMOMIND_Admin {
 							<?php
 							if ( $progress['reconcile']['finished_at'] > 0 ) {
 								/* translators: 1: time, 2: missing, 3: stale, 4: deleted */
-								echo esc_html( sprintf( __( '(last %1$s: %2$d missing, %3$d stale, %4$d removed by SamoMind)', 'samomind-ai-assistant' ), $helpers->format_time( $progress['reconcile']['finished_at'] ), $progress['reconcile']['missing'], $progress['reconcile']['stale'], $progress['reconcile']['deleted'] ) );
+								echo esc_html( sprintf( __( '(last %1$s: %2$d missing, %3$d stale, %4$d removed by Samomind)', 'samomind-ai-assistant' ), $helpers->format_time( $progress['reconcile']['finished_at'] ), $progress['reconcile']['missing'], $progress['reconcile']['stale'], $progress['reconcile']['deleted'] ) );
 							}
 							?>
 						</td>
@@ -874,7 +874,7 @@ class SAMOMIND_Admin {
 
 			<div class="samomind-card">
 				<h2><?php esc_html_e( 'Request log', 'samomind-ai-assistant' ); ?></h2>
-				<p class="description"><?php esc_html_e( 'The last 200 requests to SamoMind: time, endpoint, HTTP status and error code. Request bodies and credentials are never logged.', 'samomind-ai-assistant' ); ?></p>
+				<p class="description"><?php esc_html_e( 'The last 200 requests to Samomind: time, endpoint, HTTP status and error code. Request bodies and credentials are never logged.', 'samomind-ai-assistant' ); ?></p>
 				<?php if ( empty( $rows ) ) : ?>
 					<p><?php esc_html_e( 'No requests yet.', 'samomind-ai-assistant' ); ?></p>
 				<?php else : ?>
@@ -919,9 +919,9 @@ class SAMOMIND_Admin {
 		$helpers = SAMOMIND()->helpers;
 		?>
 		<div class="wrap samomind-admin-wrap">
-			<h1><?php esc_html_e( 'SamoMind Settings', 'samomind-ai-assistant' ); ?></h1>
+			<h1><?php esc_html_e( 'Samomind Settings', 'samomind-ai-assistant' ); ?></h1>
 			<p class="description">
-				<?php esc_html_e( 'In the SamoMind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
+				<?php esc_html_e( 'In the Samomind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
 			</p>
 			<hr class="wp-header-end">
 
@@ -987,7 +987,7 @@ class SAMOMIND_Admin {
 								<p class="description">
 									<?php
 									/* translators: %s: default API URL */
-									echo esc_html( sprintf( __( 'Leave as %s unless SamoMind asks you to use a staging address. The plugin sends requests only to this address.', 'samomind-ai-assistant' ), SAMOMIND_Helpers::DEFAULT_API_BASE_URL ) );
+									echo esc_html( sprintf( __( 'Leave as %s unless Samomind asks you to use a staging address. The plugin sends requests only to this address.', 'samomind-ai-assistant' ), SAMOMIND_Helpers::DEFAULT_API_BASE_URL ) );
 									?>
 								</p>
 							</td>
@@ -1016,7 +1016,7 @@ class SAMOMIND_Admin {
 								</fieldset>
 								<p class="description"><?php esc_html_e( 'Only published, public, not password-protected items of the ticked types are sent.', 'samomind-ai-assistant' ); ?></p>
 								<p class="description"><?php esc_html_e( 'We start with posts, pages and products. Tick other content types only if visitors ask about them.', 'samomind-ai-assistant' ); ?></p>
-								<p class="description"><?php esc_html_e( 'Unticking a type removes its items from SamoMind: they are queued for deletion and sent in the background. Ticking it again adds them back at the next daily reconcile, or click "Sync now" on the Status page.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Unticking a type removes its items from Samomind: they are queued for deletion and sent in the background. Ticking it again adds them back at the next daily reconcile, or click "Sync now" on the Status page.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>
@@ -1029,13 +1029,13 @@ class SAMOMIND_Admin {
 								<input type="hidden" name="samomind_widget_enabled" value="0">
 								<label>
 									<input type="checkbox" id="samomind_widget_enabled" name="samomind_widget_enabled" value="1"<?php checked( $helpers->is_widget_enabled() ); ?>>
-									<?php esc_html_e( 'Show the SamoMind chat widget on this site', 'samomind-ai-assistant' ); ?>
+									<?php esc_html_e( 'Show the Samomind chat widget on this site', 'samomind-ai-assistant' ); ?>
 								</label>
 								<p class="description">
 									<?php
 									echo wp_kses(
 										/* translators: %s: the site address, for example https://example.com */
-										sprintf( __( 'Before you turn this on, add <code>%s</code> to <strong>Allowed origins</strong> in the SamoMind dashboard. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
+										sprintf( __( 'Before you turn this on, add <code>%s</code> to <strong>Allowed origins</strong> in the Samomind dashboard. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
 										array(
 											'code'   => array(),
 											'strong' => array(),
@@ -1053,7 +1053,7 @@ class SAMOMIND_Admin {
 							<td>
 								<input type="text" id="samomind_site_key" name="samomind_site_key" class="regular-text code" spellcheck="false" autocomplete="off"
 									value="<?php echo esc_attr( $helpers->get_site_key() ); ?>" placeholder="pk_live_...">
-								<p class="description"><?php esc_html_e( 'Copy the site key from the Widget screen of the SamoMind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Copy the site key from the Widget screen of the Samomind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>

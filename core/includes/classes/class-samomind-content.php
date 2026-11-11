@@ -54,7 +54,7 @@ class SAMOMIND_Content {
 		$types = array_values( array_intersect( $this->get_available_post_types(), $this->get_selected_post_types() ) );
 
 		/**
-		 * Filter the post types sent to SamoMind. Runs after the settings
+		 * Filter the post types sent to Samomind. Runs after the settings
 		 * page's post type selection.
 		 *
 		 * @since 0.1.0
@@ -161,7 +161,7 @@ class SAMOMIND_Content {
 	 */
 	public function get_excluded_ids() {
 		/**
-		 * Filter the post ids never sent to SamoMind.
+		 * Filter the post ids never sent to Samomind.
 		 *
 		 * @since 0.1.0
 		 * @param int[] $ids Post ids.
@@ -213,7 +213,7 @@ class SAMOMIND_Content {
 	}
 
 	/**
-	 * Whether a post is sent to SamoMind right now.
+	 * Whether a post is sent to Samomind right now.
 	 *
 	 * @since   0.1.0
 	 * @param   WP_Post|null $post  Post.
@@ -517,7 +517,7 @@ class SAMOMIND_Content {
 
 	/**
 	 * Ids of every published post of one type, eligible or not. Used to
-	 * remove a type that was unticked; ids SamoMind never had come back
+	 * remove a type that was unticked; ids Samomind never had come back
 	 * not_found, which is harmless.
 	 *
 	 * @since   0.1.0
@@ -590,7 +590,7 @@ class SAMOMIND_Content {
 	 * unprotected posts of the ticked types after the filters, less the
 	 * ids the SAMOMIND/content/excluded_ids filter lists. Hidden
 	 * WooCommerce products are not subtracted, so a shop with hidden
-	 * products can show a few more than SamoMind holds.
+	 * products can show a few more than Samomind holds.
 	 *
 	 * @since   0.2.0
 	 * @return  int

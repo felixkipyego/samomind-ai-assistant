@@ -1,17 +1,17 @@
 <?php
 /**
- * SamoMind AI Assistant
+ * Samomind AI Assistant
  *
  * @package       SAMOMIND
  * @author        SoftwaresKe Ltd
  * @license       GPL-2.0-or-later
- * @version       0.3.4
+ * @version       0.3.5
  *
  * @wordpress-plugin
- * Plugin Name:       SamoMind AI Assistant
- * Plugin URI:        https://samomind.com
- * Description:       Keeps your SamoMind AI assistant's knowledge base in sync with this site's public pages, posts and products, and adds the SamoMind chat widget.
- * Version:           0.3.4
+ * Plugin Name:       Samomind AI Assistant
+ * Plugin URI:        https://samomind.com/help/wordpress-plugin/
+ * Description:       Keeps your Samomind AI assistant's knowledge base in sync with this site's public pages, posts and products, and adds the Samomind chat widget.
+ * Version:           0.3.5
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Author:            SoftwaresKe Ltd
@@ -22,7 +22,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  *
  * You should have received a copy of the GNU General Public License
- * along with SamoMind AI Assistant. If not, see <https://www.gnu.org/licenses/gpl-2.0.html>.
+ * along with Samomind AI Assistant. If not, see <https://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
 // Exit if accessed directly.
@@ -31,10 +31,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin name.
-define( 'SAMOMIND_NAME', 'SamoMind AI Assistant' );
+define( 'SAMOMIND_NAME', 'Samomind AI Assistant' );
 
 // Plugin version.
-define( 'SAMOMIND_VERSION', '0.3.4' );
+define( 'SAMOMIND_VERSION', '0.3.5' );
 
 // Plugin Root File.
 define( 'SAMOMIND_PLUGIN_FILE', __FILE__ );

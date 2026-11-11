@@ -35,7 +35,7 @@ class SAMOMIND_Embed {
 	const WIDGET_URL = 'https://widget.samomind.com/widget.js';
 
 	/**
-	 * Shape of a site key: "pk_live_" and the URL-safe token the SamoMind
+	 * Shape of a site key: "pk_live_" and the URL-safe token the Samomind
 	 * backend generates (generate_site_key(), 256 bits, 43 characters).
 	 *
 	 * @var string

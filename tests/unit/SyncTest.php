@@ -482,7 +482,7 @@ class SyncTest extends SAMOMIND_TestCase {
 		$connection = SAMOMIND()->connection;
 		$this->assertFalse( $connection->is_connected() );
 		$this->assertSame( 'source_disconnected', $connection->get_block()['code'] );
-		$this->assertSame( 'Disconnected from the SamoMind dashboard.', $connection->get_block()['message'] );
+		$this->assertSame( 'Disconnected from the Samomind dashboard.', $connection->get_block()['message'] );
 		$this->assertSame( array(), $this->sync->get_queue()['items'] );
 		$this->assertFalse( $this->sync->has_work() );
 	}
@@ -534,7 +534,7 @@ class SyncTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( 'source_disconnected', $result->get_error_code() );
 		$this->assertFalse( SAMOMIND()->connection->is_connected() );
-		$this->assertSame( 'Disconnected from the SamoMind dashboard.', SAMOMIND()->connection->get_block()['message'] );
+		$this->assertSame( 'Disconnected from the Samomind dashboard.', SAMOMIND()->connection->get_block()['message'] );
 
 		// Not connected any more: loading the page again sends nothing.
 		$this->assertNull( SAMOMIND()->connection->refresh_status() );
