@@ -10,9 +10,9 @@ ones WordPress.org requires.
 | `banner-772x250.png`, `banner-1544x500.png` | page banner: deep purple #300A6E background, the white lockup (`samomind-mono-white.svg`) and the line "Answers your visitors from your own site" | 772 x 250 and 1544 x 500 px |
 | `screenshot-1.png` | Samomind > Settings with the chat widget switched on (demo site, fake key) | 1280 x 1400 |
 | `screenshot-2.png` | the content types list and the sync status (demo site, fake data) | 1120 x 800 |
-| `screenshot-3.png` | the chat widget's welcome screen on https://www.softwareske.com | 1280 x 800 |
-| `screenshot-4.png` | one answer with its source link, same site | 1280 x 800 |
-| `screenshot-5.png` | the widget on a phone-sized screen (390 x 844 at 2x) | 780 x 1688 |
+| `screenshot-3.png` | the chat widget's welcome screen on https://samomind.com (Samomind's own site) | 1280 x 800 |
+| `screenshot-4.png` | one answer with its source links, same site (the question "How do I add it to my website?") | 1280 x 800 |
+| `screenshot-5.png` | the widget on a phone-sized screen (390 x 844 at 2x), same site | 780 x 1688 |
 
 A screenshot's number matches its line under `== Screenshots ==` in
 readme.txt. The logo files are Samomind's own artwork, taken from the Samomind logo pack, rasterised as they are and never redrawn; the wordmark is not retyped.
