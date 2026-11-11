@@ -11,7 +11,7 @@ ones WordPress.org requires.
 | `screenshot-1.png` | Samomind > Settings with the chat widget switched on (demo site, fake key) | 1280 x 1400 |
 | `screenshot-2.png` | the content types list and the sync status (demo site, fake data) | 1120 x 800 |
 | `screenshot-3.png` | the chat widget's welcome screen on https://samomind.com (Samomind's own site) | 1280 x 800 |
-| `screenshot-4.png` | one answer with its source links, same site (the question "How do I add it to my website?") | 1280 x 800 |
+| `screenshot-4.png` | one answer with its source links, same site (the question "Does it work with WordPress?") | 1280 x 800 |
 | `screenshot-5.png` | the widget on a phone-sized screen (390 x 844 at 2x), same site | 780 x 1688 |
 
 A screenshot's number matches its line under `== Screenshots ==` in
