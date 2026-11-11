@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Manage the SamoMind connection and sync.
+ * Manage the Samomind connection and sync.
  *
  * Every command calls the same code the admin buttons call. `sync` and
  * `reconcile` then run the background worker in the foreground until the
@@ -76,7 +76,7 @@ class SAMOMIND_CLI {
 	}
 
 	/**
-	 * Connect this site to SamoMind and start the first sync in the background.
+	 * Connect this site to Samomind and start the first sync in the background.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -87,7 +87,7 @@ class SAMOMIND_CLI {
 	 */
 	public function connect( $args, $assoc_args ) {
 		if ( ! SAMOMIND()->helpers->has_credentials() ) {
-			WP_CLI::error( 'Set the key id and secret first (SamoMind > Settings, or the SAMOMIND_API_SECRET constant).' );
+			WP_CLI::error( 'Set the key id and secret first (Samomind > Settings, or the SAMOMIND_API_SECRET constant).' );
 		}
 		$result = SAMOMIND()->connection->connect();
 		if ( is_wp_error( $result ) ) {
@@ -97,7 +97,7 @@ class SAMOMIND_CLI {
 	}
 
 	/**
-	 * Disconnect this site. SamoMind removes every document it received from it.
+	 * Disconnect this site. Samomind removes every document it received from it.
 	 *
 	 * ## OPTIONS
 	 *
@@ -112,7 +112,7 @@ class SAMOMIND_CLI {
 	 * @param array $assoc_args  Named arguments.
 	 */
 	public function disconnect( $args, $assoc_args ) {
-		WP_CLI::confirm( 'Disconnect this site? SamoMind removes every document it received from it.', $assoc_args );
+		WP_CLI::confirm( 'Disconnect this site? Samomind removes every document it received from it.', $assoc_args );
 		$result = SAMOMIND()->connection->disconnect( 'admin' );
 		if ( is_wp_error( $result ) ) {
 			WP_CLI::error( 'Disconnect failed: ' . $result->get_error_message() . ' (' . $result->get_error_code() . ')' );
@@ -143,7 +143,7 @@ class SAMOMIND_CLI {
 	}
 
 	/**
-	 * Reconcile this site's inventory with SamoMind now.
+	 * Reconcile this site's inventory with Samomind now.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -161,11 +161,11 @@ class SAMOMIND_CLI {
 		if ( 'stopped' === $reconcile['state'] ) {
 			WP_CLI::error( 'Reconcile stopped: ' . $reconcile['message'] );
 		}
-		WP_CLI::success( sprintf( 'Reconcile %s: %d missing, %d stale (both pushed), %d removed by SamoMind.', $reconcile['state'], $reconcile['missing'], $reconcile['stale'], $reconcile['deleted'] ) );
+		WP_CLI::success( sprintf( 'Reconcile %s: %d missing, %d stale (both pushed), %d removed by Samomind.', $reconcile['state'], $reconcile['missing'], $reconcile['stale'], $reconcile['deleted'] ) );
 	}
 
 	/**
-	 * Check in with SamoMind now.
+	 * Check in with Samomind now.
 	 *
 	 * ## EXAMPLES
 	 *
@@ -181,7 +181,7 @@ class SAMOMIND_CLI {
 			WP_CLI::error( 'Check-in failed: ' . $result->get_error_message() . ' (' . $result->get_error_code() . ')' );
 		}
 		$status = isset( $result['status'] ) ? $result['status'] : 'unknown';
-		WP_CLI::success( 'Checked in. SamoMind reports: ' . $status );
+		WP_CLI::success( 'Checked in. Samomind reports: ' . $status );
 	}
 
 	/**

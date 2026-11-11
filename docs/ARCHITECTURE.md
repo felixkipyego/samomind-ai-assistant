@@ -1,4 +1,4 @@
-# SamoMind AI Assistant: architecture
+# Samomind AI Assistant: architecture
 
 This plugin copies the structure of the reference plugin
 `onsite-training-cost-estimator` (OTCE) one for one. None of its business
@@ -6,13 +6,13 @@ logic is used, only the shape: file layout, loading, naming, settings and
 hook style. Where this plugin needs something the reference has no example
 of, the adaptation is listed with a "why" line.
 
-The API contract is `docs/API_CONTRACT.md` (a pinned copy of SamoMind's
+The API contract is `docs/API_CONTRACT.md` (a pinned copy of Samomind's
 `docs/ingest/PUSH_INGESTION_DESIGN.md`). Where this file and the contract
 differ, the contract wins.
 
 ## 1. Conventions
 
-| Convention | Reference example | SamoMind value |
+| Convention | Reference example | Samomind value |
 |---|---|---|
 | Main plugin file | `onsite-training-cost-estimator.php` | `samomind-ai-assistant.php` |
 | Plugin header | Plugin Name, URI, Description, Version, Author, Text Domain, Domain Path `/languages`, License | same fields, plus Requires at least `6.0`, Requires PHP `7.4`, License `GPL-2.0-or-later` |
@@ -298,7 +298,7 @@ with its own code, so reading `post_content` alone sent empty or raw pages.
 **A11. Status page.** Loading the Status page makes a lightweight
 `/checkin` at most once a minute (`SAMOMIND_Connection::refresh_status()`),
 with a fresh key and without moving the daily check-in time, so a
-disconnect made in the SamoMind dashboard or a deleted source shows within
+disconnect made in the Samomind dashboard or a deleted source shows within
 a page load. It never calls `/connect`, and it is skipped when a bad key
 paused the site. The page also shows "Included on this site": published,
 unprotected posts of the ticked types after filters, less the ids listed
@@ -310,7 +310,7 @@ type on the settings page queues pushes for its published, unprotected
 items at once (replacing any delete still queued for them), through the
 same worker and batching as any push. Reconcile does not compute "missing"
 on the site: it sends the inventory (every eligible id with its modified
-time, in byte order, in pages of the server's entry limit) and SamoMind
+time, in byte order, in pages of the server's entry limit) and Samomind
 answers with `missing` (listed ids it has no live item for, which includes
 items it deleted) and `stale` (listed with a newer modified time than it
 holds). The plugin queues a push for each, replacing a delete still queued
@@ -323,7 +323,7 @@ scanners (Wordfence, Sucuri) flagged the pasted inline snippet. With
 `SAMOMIND_Embed::enqueue_widget()` calls `wp_enqueue_script()` for
 `https://widget.samomind.com/widget.js` (handle `samomind-widget`, footer,
 `defer` strategy, no version). The loader reads `data-site-key` and
-`data-base-url` from its own tag (SamoMind `widget/loader/src/config.js`), so
+`data-base-url` from its own tag (Samomind `widget/loader/src/config.js`), so
 `add_widget_attributes()` adds both through `wp_script_attributes`, only for
 the tag whose id is `samomind-widget-js`. The base URL is the configured API
 base URL. Nothing is echoed. It never loads in wp-admin, AJAX, the login
@@ -331,7 +331,7 @@ page, feeds, embeds, previews, the Customizer or REST/JSON requests.
 The contract has no endpoint that returns the site key (`/connect` and
 `/checkin` answer with `source_id`, interval, limits, state), and the
 ingest key is not a site key, so the key is typed in and validated against
-`pk_live_` + 20 to 128 URL-safe characters (what SamoMind's
+`pk_live_` + 20 to 128 URL-safe characters (what Samomind's
 `generate_site_key()` produces); the value is checked as typed, never
 stripped of markup first. The key's origin must be in the dashboard's
 Allowed origins; the settings page shows the exact origin from
@@ -413,7 +413,7 @@ daily), after 24 h of failures an admin notice appears;
 inside the client; `unknown_source` and `source_disconnected` mean the
 dashboard wins (contract 5.4 for `source_disconnected`; see "Still differs"
 for `unknown_source`): the source id, queue and sync state are dropped, the
-connection is blocked ("Disconnected from the SamoMind dashboard."), the
+connection is blocked ("Disconnected from the Samomind dashboard."), the
 worker and the hourly tick send nothing, and `/connect` is called only from
 the Connect button or `wp samomind connect`; `duplicate_request` counts as applied; `invalid_key`, `key_revoked`,
 `unsupported_api_version`, `tenant_suspended` and `source_disabled` block
@@ -429,7 +429,7 @@ drop the request and record the error.
 | `SAMOMIND/content/text` | the extracted plain text | replace the text sent for one post (receives the text, the `WP_Post`, the collected data) |
 | `SAMOMIND/sync/debounce_seconds` | `30` | seconds a saved post waits before it is pushed |
 | `SAMOMIND/sync/builder_meta_keys` | the built-in builders' keys | add the storage meta key of another builder |
-| `SAMOMIND/settings/get_plugin_name` | `SamoMind AI Assistant` | same as the reference |
+| `SAMOMIND/settings/get_plugin_name` | `Samomind AI Assistant` | same as the reference |
 
 Action: `SAMOMIND/plugin_loaded` after setup.
 
@@ -449,7 +449,7 @@ public taxonomies go in `fields.categories`.
 
 ### Still differs
 
-The contract copy is SamoMind `ba44704` (7.6.a1 amendments: deactivation
+The contract copy is Samomind `ba44704` (7.6.a1 amendments: deactivation
 does nothing server-side, a dashboard disconnect wins, open item for an
 indexed count). Two places still read differently from what is built:
 

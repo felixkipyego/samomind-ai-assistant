@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.5 (2026-11-11)
+
+Step 7.6.i.
+
+- Changed: new name, Samomind (lower-case m), in every text the user sees:
+  the plugin name, admin screens, notices, WP-CLI messages and the readme.
+  The slug, text domain, option names, hooks and the `wp samomind` command
+  are unchanged.
+- Changed: signup at https://app.samomind.com is open to everyone with a
+  7-day free trial. The readme no longer says access is by invitation.
+- Plugin URI is now https://samomind.com/help/wordpress-plugin/, and the
+  Installation section links to the full guide.
+- New WordPress.org icons, banners and two settings screenshots.
+- No change in behaviour.
+
 ## 0.3.4 (2026-11-07)
 
 Step 7.6.d-review-b.

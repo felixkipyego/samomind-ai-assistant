@@ -1,6 +1,6 @@
 {
   "name": "softwareske/samomind-ai-assistant",
-  "description": "SamoMind AI Assistant WordPress plugin. Composer is used for development tooling only.",
+  "description": "Samomind AI Assistant WordPress plugin. Composer is used for development tooling only.",
   "type": "wordpress-plugin",
   "license": "GPL-2.0-or-later",
   "require": {

@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<ruleset name="SamoMind AI Assistant">
+<ruleset name="Samomind AI Assistant">
 	<description>WordPress Coding Standards, tuned to the conventions of the reference plugin (docs/ARCHITECTURE.md section 1).</description>
 
 	<file>.</file>

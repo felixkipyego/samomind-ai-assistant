@@ -1,7 +1,7 @@
 #!/bin/sh
 # Smoke test in wp-env (Docker): activate the plugin, open the settings and
 # status pages as the admin, run `wp samomind status`, and check the debug
-# log has nothing from the plugin. Calls no SamoMind API.
+# log has nothing from the plugin. Calls no Samomind API.
 #
 # Run from the plugin root: composer smoke
 # Clean up afterwards: npx @wordpress/env destroy

@@ -1,6 +1,6 @@
 /**
  * SAMOMIND — Backend Scripts
- * SamoMind AI Assistant
+ * Samomind AI Assistant
  */
 ( function ( $ ) {
 	'use strict';

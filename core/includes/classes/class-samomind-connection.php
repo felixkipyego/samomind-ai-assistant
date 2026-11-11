@@ -229,7 +229,7 @@ class SAMOMIND_Connection {
 	}
 
 	/**
-	 * The source was disconnected or removed on the SamoMind side. Forget
+	 * The source was disconnected or removed on the Samomind side. Forget
 	 * the source id and all pending work, and block until an admin clicks
 	 * Connect (or runs `wp samomind connect`). Nothing calls /connect on
 	 * its own.
@@ -240,8 +240,8 @@ class SAMOMIND_Connection {
 	 */
 	public function detach( $error ) {
 		$message = 'source_disconnected' === $error->get_error_code()
-			? __( 'Disconnected from the SamoMind dashboard.', 'samomind-ai-assistant' )
-			: __( 'SamoMind no longer knows this site; it may have been removed in the dashboard.', 'samomind-ai-assistant' );
+			? __( 'Disconnected from the Samomind dashboard.', 'samomind-ai-assistant' )
+			: __( 'Samomind no longer knows this site; it may have been removed in the dashboard.', 'samomind-ai-assistant' );
 
 		SAMOMIND()->sync->reset();
 		update_option(
@@ -305,7 +305,7 @@ class SAMOMIND_Connection {
 			return $result;
 		}
 		if ( empty( $result['source_id'] ) || ! is_string( $result['source_id'] ) ) {
-			return new WP_Error( 'invalid_response', __( 'SamoMind did not return a source id.', 'samomind-ai-assistant' ) );
+			return new WP_Error( 'invalid_response', __( 'Samomind did not return a source id.', 'samomind-ai-assistant' ) );
 		}
 
 		$limits = self::DEFAULT_LIMITS;
@@ -444,7 +444,7 @@ class SAMOMIND_Connection {
 		if ( ! empty( $versions ) && ! in_array( SAMOMIND_Client::API_VERSION, $versions, true ) ) {
 			$changes['blocked'] = array(
 				'code'    => 'unsupported_api_version',
-				'message' => __( 'SamoMind no longer supports this plugin version. Update the plugin.', 'samomind-ai-assistant' ),
+				'message' => __( 'Samomind no longer supports this plugin version. Update the plugin.', 'samomind-ai-assistant' ),
 				'at'      => time(),
 			);
 		}
@@ -454,7 +454,7 @@ class SAMOMIND_Connection {
 	}
 
 	/**
-	 * Check in for the Status page, so a disconnect made in the SamoMind
+	 * Check in for the Status page, so a disconnect made in the Samomind
 	 * dashboard, or a deleted source, shows within a page load. At most
 	 * once a minute per site, never calls /connect, and does nothing when
 	 * the site is not connected or a bad key already paused it.
