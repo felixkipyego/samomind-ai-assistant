@@ -1,6 +1,6 @@
 # WordPress.org submission (Felix uploads it)
 
-Plugin: Samomind AI Assistant, slug `samomind-ai-assistant`, version 0.3.5.
+Plugin: Samomind AI Assistant, slug `samomind-ai-assistant`, version 0.3.6.
 Submitting account: `samomind` (registered with a samomind.com address,
 two-factor on). Felix's personal account `kipyegofelix` is added as a
 committer after approval (step 4).
@@ -9,10 +9,10 @@ committer after approval (step 4).
 
 1. Get the zip. Run `composer build` from the plugin folder on the
    merged `main` (it packs the committed tree and leaves out everything in
-   `.distignore`). The file is `build/samomind-ai-assistant-0.3.5.zip`.
+   `.distignore`). The file is `build/samomind-ai-assistant-0.3.6.zip`.
    The `.wordpress-org/` images are not in it, on purpose.
 2. Check it once: one top-level folder `samomind-ai-assistant/`, the plugin
-   header says Version 0.3.5, `readme.txt` says Stable tag 0.3.5.
+   header says Version 0.3.6, `readme.txt` says Stable tag 0.3.6.
 3. Make sure you can sign in as `samomind` at https://login.wordpress.org/
    (WordPress.com logins do not work there). Use the samomind.com email
    and the authenticator app.
@@ -89,7 +89,7 @@ svn co https://plugins.svn.wordpress.org/samomind-ai-assistant svn-samomind
 cd svn-samomind
 
 # trunk: the contents of the zip's samomind-ai-assistant/ folder
-unzip -q /path/to/samomind-ai-assistant-0.3.5.zip -d /tmp/samomind-zip
+unzip -q /path/to/samomind-ai-assistant-0.3.6.zip -d /tmp/samomind-zip
 cp -R /tmp/samomind-zip/samomind-ai-assistant/. trunk/
 
 # assets: the .wordpress-org images, a sibling of trunk (not inside it)
@@ -99,11 +99,11 @@ cp /path/to/samomind-ai-assistant/.wordpress-org/*.png assets/
 svn add --force trunk assets
 svn propset svn:mime-type image/png assets/*.png
 svn status
-svn ci -m "Add Samomind AI Assistant 0.3.5"
+svn ci -m "Add Samomind AI Assistant 0.3.6"
 
-# tag the release: the tag name is the version, trunk readme says Stable tag 0.3.5
-svn cp trunk tags/0.3.5
-svn ci -m "Tag 0.3.5"
+# tag the release: the tag name is the version, trunk readme says Stable tag 0.3.6
+svn cp trunk tags/0.3.6
+svn ci -m "Tag 0.3.6"
 ```
 
 Notes:

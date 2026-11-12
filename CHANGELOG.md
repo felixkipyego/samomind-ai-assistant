@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.3.6 (2026-11-12)
+
+Step 7.6.m.
+
+- Fixed: stock and price changes made by orders, cancelled and refunded
+  orders, the REST API, the CSV importer, ERP and POS plugins, variation
+  saves and scheduled sales did not reach Samomind until someone edited the
+  product. WooCommerce saves those with its own code, which skips the post
+  save hooks the plugin listened to. The plugin now also queues the product
+  on WooCommerce's stock, stock status and product update actions (a
+  variation queues its parent), through the same 30 second wait.
+- Changed: the price is built from WooCommerce's own prices and sent as
+  clean text, "$70.00 (was $100.00)" or "$30.00 to $50.00 (some on sale)",
+  in the shop's tax display, currency and number format, with a price suffix
+  as plain text. It no longer carries screen-reader text, and a large sale
+  price is no longer cut off at 64 characters.
+- Hidden products: confirmed that a product with catalog visibility Hidden
+  is never sent, and that a product turned Hidden by a change that skips the
+  save hooks is removed from Samomind. Shop only and Search results only
+  products are sent.
+- New: a dismissible notice on the Status and Settings screens when
+  WooCommerce is active but Products is not ticked under What is synced. The
+  selection is never changed for you.
+
 ## 0.3.5 (2026-11-11)
 
 Step 7.6.i.

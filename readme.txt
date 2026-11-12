@@ -4,7 +4,7 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.5
+Stable tag: 0.3.6
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -25,9 +25,9 @@ The plugin connects this site to your Samomind account. Your public pages, posts
 
 = What is sent =
 
-Only published, public content that is not password-protected: for each page, post, public custom post type item or WooCommerce product, its id, address, title, text (the rendered content as plain text, the excerpt and, for products, the short description), type, last modified time and the names of its public categories and tags. Products add price and stock status.
+Only published, public content that is not password-protected: for each page, post, public custom post type item or WooCommerce product, its id, address, title, text (the rendered content as plain text, the excerpt and, for products, the short description), type, last modified time and the names of its public categories and tags. Products add the price as the shop shows it to visitors (for example "$70.00 (was $100.00)" or "$30.00 to $50.00") and the stock status.
 
-Never sent: drafts, scheduled, private or password-protected content, users, visitors, comments, form entries, orders, carts, customers or media files. Hidden WooCommerce products are not sent.
+Never sent: drafts, scheduled, private or password-protected content, users, visitors, comments, form entries, orders, carts, customers or media files. WooCommerce products whose catalog visibility is Hidden are never sent; products set to Shop only or Search results only are, because their pages are public.
 
 Choose the post types under Samomind > Settings > What is synced (posts, pages and WooCommerce products are ticked by default, other types start unticked). Unticking a type removes its items from Samomind. Developers can also use the `SAMOMIND/content/post_types` filter (it runs after that setting) and `SAMOMIND/content/excluded_ids` to leave out single posts.
 
@@ -91,7 +91,7 @@ Yes. For each page the plugin finds the builder it was made with and asks that b
 
 = How quickly do changes show up in the assistant? =
 
-A change is sent about 30 seconds after the last save (so several quick edits become one update), then Samomind indexes it. A daily check-in and reconcile catches anything missed. WP-Cron only runs when the site gets visits, so on a quiet site set up a real cron job that runs `wp cron event run --due-now`, or install WooCommerce, whose Action Scheduler runs the work.
+A change is sent about 30 seconds after the last save (so several quick edits become one update), then Samomind indexes it. Stock and price changes made by orders, imports, the REST API, ERP or POS plugins and scheduled sales are sent the same way. A daily check-in and reconcile catches anything missed. WP-Cron only runs when the site gets visits, so on a quiet site set up a real cron job that runs `wp cron event run --due-now`, or install WooCommerce, whose Action Scheduler runs the work.
 
 = Will it slow down my site? =
 
@@ -114,6 +114,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 5. The chat widget on a phone-sized screen.
 
 == Changelog ==
+
+= 0.3.6 =
+* Stock and price changes from orders, imports, the REST API and scheduled sales now reach the assistant within a minute. Clearer prices for sales and variable products. Hidden products are never sent.
 
 = 0.3.5 =
 * New name: Samomind. Signup is open to everyone. No change in behaviour.
@@ -146,6 +149,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.3.6 =
+Stock and price changes from orders, imports, the REST API and scheduled sales now reach the assistant within a minute. Clearer prices for sales and variable products. Hidden products are never sent.
 
 = 0.3.5 =
 New name: Samomind. Signup is open to everyone. No change in behaviour.
