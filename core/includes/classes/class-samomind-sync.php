@@ -56,6 +56,16 @@ class SAMOMIND_Sync {
 	const EVENT_DELAY = 30;
 
 	/**
+	 * Seconds during which a second WooCommerce change to the same product,
+	 * in the same request, is not queued again. One order line fires several
+	 * of the actions below within milliseconds; each queue write is an option
+	 * write, and the 30 second wait is longer than this anyway.
+	 *
+	 * @var int
+	 */
+	const SHOP_REQUEUE_GUARD = 5;
+
+	/**
 	 * Requests per worker run; the API allows 60 per minute per key.
 	 *
 	 * @var int
@@ -104,6 +114,13 @@ class SAMOMIND_Sync {
 	 * ###
 	 * ######################
 	 */
+
+	/**
+	 * Products queued by on_shop_product_change() in this request: id => time.
+	 *
+	 * @var array
+	 */
+	private $shop_seen = array();
 
 	/**
 	 * Full sync and reconcile state with defaults.
@@ -393,6 +410,47 @@ class SAMOMIND_Sync {
 			return;
 		}
 		$this->queue_post_id( (int) $post_id );
+	}
+
+	/**
+	 * Hooked to WooCommerce's stock, stock status and product update
+	 * actions. WooCommerce writes stock and price changes made by orders,
+	 * the REST API, the importer, ERP and POS plugins and scheduled sales
+	 * with its own save code, which never runs wp_after_insert_post or
+	 * transition_post_status. These actions are the only signal.
+	 *
+	 * Takes the product, or an id (a stock status action passes the id first).
+	 * A variation resolves to its parent product, the document Samomind holds.
+	 * The post is queued like any save: a push when it is eligible, and a
+	 * delete when it is published but no longer eligible (a product turned
+	 * hidden, or excluded, by a change that skipped the save hooks).
+	 *
+	 * @since   0.3.6
+	 * @param   WC_Product|int $product  Product, variation or id.
+	 * @return  void
+	 */
+	public function on_shop_product_change( $product = 0 ) {
+		$id = ( is_object( $product ) && method_exists( $product, 'get_id' ) ) ? (int) $product->get_id() : (int) $product;
+		if ( $id <= 0 ) {
+			return;
+		}
+
+		$post = get_post( $id );
+		if ( $post instanceof WP_Post && 'product_variation' === $post->post_type ) {
+			$id   = (int) $post->post_parent;
+			$post = $id > 0 ? get_post( $id ) : null;
+		}
+		if ( ! $post instanceof WP_Post ) {
+			return;
+		}
+
+		$now = $this->now();
+		if ( isset( $this->shop_seen[ $id ] ) && $now - $this->shop_seen[ $id ] < self::SHOP_REQUEUE_GUARD ) {
+			return;
+		}
+		$this->shop_seen[ $id ] = $now;
+
+		$this->queue_post( $post, 'publish' === $post->post_status );
 	}
 
 	/**

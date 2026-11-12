@@ -551,6 +551,23 @@ class SAMOMIND_Admin {
 	}
 
 	/**
+	 * Tell admins that WooCommerce products are not being synced. It only
+	 * says so: the selection is never changed for them.
+	 *
+	 * @since   0.3.6
+	 * @return  void
+	 */
+	private function render_shop_notice() {
+		if ( ! current_user_can( 'manage_options' ) || ! SAMOMIND()->content->shop_products_not_synced() ) {
+			return;
+		}
+		printf(
+			'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
+			esc_html__( 'WooCommerce is active, but products are not synced. Tick Products under Samomind > Settings > What is synced.', 'samomind-ai-assistant' )
+		);
+	}
+
+	/**
 	 * Tell admins when sync is blocked, or failing for over 24 hours
 	 * (contract 5.7).
 	 *
@@ -725,6 +742,7 @@ class SAMOMIND_Admin {
 			<hr class="wp-header-end">
 
 			<?php $this->render_action_notice(); ?>
+			<?php $this->render_shop_notice(); ?>
 
 			<div class="samomind-card">
 				<h2><?php esc_html_e( 'Connection', 'samomind-ai-assistant' ); ?></h2>
@@ -926,6 +944,7 @@ class SAMOMIND_Admin {
 			<hr class="wp-header-end">
 
 			<?php $this->render_action_notice(); ?>
+			<?php $this->render_shop_notice(); ?>
 			<?php settings_errors( self::SETTINGS_GROUP ); ?>
 
 			<div class="samomind-card">

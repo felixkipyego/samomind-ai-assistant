@@ -210,7 +210,17 @@ Edit, REST and `wp_update_post()`, once meta and terms are written);
 storage keys of the page builders (each adapter lists its own, filter
 `SAMOMIND/sync/builder_meta_keys`); and, as extras nothing depends on,
 `elementor/document/after_save` and `fl_builder_after_save_layout`
-(published layouts only). A queued item records its earliest send time,
+(published layouts only). WooCommerce writes stock and price changes from
+orders, the REST API, the importer, ERP plugins, variation saves and
+scheduled sales with its own save code, which skips every hook above, so
+`SAMOMIND_Sync::on_shop_product_change()` is also hooked to
+`woocommerce_product_set_stock`, `woocommerce_variation_set_stock`,
+`woocommerce_product_set_stock_status`,
+`woocommerce_variation_set_stock_status`, `woocommerce_update_product`,
+`woocommerce_update_product_variation` and
+`woocommerce_ajax_save_product_variations` (a variation queues its parent
+product; a published product that is no longer eligible, for example one
+turned hidden, is queued as a delete). A queued item records its earliest send time,
 the last enqueue plus 30 seconds (filter `SAMOMIND/sync/debounce_seconds`);
 every new save of the post restarts the wait. A worker run that happens
 earlier, for any reason, leaves the item alone and reschedules itself for
