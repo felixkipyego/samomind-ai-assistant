@@ -84,12 +84,26 @@ class SAMOMIND_Fake_Content extends SAMOMIND_Content {
 		return self::sort_by_external_id( $entries );
 	}
 
+	/**
+	 * Ids that are published but not eligible (a hidden product, an excluded id).
+	 *
+	 * @var int[]
+	 */
+	public $ineligible = array();
+
+	/**
+	 * Post types that are not synced; empty means every type is.
+	 *
+	 * @var string[]
+	 */
+	public $untracked_types = array();
+
 	public function is_tracked_type( $post_type ) {
-		return true;
+		return ! in_array( $post_type, $this->untracked_types, true );
 	}
 
 	public function is_eligible( $post ) {
-		return 'publish' === $post->post_status && '' === $post->post_password;
+		return 'publish' === $post->post_status && '' === $post->post_password && ! in_array( (int) $post->ID, $this->ineligible, true );
 	}
 
 	public $published_by_type = array();
@@ -150,6 +164,22 @@ class SAMOMIND_Fake_Scheduler {
 	}
 
 	public function unschedule_worker() {
+	}
+}
+
+/**
+ * The part of a WooCommerce product the stock and update actions pass on.
+ */
+class SAMOMIND_Fake_Shop_Product {
+
+	private $id;
+
+	public function __construct( $id ) {
+		$this->id = $id;
+	}
+
+	public function get_id() {
+		return $this->id;
 	}
 }
 
@@ -862,5 +892,149 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertSame( 1, $reconcile['missing'] );
 		$this->assertSame( 1, $reconcile['stale'] );
 		$this->assertSame( 1, $reconcile['deleted'] );
+	}
+
+	/**
+	 * What a WooCommerce stock or price change fires, per scenario of the
+	 * 7.6.l investigation (the number is that report's). Each is a change
+	 * that never runs wp_after_insert_post or transition_post_status.
+	 */
+	public function shop_change_scenarios() {
+		$product   = function ( $id ) {
+			return new SAMOMIND_Fake_Shop_Product( $id );
+		};
+		return array(
+			'1b an order empties a simple product'          => array( array( array( 'woocommerce_product_set_stock', 'obj' ), array( 'woocommerce_product_set_stock_status', 'id' ), array( 'woocommerce_update_product', 'id' ) ) ),
+			'1d orders empty both variations of a product'  => array( array( array( 'woocommerce_variation_set_stock', 'variation' ), array( 'woocommerce_variation_set_stock_status', 'variation-id' ) ) ),
+			'2a a cancelled order restores stock'           => array( array( array( 'woocommerce_product_set_stock', 'obj' ) ) ),
+			'2b a refund restocks'                          => array( array( array( 'woocommerce_product_set_stock', 'obj' ), array( 'woocommerce_product_set_stock_status', 'id' ) ) ),
+			'3c a variation saved on the product screen'    => array( array( array( 'woocommerce_ajax_save_product_variations', 'id' ) ) ),
+			'5b/5c a scheduled sale starts or ends'         => array( array( array( 'woocommerce_update_product', 'id' ) ) ),
+			'6 the CSV importer'                            => array( array( array( 'woocommerce_update_product', 'id' ) ) ),
+			'7 a REST price and stock update'               => array( array( array( 'woocommerce_update_product', 'id' ), array( 'woocommerce_product_set_stock', 'obj' ) ) ),
+			'8 wc_update_product_stock() from an ERP'       => array( array( array( 'woocommerce_product_set_stock', 'obj' ), array( 'woocommerce_product_set_stock_status', 'id' ) ) ),
+			'9 a sale price on one variation'               => array( array( array( 'woocommerce_update_product_variation', 'variation-id' ) ) ),
+		);
+	}
+
+	/**
+	 * @dataProvider shop_change_scenarios
+	 */
+	public function test_a_shop_change_is_pushed_within_the_wait( array $fired ) {
+		$this->content->posts = array( 50 => true, 51 => true );
+		$this->content->texts = array( 50 => 'Mug, in stock', 51 => 'Shirt' );
+		Functions\when( 'get_post' )->alias(
+			function ( $id ) {
+				return 51 === (int) $id ? new WP_Post( array( 'ID' => 51, 'post_type' => 'product_variation', 'post_parent' => 50 ) ) : new WP_Post( array( 'ID' => $id, 'post_type' => 'product' ) );
+			}
+		);
+
+		foreach ( $fired as $hook ) {
+			switch ( $hook[1] ) {
+				case 'obj':
+					$this->sync->on_shop_product_change( new SAMOMIND_Fake_Shop_Product( 50 ) );
+					break;
+				case 'variation':
+					$this->sync->on_shop_product_change( new SAMOMIND_Fake_Shop_Product( 51 ) );
+					break;
+				case 'variation-id':
+					$this->sync->on_shop_product_change( 51 );
+					break;
+				default:
+					$this->sync->on_shop_product_change( 50 );
+			}
+		}
+
+		$this->assertSame( array( '50' ), array_map( 'strval', array_keys( $this->sync->get_queue()['items'] ) ) );
+		$this->assertSame( 'push', $this->sync->get_queue()['items']['50']['op'] );
+
+		// Not before the wait is over, then in one push.
+		$this->wait( 10 );
+		$this->sync->run();
+		$this->assertSame( array(), $this->client->calls );
+		$this->wait( 25 );
+		$this->sync->run();
+		$this->assertSame( array( '50:Mug, in stock' ), $this->pushed_texts() );
+	}
+
+	public function test_a_variation_change_queues_the_parent_product() {
+		Functions\when( 'get_post' )->alias(
+			function ( $id ) {
+				return 61 === (int) $id ? new WP_Post( array( 'ID' => 61, 'post_type' => 'product_variation', 'post_parent' => 60 ) ) : new WP_Post( array( 'ID' => $id, 'post_type' => 'product' ) );
+			}
+		);
+
+		$this->sync->on_shop_product_change( new SAMOMIND_Fake_Shop_Product( 61 ) );
+
+		$this->assertSame( array( '60' ), array_map( 'strval', array_keys( $this->sync->get_queue()['items'] ) ) );
+	}
+
+	public function test_repeated_changes_to_one_product_collapse_into_one_push() {
+		// An order line fires set_stock, set_stock_status and update_product
+		// within milliseconds; a second order a few seconds later restarts the wait.
+		$this->content->posts = array( 70 => true );
+		$this->content->texts = array( 70 => 'Cap' );
+		Functions\when( 'get_post' )->alias(
+			function ( $id ) {
+				return new WP_Post( array( 'ID' => $id, 'post_type' => 'product' ) );
+			}
+		);
+
+		$this->sync->on_shop_product_change( new SAMOMIND_Fake_Shop_Product( 70 ) );
+		$this->sync->on_shop_product_change( 70 );
+		$this->sync->on_shop_product_change( 70 );
+		$this->wait( 20 );
+		$this->sync->on_shop_product_change( new SAMOMIND_Fake_Shop_Product( 70 ) );
+		$this->wait( 20 );
+		$this->sync->run();
+		$this->assertSame( array(), $this->client->calls, 'The second order restarted the wait.' );
+
+		$this->wait( 15 );
+		$this->sync->run();
+
+		$this->assertSame( array( '70:Cap' ), $this->pushed_texts() );
+		$this->assertCount( 1, $this->client->calls );
+		$this->assertSame( 0, $this->sync->get_progress()['pending'] );
+	}
+
+	public function test_a_draft_product_or_an_untracked_type_is_not_queued() {
+		Functions\when( 'get_post' )->alias(
+			function ( $id ) {
+				return 81 === (int) $id
+					? new WP_Post( array( 'ID' => 81, 'post_type' => 'product', 'post_status' => 'draft' ) )
+					: new WP_Post( array( 'ID' => $id, 'post_type' => 'product' ) );
+			}
+		);
+		$this->content->untracked_types = array( 'product' );
+
+		$this->sync->on_shop_product_change( 81 );
+		$this->sync->on_shop_product_change( 82 );
+
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
+	}
+
+	public function test_a_published_product_that_stopped_being_eligible_is_deleted() {
+		// A product turned hidden by a change that skipped the save hooks
+		// (REST, the importer): Samomind may hold it, so it is removed.
+		$this->content->ineligible = array( 90 );
+		Functions\when( 'get_post' )->alias(
+			function ( $id ) {
+				return new WP_Post( array( 'ID' => $id, 'post_type' => 'product' ) );
+			}
+		);
+
+		$this->sync->on_shop_product_change( 90 );
+
+		$this->assertSame( 'delete', $this->sync->get_queue()['items']['90']['op'] );
+	}
+
+	public function test_a_zero_or_unknown_product_id_queues_nothing() {
+		Functions\when( 'get_post' )->justReturn( null );
+
+		$this->sync->on_shop_product_change( 0 );
+		$this->sync->on_shop_product_change( 12345 );
+		$this->sync->on_shop_product_change( null );
+
+		$this->assertSame( array(), $this->sync->get_queue()['items'] );
 	}
 }

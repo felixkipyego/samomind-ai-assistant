@@ -66,6 +66,21 @@ class SAMOMIND_Run {
 		add_action( 'updated_post_meta', array( $sync, 'on_post_meta_change' ), 10, 3 );
 		add_action( 'deleted_post_meta', array( $sync, 'on_post_meta_change' ), 10, 3 );
 
+		// WooCommerce stock and price changes that skip the save hooks above: orders, REST, the
+		// importer, ERP and POS plugins, variation saves and scheduled sales (which save each
+		// product, so woocommerce_update_product covers them).
+		foreach ( array(
+			'woocommerce_product_set_stock',
+			'woocommerce_variation_set_stock',
+			'woocommerce_product_set_stock_status',
+			'woocommerce_variation_set_stock_status',
+			'woocommerce_update_product',
+			'woocommerce_update_product_variation',
+			'woocommerce_ajax_save_product_variations',
+		) as $shop_hook ) {
+			add_action( $shop_hook, array( $sync, 'on_shop_product_change' ) );
+		}
+
 		// A builder's own "layout saved" action; nothing depends on these.
 		add_action( 'elementor/document/after_save', array( $this, 'on_elementor_saved' ) );
 		add_action( 'fl_builder_after_save_layout', array( $this, 'on_beaver_saved' ), 10, 2 );

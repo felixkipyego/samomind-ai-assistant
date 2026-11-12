@@ -419,7 +419,7 @@ class SAMOMIND_Content {
 				$data['product'] = array(
 					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce's own filter, so the description renders as on the product page.
 					'short_description_html' => apply_filters( 'woocommerce_short_description', $product->get_short_description() ),
-					'price'                  => $product->get_price_html(),
+					'price'                  => $this->product_price_text( $product ),
 					'stock_status'           => $product->get_stock_status(),
 					'catalog_visibility'     => $product->get_catalog_visibility(),
 				);
@@ -460,6 +460,120 @@ class SAMOMIND_Content {
 			}
 		}
 		return $names;
+	}
+
+	/**
+	 * A product's price as clean plain text, the way the shop shows it to a
+	 * guest: same tax display, currency and number format, no markup and no
+	 * screen-reader text. The API takes at most MAX_PRICE_CHARS (64).
+	 *
+	 * A simple or external product reads "$100.00", or "$70.00 (was $100.00)"
+	 * on sale. A variable product reads "$30.00 to $50.00", with " (some on
+	 * sale)" when any variation is. Grouped products have no price of their own: the range is over their
+	 * children's displayed prices. A price a shop or plugin hides from guests
+	 * (get_price_html() is empty) is not sent, nor is a product with no price.
+	 *
+	 * @since   0.3.6
+	 * @param   WC_Product $product  Product.
+	 * @return  string  Empty when there is no price.
+	 */
+	public function product_price_text( $product ) {
+		if ( ! is_object( $product ) || '' === trim( wp_strip_all_tags( (string) $product->get_price_html() ) ) ) {
+			return '';
+		}
+
+		if ( $product->is_type( array( 'variable', 'variable-subscription' ) ) ) {
+			$prices = $product->get_variation_prices( true );
+			if ( empty( $prices['price'] ) ) {
+				return '';
+			}
+			$text = self::range_text(
+				current( $prices['price'] ),
+				end( $prices['price'] ),
+				(bool) $product->is_on_sale(),
+				current( $prices['regular_price'] ),
+				end( $prices['regular_price'] )
+			);
+		} elseif ( $product->is_type( 'grouped' ) ) {
+			$child_prices = array();
+			$on_sale      = false;
+			foreach ( $product->get_children() as $child_id ) {
+				$child = wc_get_product( $child_id );
+				if ( $child && '' !== $child->get_price() ) {
+					$child_prices[] = wc_get_price_to_display( $child );
+					$on_sale        = $on_sale || $child->is_on_sale();
+				}
+			}
+			if ( empty( $child_prices ) ) {
+				return '';
+			}
+			$text = self::range_text( min( $child_prices ), max( $child_prices ), $on_sale, null, null );
+		} elseif ( '' === $product->get_price() ) {
+			return '';
+		} else {
+			$price = wc_get_price_to_display( $product );
+			$text  = self::money( $price );
+			if ( $product->is_on_sale() ) {
+				$regular = wc_get_price_to_display( $product, array( 'price' => $product->get_regular_price() ) );
+				if ( (string) $regular !== (string) $price ) {
+					$text .= ' (was ' . self::money( $regular ) . ')';
+				}
+			}
+		}
+
+		$suffix = trim( html_entity_decode( wp_strip_all_tags( (string) $product->get_price_suffix() ), ENT_QUOTES, 'UTF-8' ) );
+		if ( '' !== $suffix ) {
+			$text .= ' ' . $suffix;
+		}
+
+		return self::truncate( $text, self::MAX_PRICE_CHARS );
+	}
+
+	/**
+	 * "$low to $high", one price when both are equal, and "(was $x)" or
+	 * "(some on sale)" when something in the range is on sale.
+	 *
+	 * @since   0.3.6
+	 * @param   float|string      $low      Lowest displayed price.
+	 * @param   float|string      $high     Highest displayed price.
+	 * @param   bool              $on_sale  Whether anything is on sale.
+	 * @param   float|string|null $low_reg  Lowest regular price, when known.
+	 * @param   float|string|null $high_reg Highest regular price, when known.
+	 * @return  string
+	 */
+	private static function range_text( $low, $high, $on_sale, $low_reg, $high_reg ) {
+		if ( (string) $low !== (string) $high ) {
+			return self::money( $low ) . ' to ' . self::money( $high ) . ( $on_sale ? ' (some on sale)' : '' );
+		}
+		if ( $on_sale && null !== $low_reg && (string) $low_reg === (string) $high_reg && (string) $low_reg !== (string) $low ) {
+			return self::money( $low ) . ' (was ' . self::money( $low_reg ) . ')';
+		}
+		return self::money( $low ) . ( $on_sale ? ' (some on sale)' : '' );
+	}
+
+	/**
+	 * An amount in the store's currency and number format, as plain text.
+	 *
+	 * @since   0.3.6
+	 * @param   float|string $amount  Amount.
+	 * @return  string
+	 */
+	private static function money( $amount ) {
+		$text = html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
+		return trim( str_replace( "\xC2\xA0", ' ', $text ) );
+	}
+
+	/**
+	 * Whether WooCommerce is active and its products are offered for sync
+	 * but not ticked on the settings page.
+	 *
+	 * @since   0.3.6
+	 * @return  bool
+	 */
+	public function shop_products_not_synced() {
+		return $this->woocommerce_active()
+			&& in_array( 'product', $this->get_available_post_types(), true )
+			&& ! in_array( 'product', $this->get_selected_post_types(), true );
 	}
 
 	/**

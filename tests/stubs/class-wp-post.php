@@ -14,6 +14,7 @@ class WP_Post {
 	public $post_modified_gmt = '2026-11-01 00:00:00';
 	public $post_date_gmt     = '2026-11-01 00:00:00';
 	public $post_content      = '';
+	public $post_parent       = 0;
 
 	public function __construct( array $fields = array() ) {
 		foreach ( $fields as $name => $value ) {

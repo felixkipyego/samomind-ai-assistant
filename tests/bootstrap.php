@@ -10,7 +10,7 @@ require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
 define( 'ABSPATH', __DIR__ . '/' );
 define( 'SAMOMIND_NAME', 'Samomind AI Assistant' );
-define( 'SAMOMIND_VERSION', '0.3.5' );
+define( 'SAMOMIND_VERSION', '0.3.6' );
 define( 'SAMOMIND_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 define( 'MINUTE_IN_SECONDS', 60 );
 define( 'HOUR_IN_SECONDS', 3600 );
