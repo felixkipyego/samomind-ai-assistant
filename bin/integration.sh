@@ -11,7 +11,8 @@ WP_ENV="npx --yes @wordpress/env@10"
 PLUGIN_DIR="wp-content/plugins/samomind-ai-assistant"
 
 $WP_ENV start
-$WP_ENV run tests-cli wp plugin activate woocommerce samomind-ai-assistant
+# .wp-env.json lists both plugins, so wp-env has activated them.
+$WP_ENV run tests-cli wp plugin list --status=active --field=name
 
 for hpos in 0 1; do
 	echo "== Integration tests, HPOS $hpos =="
