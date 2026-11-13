@@ -116,6 +116,8 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 				'shop_emails_per_hour'  => 100000,
 				'grant_minutes'         => 100000,
 				'account_proof_seconds' => 100000,
+				'resend_gap_seconds'    => 1,
+				'sends_per_session_hour' => 100000,
 			)
 		);
 		$this->assertSame(
@@ -125,6 +127,8 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 				'shop_emails_per_hour'  => 100,
 				'grant_minutes'         => 120,
 				'account_proof_seconds' => 120,
+				'resend_gap_seconds'    => 30,
+				'sends_per_session_hour' => 10,
 			),
 			$clamped
 		);
@@ -135,6 +139,8 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 		$this->assertSame( 30, $floor['grant_minutes'], 'A value that is not a whole number falls back to the default.' );
 		$this->assertSame( 20, $floor['shop_emails_per_hour'] );
 		$this->assertSame( 60, $floor['account_proof_seconds'], 'A missing value is the default.' );
+		$this->assertSame( 60, $floor['resend_gap_seconds'] );
+		$this->assertSame( 3, $floor['sends_per_session_hour'] );
 	}
 
 	public function test_a_hostile_try_limit_is_held_to_ten() {
@@ -248,6 +254,17 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 		update_option( SAMOMIND_Orders_Settings::OPT_IN, '1', false );
 		delete_option( SAMOMIND_Orders_Settings::TERMS );
 		$this->assertSame( 403, $this->call( 'start', array( 'session_ref' => $this->session_ref() ) )->get_status(), 'Terms not accepted.' );
+	}
+
+	public function test_old_woocommerce_reports_its_own_reason() {
+		$wc      = WC();
+		$version = $wc->version;
+		$wc->version = '8.1.0';
+		$ping    = $this->call( 'ping' )->get_data();
+		$wc->version = $version;
+
+		$this->assertFalse( $ping['capabilities']['enabled'] );
+		$this->assertSame( 'woocommerce_too_old', $ping['capabilities']['reason'] );
 	}
 
 	public function test_ping_reports_the_capabilities() {

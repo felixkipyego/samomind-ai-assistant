@@ -54,6 +54,27 @@ class OrdersAccountTest extends SAMOMIND_Integration_TestCase {
 		$this->assertSame( 'processing', $found['order']['status'] );
 	}
 
+	public function test_the_proof_record_lives_for_the_latest_account_proof_seconds() {
+		$user = $this->make_user();
+		$this->log_in( $user );
+		$nonce = wp_create_nonce( 'wp_rest' );
+		delete_option( SAMOMIND_Orders_Store::PROOF_SECONDS_OPTION );
+
+		$this->assertEqualsWithDelta( time() + 60, $this->proof( $this->challenge(), $nonce )->get_data()['proof']['exp'], 5, 'Default.' );
+
+		$this->call( 'ping', array( 'limits' => array( 'account_proof_seconds' => 90 ) ) );
+		$this->assertEqualsWithDelta( time() + 90, $this->proof( $this->challenge(), $nonce )->get_data()['proof']['exp'], 5 );
+
+		// Any endpoint counts, and the ceiling is 120.
+		$this->call( 'end', array( 'session_ref' => $this->session_ref(), 'limits' => array( 'account_proof_seconds' => 99999 ) ) );
+		$this->assertEqualsWithDelta( time() + 120, $this->proof( $this->challenge(), $nonce )->get_data()['proof']['exp'], 5 );
+
+		// A request without the value changes nothing.
+		$this->call( 'ping' );
+		$this->assertEqualsWithDelta( time() + 120, $this->proof( $this->challenge(), $nonce )->get_data()['proof']['exp'], 5 );
+		delete_option( SAMOMIND_Orders_Store::PROOF_SECONDS_OPTION );
+	}
+
 	public function test_the_proof_names_no_one() {
 		$user = $this->make_user();
 		list( , $proof ) = $this->logged_in_proof( $user );

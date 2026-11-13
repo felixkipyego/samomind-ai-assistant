@@ -203,8 +203,11 @@ class SAMOMIND_Orders_Settings {
 		if ( is_multisite() ) {
 			return 'multisite';
 		}
-		if ( ! $this->woocommerce_active() || version_compare( $this->woocommerce_version(), self::MIN_WOOCOMMERCE, '<' ) ) {
+		if ( ! $this->woocommerce_active() ) {
 			return 'woocommerce_missing';
+		}
+		if ( version_compare( $this->woocommerce_version(), self::MIN_WOOCOMMERCE, '<' ) ) {
+			return 'woocommerce_too_old';
 		}
 		if ( ! $this->is_opted_in() || ! $this->terms_are_accepted() || ! $this->has_secret() ) {
 			return 'not_opted_in';

@@ -1148,6 +1148,7 @@ class SAMOMIND_Admin {
 
 	/**
 	 * The order status card: opt-in, terms, orders key, sharing choices.
+	 * The terms text is a draft until the legal review.
 	 * The saved key is never printed.
 	 *
 	 * @since   0.4.0
@@ -1181,6 +1182,7 @@ class SAMOMIND_Admin {
 						<tr>
 							<th scope="row"><?php esc_html_e( 'Order-data terms', 'samomind-ai-assistant' ); ?></th>
 							<td>
+								<p class="description"><strong><?php esc_html_e( 'DRAFT wording, pending legal review. It may change before release.', 'samomind-ai-assistant' ); ?></strong></p>
 								<p class="description">
 									<?php esc_html_e( 'You are responsible for your shop\'s order data and need a lawful basis to show it to the customer it belongs to. Tell your customers that their order status may be shown to them through an AI assistant. Samomind handles order data for you only to answer a customer\'s own question about their order, and does not store orders, email addresses or codes. Keep the orders key secret and replace it if you think it has leaked.', 'samomind-ai-assistant' ); ?>
 									<a href="https://samomind.com/terms-and-conditions/" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of service', 'samomind-ai-assistant' ); ?></a>

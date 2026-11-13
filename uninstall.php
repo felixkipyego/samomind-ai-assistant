@@ -56,6 +56,7 @@ $samomind_options = array(
 	'samomind_orders_share_tracking',
 	'samomind_orders_share_items',
 	'samomind_orders_reported',
+	'samomind_orders_proof_seconds',
 );
 
 foreach ( $samomind_options as $samomind_option ) {

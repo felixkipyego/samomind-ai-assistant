@@ -268,17 +268,86 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 	}
 
 	public function test_shop_send_limit() {
-		$mails = array();
+		$mails   = array();
+		$bodies  = array();
+		$limits  = array( 'limits' => array( 'shop_emails_per_hour' => 3 ) );
 		for ( $i = 0; $i < 4; $i++ ) {
 			$order = $this->make_order( array( 'billing_email' => "buyer$i@example.com" ) );
-			$this->call(
-				'start',
-				$this->start_body( $order->get_id(), $order->get_billing_email(), "s$i" ) + array( 'limits' => array( 'shop_emails_per_hour' => 3 ) )
-			);
+			$response = $this->call( 'start', $this->start_body( $order->get_id(), $order->get_billing_email(), "s$i" ) + $limits );
+			$this->assertSame( 202, $response->get_status(), 'Never 429.' );
+			$bodies[] = wp_json_encode( $response->get_data() );
 			$this->run_plugin_shutdown();
 			$mails[] = count( $this->mails );
 		}
-		$this->assertSame( array( 1, 2, 3, 3 ), $mails, 'The fourth email in the hour is not sent, and the answer is the same 202.' );
+		$this->assertSame( array( 1, 2, 3, 3 ), $mails, 'The fourth email in the hour is not sent.' );
+		$this->assertSame( array( '{"accepted":true}', '{"accepted":true}', '{"accepted":true}', '{"accepted":true,"mail_capped":true}' ), $bodies );
+	}
+
+	public function test_mail_capped_does_not_depend_on_the_order_existing() {
+		$limits = array( 'limits' => array( 'shop_emails_per_hour' => 1 ) );
+		$order  = $this->make_order();
+		$this->call( 'start', $this->start_body( $order->get_id(), $order->get_billing_email(), 'one' ) + $limits );
+		$this->run_plugin_shutdown();
+		$this->assertCount( 1, $this->mails );
+
+		$other   = $this->make_order( array( 'billing_email' => 'other@example.com' ) );
+		$results = array(
+			$this->call( 'start', $this->start_body( $other->get_id(), $other->get_billing_email(), 'two' ) + $limits ),
+			$this->call( 'start', $this->start_body( 99999999, 'nobody@example.com', 'three' ) + $limits ),
+			$this->call( 'start', $this->start_body( $other->get_id(), 'wrong@example.com', 'four' ) + $limits ),
+		);
+		foreach ( $results as $response ) {
+			$this->assertSame( 202, $response->get_status() );
+			$this->assertSame( '{"accepted":true,"mail_capped":true}', wp_json_encode( $response->get_data() ) );
+		}
+		$this->run_plugin_shutdown();
+		$this->assertCount( 1, $this->mails );
+	}
+
+	public function test_resend_limits_come_from_samomind_within_the_ceilings() {
+		$order = $this->make_order();
+		$body  = function () use ( $order ) {
+			return $this->start_body( $order->get_id(), $order->get_billing_email() ) + array(
+				'limits' => array(
+					'resend_gap_seconds'     => 1,
+					'sends_per_session_hour' => 100,
+				),
+			);
+		};
+
+		$this->call( 'start', $body() );
+		$this->run_plugin_shutdown();
+		$this->assertCount( 1, $this->mails );
+
+		// A gap of 1 is held to 30 seconds: 29 seconds later is too soon, 31 is fine.
+		$this->age_sends( 'a', 29 );
+		$this->call( 'start', $body() );
+		$this->run_plugin_shutdown();
+		$this->assertCount( 1, $this->mails );
+		$this->age_sends( 'a', 31 );
+		$this->call( 'start', $body() );
+		$this->run_plugin_shutdown();
+		$this->assertCount( 2, $this->mails );
+
+		// A cap of 100 an hour is held to 10.
+		for ( $i = 0; $i < 12; $i++ ) {
+			$this->age_sends( 'a', 31 );
+			$this->call( 'start', $body() );
+			$this->run_plugin_shutdown();
+		}
+		$this->assertCount( 10, $this->mails );
+
+		// And a smaller gap and cap from Samomind are honoured.
+		$small = $this->make_order( array( 'billing_email' => 'small@example.com' ) );
+		$send  = function () use ( $small ) {
+			$this->call( 'start', $this->start_body( $small->get_id(), $small->get_billing_email(), 'small' ) + array( 'limits' => array( 'resend_gap_seconds' => 120, 'sends_per_session_hour' => 1 ) ) );
+			$this->run_plugin_shutdown();
+		};
+		$before = count( $this->mails );
+		$send();
+		$this->age_sends( 'small', 500 );
+		$send();
+		$this->assertCount( $before + 1, $this->mails, 'One an hour means one.' );
 	}
 
 	public function test_grant_expires_absolutely() {

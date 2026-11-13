@@ -62,16 +62,20 @@ class SAMOMIND_Orders_Auth {
 
 	/**
 	 * Limits Samomind sends: default, lowest and hard ceiling for each
-	 * (design decision 18). The shop holds every value to its ceiling.
+	 * (design decision 18). The shop holds every value to its ceiling. The
+	 * resend gap is never shorter than 30 seconds and a session never gets
+	 * more than 10 code emails an hour.
 	 *
 	 * @var array
 	 */
 	const LIMITS = array(
-		'code_ttl_minutes'      => array( 10, 1, 30 ),
-		'code_tries'            => array( 3, 1, 10 ),
-		'shop_emails_per_hour'  => array( 20, 1, 100 ),
-		'grant_minutes'         => array( 30, 1, 120 ),
-		'account_proof_seconds' => array( 60, 5, 120 ),
+		'code_ttl_minutes'       => array( 10, 1, 30 ),
+		'code_tries'             => array( 3, 1, 10 ),
+		'shop_emails_per_hour'   => array( 20, 1, 100 ),
+		'grant_minutes'          => array( 30, 1, 120 ),
+		'account_proof_seconds'  => array( 60, 5, 120 ),
+		'resend_gap_seconds'     => array( 60, 30, 3600 ),
+		'sends_per_session_hour' => array( 3, 1, 10 ),
 	);
 
 	/**

@@ -260,6 +260,7 @@ class SAMOMIND_Orders_Rest {
 		$this->reply_nonce = (string) $request->get_header( 'X-SamoMind-Orders-Nonce' );
 
 		if ( 'ping' === $action ) {
+			$this->remember_proof_seconds( json_decode( (string) $request->get_body(), true ) );
 			return $this->ping();
 		}
 		if ( ! $this->settings->is_enabled() ) {
@@ -271,6 +272,7 @@ class SAMOMIND_Orders_Rest {
 		if ( ! is_array( $data ) ) {
 			return new WP_REST_Response( array( 'code' => 'bad_request' ), 400 );
 		}
+		$this->remember_proof_seconds( $data );
 		$session_ref = isset( $data['session_ref'] ) && is_string( $data['session_ref'] ) && 1 === preg_match( '/^[0-9a-f]{32}$/', $data['session_ref'] )
 			? $data['session_ref']
 			: '';
@@ -341,14 +343,25 @@ class SAMOMIND_Orders_Rest {
 		$code    = str_pad( (string) random_int( 0, 999999 ), 6, '0', STR_PAD_LEFT );
 		$hash    = $store->code_hash( $session_ref, $order ? $order->get_id() : 0, $code );
 
-		if ( $matches && $store->allow_send( $session_ref ) ) {
+		// Whether the shop's own hourly cap is used up says nothing about this order, so it is
+		// reported on every start alike, and the status stays 202.
+		$capped = $store->shop_cap_reached( $limit['shop_emails_per_hour'] );
+
+		if ( $matches && ! $capped && $store->allow_send( $session_ref, $limit['resend_gap_seconds'], $limit['sends_per_session_hour'] ) ) {
 			if ( $store->allow_shop_email( $limit['shop_emails_per_hour'] ) ) {
 				$store->put_code( $session_ref, $order->get_id(), $hash, $limit['code_ttl_minutes'] * MINUTE_IN_SECONDS );
 				( new SAMOMIND_Orders_Mail( $store ) )->dispatch( $order->get_billing_email(), $code );
-			} else {
-				// No mail, and the same answer: a different one would say the order exists.
-				$this->log_once( 'orders/start', 202, 'rate_limited' );
 			}
+		}
+		if ( $capped ) {
+			$this->log_once( 'orders/start', 202, 'mail_capped' );
+			return new WP_REST_Response(
+				array(
+					'accepted'    => true,
+					'mail_capped' => true,
+				),
+				202
+			);
 		}
 
 		return new WP_REST_Response( array( 'accepted' => true ), 202 );
@@ -463,6 +476,37 @@ class SAMOMIND_Orders_Rest {
 	}
 
 	/**
+	 * Keep account_proof_seconds from a signed request that carries it, so the
+	 * browser endpoint, which gets no limits of its own, can use it.
+	 *
+	 * @since   0.4.0
+	 * @param   mixed $data  Decoded body.
+	 * @return  void
+	 */
+	private function remember_proof_seconds( $data ) {
+		if ( ! is_array( $data ) || ! isset( $data['limits']['account_proof_seconds'] ) ) {
+			return;
+		}
+		$seconds = SAMOMIND_Orders_Auth::clamp_limits( $data['limits'] )['account_proof_seconds'];
+		if ( $seconds !== $this->proof_seconds() ) {
+			update_option( SAMOMIND_Orders_Store::PROOF_SECONDS_OPTION, $seconds, false );
+		}
+	}
+
+	/**
+	 * Life of an account proof record: the latest value Samomind sent, held to
+	 * the ceiling, or 60 seconds.
+	 *
+	 * @since   0.4.0
+	 * @return  int
+	 */
+	private function proof_seconds() {
+		$limit = SAMOMIND_Orders_Auth::LIMITS['account_proof_seconds'];
+		$saved = (int) get_option( SAMOMIND_Orders_Store::PROOF_SECONDS_OPTION, $limit[0] );
+		return max( $limit[1], min( $limit[2], $saved ) );
+	}
+
+	/**
 	 * Wait until the minimum response time has passed. The time is counted
 	 * from the start of the request, so a slow path is not made slower.
 	 *
@@ -561,7 +605,7 @@ class SAMOMIND_Orders_Rest {
 			return new WP_REST_Response( array( 'loggedIn' => false ), 200 );
 		}
 
-		$ttl = SAMOMIND_Orders_Auth::LIMITS['account_proof_seconds'][0];
+		$ttl = $this->proof_seconds();
 		$exp = time() + $ttl;
 		( new SAMOMIND_Orders_Store( $this->settings->get_secret() ) )->put_record( $challenge, $user_id, $verifier, $ttl );
 

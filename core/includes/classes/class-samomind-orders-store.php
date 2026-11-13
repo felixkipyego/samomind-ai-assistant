@@ -28,18 +28,12 @@ class SAMOMIND_Orders_Store {
 	const PREFIX = 'samomind_ord_';
 
 	/**
-	 * Seconds to wait before a new code for the same chat session.
+	 * Option: account_proof_seconds from the latest signed request that
+	 * carried one.
 	 *
-	 * @var int
+	 * @var string
 	 */
-	const RESEND_GAP = 60;
-
-	/**
-	 * Code emails for one chat session in an hour.
-	 *
-	 * @var int
-	 */
-	const SENDS_PER_SESSION = 3;
+	const PROOF_SECONDS_OPTION = 'samomind_orders_proof_seconds';
 
 	/**
 	 * Orders key, the HMAC key for stored codes.
@@ -90,9 +84,11 @@ class SAMOMIND_Orders_Store {
 	 *
 	 * @since   0.4.0
 	 * @param   string $session_ref  Session reference.
+	 * @param   int    $gap          Seconds between two codes, already clamped.
+	 * @param   int    $per_hour     Codes an hour, already clamped.
 	 * @return  bool
 	 */
-	public function allow_send( $session_ref ) {
+	public function allow_send( $session_ref, $gap, $per_hour ) {
 		$name  = self::name( 'sends', array( $session_ref ) );
 		$state = get_transient( $name );
 		$now   = time();
@@ -103,12 +99,24 @@ class SAMOMIND_Orders_Store {
 				'last'  => 0,
 			);
 		}
-		if ( $now - (int) $state['last'] < self::RESEND_GAP || (int) $state['count'] >= self::SENDS_PER_SESSION ) {
+		if ( $now - (int) $state['last'] < (int) $gap || (int) $state['count'] >= (int) $per_hour ) {
 			return false;
 		}
 		$state['count'] = (int) $state['count'] + 1;
 		$state['last']  = $now;
 		return set_transient( $name, $state, HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Whether the shop has already sent its cap of code emails this hour.
+	 * It only looks; it counts nothing.
+	 *
+	 * @since   0.4.0
+	 * @param   int $cap  Emails per hour, already clamped.
+	 * @return  bool
+	 */
+	public function shop_cap_reached( $cap ) {
+		return (int) get_transient( self::name( 'hour', array( gmdate( 'Y-m-d-H' ) ) ) ) >= (int) $cap;
 	}
 
 	/**

@@ -2,6 +2,17 @@
 
 > Copy of SamoMind docs/design/F-3-order-status.md, section 13 (SamoMind origin/main at 3f0f137). Do not edit here: change it in SamoMind and copy it again. Sections 2, 4, 5 and 11 of that file explain the rules this contract serves.
 
+> **Plugin answers of 14 November 2026, pending the same change in SamoMind's design doc.** The text below is the copy of section 13 and has not been edited. These points differ from it or settle what it left open, and the plugin follows them:
+>
+> 1. **Proof signature.** `sig` is bare hex `HMAC-SHA256(orders key, "samomind-orders-v1-proof\n1\n<challenge>\n<exp>")`.
+> 3. **Resend rules.** `limits` also carries `resend_gap_seconds` (default 60) and `sends_per_session_hour` (default 3). The shop holds them to a gap of at least 30 seconds and at most 10 sends an hour; when absent, the defaults apply.
+> 4. **Mail cap.** `POST /orders/start` is always `202`, never `429`. When the shop's own hourly email cap (`shop_emails_per_hour`) blocked the mail, the signed body is `{"accepted": true, "mail_capped": true}`, for every start alike, whether or not the order exists. Otherwise it is `{"accepted": true}`.
+> 6. **Tracking link.** `order.tracking.url` may be `null` (the carrier and number are kept) when the add-on's link is not https, has credentials, is over 2048 characters or has an IP address as its host.
+> 8. **Old WooCommerce.** `capabilities.orders.reason` gains `woocommerce_too_old` (WooCommerce older than 8.2). Additive.
+> 9. **Proof record lifetime.** The one-time record written at `account-proof` lives for the `account_proof_seconds` of the most recent signed request that carried it (any endpoint), default 60, at most 120.
+>
+> Also settled, no change to the text: `shipped` is `null` when tracking is not shared; the key id header is not pinned; an unredeemed account record cannot be deleted by `end` and expires in 60 seconds; the plugin checks the login session by the sha256 of its token against the user's session list, and a site with a custom session store gets `{"loggedIn": false}`.
+
 ## 13. Implementation split and the contract
 
 ### Tasks and order
