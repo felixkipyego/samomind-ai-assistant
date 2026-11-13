@@ -1,7 +1,8 @@
 {
   "core": null,
   "plugins": [
-    "."
+    ".",
+    "https://downloads.wordpress.org/plugin/woocommerce.latest-stable.zip"
   ],
   "config": {
     "WP_DEBUG": true,

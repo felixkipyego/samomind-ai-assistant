@@ -1,5 +1,37 @@
 # Changelog
 
+## Unreleased (0.4.0)
+
+Task F-3 T3. Built on a branch; the released version stays 0.3.6 and
+nothing is submitted to WordPress.org.
+
+- Added: order status in the chat, built against SamoMind's
+  docs/design/F-3-order-status.md (contract copied to
+  docs/ORDERS_CONTRACT.md). Off by default and opt-in: tick the box, accept
+  the versioned order-data terms and paste an orders key (separate from the
+  ingest key). "Share tracking" is on and "Share item names" is off by
+  default.
+- Added: signed REST endpoints for Samomind under
+  /wp-json/samomind/v1/orders/ (start, verify, account/redeem, lookup, end,
+  ping): a signature with its own label, a 120 second window, a stored
+  nonce that fails closed, a signed path, signed answers and generic error
+  bodies, and the limits Samomind sends held to hard ceilings.
+- Added: the email code (6 digits from a CSPRNG, stored as an HMAC, 10
+  minutes, 3 tries, a resend gap and a cap, a cap on mail from the whole
+  shop), sent from WooCommerce's sender on the shutdown hook after the
+  response has left, with the same answer and a 500 ms floor on every path.
+- Added: the logged-in path, a same-origin account proof (cookie and nonce,
+  no CORS, never cached) that writes the shop's own one-time record, and
+  grants that end when the WordPress login session ends.
+- Added: lookups through WooCommerce's CRUD layer only (works with HPOS on
+  or off), only the fields in the design, the fixed status vocabulary,
+  sequential order numbers, and tracking from WooCommerce Shipment Tracking
+  or Advanced Shipment Tracking.
+- Changed: when the shop has opted in, connect and check-in also report the
+  order status capabilities. Nothing new is sent before that.
+- Tests: an integration suite in wp-env with WooCommerce, run with HPOS off
+  and on (`composer integration`), and a CI job for it.
+
 ## 0.3.6 (2026-11-12)
 
 Step 7.6.m.

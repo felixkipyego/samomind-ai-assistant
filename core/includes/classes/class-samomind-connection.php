@@ -293,6 +293,8 @@ class SAMOMIND_Connection {
 			'connector_version' => SAMOMIND_VERSION,
 			'platform_version'  => get_bloginfo( 'version' ),
 		);
+		// Order status capabilities, only once the shop has opted in (docs/ORDERS_CONTRACT.md).
+		$payload = array_merge( $payload, SAMOMIND()->orders->payload_addition() );
 
 		$result = $this->client()->post( '/connect', $payload, SAMOMIND_Client::fresh_key( 'connect' ) );
 		// Contract 5.4: connect_conflict means "retry connect".
@@ -417,7 +419,9 @@ class SAMOMIND_Connection {
 		if ( '' !== $state['last_error'] ) {
 			$payload['last_error'] = $state['last_error'];
 		}
-		$key = $manual
+		// Order status capabilities, only once the shop has opted in (docs/ORDERS_CONTRACT.md).
+		$payload = array_merge( $payload, SAMOMIND()->orders->payload_addition() );
+		$key     = $manual
 			? SAMOMIND_Client::fresh_key( 'checkin' )
 			: SAMOMIND_Client::event_key( 'checkin', array( $state['source_id'], gmdate( 'Y-m-d-H' ) ) );
 

@@ -53,6 +53,10 @@ class SAMOMIND_Run {
 		// Widget snippet in the front-end footer.
 		new SAMOMIND_Embed();
 
+		// Order status: REST endpoints for Samomind and the shopper's browser (docs/ORDERS_CONTRACT.md).
+		( new SAMOMIND_Orders_Rest( SAMOMIND()->orders ) )->register_hooks();
+		add_action( 'before_woocommerce_init', array( $this, 'declare_woocommerce_compatibility' ) );
+
 		// Content events (docs/ARCHITECTURE.md A8).
 		$sync = SAMOMIND()->sync;
 		add_action( 'transition_post_status', array( $sync, 'on_transition_post_status' ), 10, 3 );
@@ -105,6 +109,20 @@ class SAMOMIND_Run {
 	 * ###
 	 * ######################
 	 */
+
+	/**
+	 * Tell WooCommerce this plugin reads orders only through its CRUD layer,
+	 * so it works with the order tables (HPOS) on or off.
+	 *
+	 * @access  public
+	 * @since   0.4.0
+	 * @return  void
+	 */
+	public function declare_woocommerce_compatibility() {
+		if ( class_exists( '\Automattic\WooCommerce\Utilities\FeaturesUtil' ) ) {
+			\Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility( 'custom_order_tables', SAMOMIND_PLUGIN_FILE, true );
+		}
+	}
 
 	/**
 	 * Elementor finished saving a document (elementor/document/after_save).

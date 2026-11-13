@@ -50,6 +50,7 @@
       "@test"
     ],
     "smoke": "sh tests/smoke/wp-env-smoke.sh",
+    "integration": "sh bin/integration.sh",
     "plugin-check": "phpcs --standard=phpcs-plugin-check.xml.dist",
     "pot": "wp i18n make-pot . languages/samomind-ai-assistant.pot --slug=samomind-ai-assistant --domain=samomind-ai-assistant --exclude=vendor,tests,docs,build,node_modules",
     "build": "sh bin/build-zip.sh"

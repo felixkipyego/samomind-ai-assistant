@@ -57,7 +57,7 @@ class SAMOMIND_Admin {
 	 *
 	 * @var string[]
 	 */
-	const ACTIONS = array( 'connect', 'disconnect', 'sync_now', 'checkin', 'reconcile', 'clear_log', 'replace_secret' );
+	const ACTIONS = array( 'connect', 'disconnect', 'sync_now', 'checkin', 'reconcile', 'clear_log', 'replace_secret', 'save_orders' );
 
 	/**
 	 * Our SAMOMIND_Admin constructor to run the plugin logic.
@@ -493,6 +493,66 @@ class SAMOMIND_Admin {
 		update_option( 'samomind_api_secret', $secret, false );
 		SAMOMIND()->connection->clear_block();
 		$this->finish( self::SETTINGS_SLUG, 'success', __( 'Secret saved. It will not be shown again.', 'samomind-ai-assistant' ) );
+	}
+
+	/**
+	 * Save the order status settings: the opt-in, the accepted terms, the
+	 * orders key and the two sharing choices. The key is never shown again.
+	 * Opting in needs the terms ticked; a change is reported to Samomind at
+	 * once when the site is connected.
+	 *
+	 * @since   0.4.0
+	 * @return  void
+	 */
+	public function handle_save_orders() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do this.', 'samomind-ai-assistant' ) );
+		}
+		check_admin_referer( 'samomind_save_orders' );
+
+		$orders = SAMOMIND()->orders;
+		if ( is_multisite() ) {
+			$this->finish( self::SETTINGS_SLUG, 'error', __( 'Order status is not available on multisite networks.', 'samomind-ai-assistant' ) );
+		}
+
+		$notes = array();
+
+		$key = isset( $_POST['samomind_orders_secret'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['samomind_orders_secret'] ) ) ) : '';
+		if ( ! empty( $_POST['samomind_orders_remove_key'] ) ) {
+			delete_option( SAMOMIND_Orders_Settings::SECRET );
+			$notes[] = __( 'The orders key was removed.', 'samomind-ai-assistant' );
+		} elseif ( '' !== $key ) {
+			if ( 1 === preg_match( '/^smok_[A-Za-z0-9_-]+$/', $key ) ) {
+				update_option( SAMOMIND_Orders_Settings::SECRET, $key, false );
+			} else {
+				$notes[] = __( 'That does not look like an orders key (it starts with smok_). The key was not changed.', 'samomind-ai-assistant' );
+			}
+		}
+
+		if ( ! empty( $_POST['samomind_orders_terms'] ) && ! $orders->terms_are_accepted() ) {
+			$orders->accept_terms( get_current_user_id() );
+		}
+
+		$wants_on = ! empty( $_POST['samomind_orders_enabled'] );
+		if ( $wants_on && ! $orders->terms_are_accepted() ) {
+			$wants_on = false;
+			$notes[]  = __( 'Order status stays off until you accept the order-data terms.', 'samomind-ai-assistant' );
+		}
+		update_option( SAMOMIND_Orders_Settings::OPT_IN, $wants_on ? '1' : '0', false );
+		update_option( SAMOMIND_Orders_Settings::SHARE_TRACKING, ! empty( $_POST['samomind_orders_share_tracking'] ) ? '1' : '0', false );
+		update_option( SAMOMIND_Orders_Settings::SHARE_ITEMS, ! empty( $_POST['samomind_orders_share_items'] ) ? '1' : '0', false );
+
+		if ( SAMOMIND()->connection->is_connected() ) {
+			SAMOMIND()->connection->checkin( true, false );
+		}
+
+		$reason = $orders->disabled_reason();
+		if ( null === $reason ) {
+			array_unshift( $notes, __( 'Order status settings saved. Customers can now check their order in the chat.', 'samomind-ai-assistant' ) );
+		} else {
+			array_unshift( $notes, __( 'Order status settings saved. Order status is not switched on yet.', 'samomind-ai-assistant' ) );
+		}
+		$this->finish( self::SETTINGS_SLUG, null === $reason ? 'success' : 'warning', implode( ' ', $notes ) );
 	}
 
 	/**
@@ -1080,6 +1140,104 @@ class SAMOMIND_Admin {
 					<?php submit_button( __( 'Save Settings', 'samomind-ai-assistant' ) ); ?>
 				</form>
 			</div>
+
+			<?php $this->render_orders_card(); ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The order status card: opt-in, terms, orders key, sharing choices.
+	 * The saved key is never printed.
+	 *
+	 * @since   0.4.0
+	 * @return  void
+	 */
+	private function render_orders_card() {
+		$orders = SAMOMIND()->orders;
+		$terms  = $orders->get_terms();
+		?>
+		<div class="samomind-card" id="samomind-orders">
+			<h2><?php esc_html_e( 'Order status in the chat', 'samomind-ai-assistant' ); ?></h2>
+			<?php if ( is_multisite() ) : ?>
+				<p class="description"><?php esc_html_e( 'Order status is not available on multisite networks.', 'samomind-ai-assistant' ); ?></p>
+			<?php elseif ( ! $orders->woocommerce_active() ) : ?>
+				<p class="description"><?php esc_html_e( 'Order status needs WooCommerce.', 'samomind-ai-assistant' ); ?></p>
+			<?php else : ?>
+				<p class="description"><?php esc_html_e( 'Let customers ask the assistant where their order is. A customer proves it is theirs with a code emailed from this shop to the order\'s billing address, or by being logged in. Off by default: nothing about orders is sent to Samomind until you switch this on.', 'samomind-ai-assistant' ); ?></p>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
+					<?php wp_nonce_field( 'samomind_save_orders' ); ?>
+					<input type="hidden" name="action" value="samomind_save_orders">
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Order status', 'samomind-ai-assistant' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" id="samomind_orders_enabled" name="samomind_orders_enabled" value="1"<?php checked( $orders->is_opted_in() ); ?>>
+									<?php esc_html_e( 'Let customers check order status in the chat', 'samomind-ai-assistant' ); ?>
+								</label>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Order-data terms', 'samomind-ai-assistant' ); ?></th>
+							<td>
+								<p class="description">
+									<?php esc_html_e( 'You are responsible for your shop\'s order data and need a lawful basis to show it to the customer it belongs to. Tell your customers that their order status may be shown to them through an AI assistant. Samomind handles order data for you only to answer a customer\'s own question about their order, and does not store orders, email addresses or codes. Keep the orders key secret and replace it if you think it has leaked.', 'samomind-ai-assistant' ); ?>
+									<a href="https://samomind.com/terms-and-conditions/" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of service', 'samomind-ai-assistant' ); ?></a>
+								</p>
+								<label>
+									<input type="checkbox" id="samomind_orders_terms" name="samomind_orders_terms" value="1"<?php checked( $orders->terms_are_accepted() ); ?>>
+									<?php
+									/* translators: %s: version of the order-data terms, for example 2026-11 */
+									echo esc_html( sprintf( __( 'I accept the order-data terms (version %s)', 'samomind-ai-assistant' ), SAMOMIND_Orders_Settings::TERMS_VERSION ) );
+									?>
+								</label>
+								<?php if ( $orders->terms_are_accepted() ) : ?>
+									<p class="description">
+										<?php
+										$accepted_by = ! empty( $terms['user_id'] ) ? get_userdata( (int) $terms['user_id'] ) : false;
+										/* translators: 1: name of the user, 2: date and time */
+										echo esc_html( sprintf( __( 'Accepted by %1$s on %2$s.', 'samomind-ai-assistant' ), $accepted_by ? $accepted_by->display_name : __( 'a former user', 'samomind-ai-assistant' ), SAMOMIND()->helpers->format_time( $terms['time'] ) ) );
+										?>
+									</p>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="samomind_orders_secret"><?php esc_html_e( 'Orders key', 'samomind-ai-assistant' ); ?></label></th>
+							<td>
+								<p>
+									<?php if ( $orders->has_secret() ) : ?>
+										<span class="samomind-badge samomind-badge--ok"><?php esc_html_e( 'A key is saved', 'samomind-ai-assistant' ); ?></span>
+									<?php else : ?>
+										<span class="samomind-badge"><?php esc_html_e( 'No key saved', 'samomind-ai-assistant' ); ?></span>
+									<?php endif; ?>
+								</p>
+								<input type="password" id="samomind_orders_secret" name="samomind_orders_secret" class="regular-text" value="" autocomplete="new-password" spellcheck="false" placeholder="smok_...">
+								<p class="description"><?php esc_html_e( 'A separate key from the ingest secret. Create it in the Samomind dashboard, next to the ingest key. The saved key is never shown; paste a new one to replace it.', 'samomind-ai-assistant' ); ?></p>
+								<?php if ( $orders->has_secret() ) : ?>
+									<label><input type="checkbox" name="samomind_orders_remove_key" value="1"> <?php esc_html_e( 'Remove the saved key (this switches order status off)', 'samomind-ai-assistant' ); ?></label>
+								<?php endif; ?>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'What the assistant may say', 'samomind-ai-assistant' ); ?></th>
+							<td>
+								<label>
+									<input type="checkbox" name="samomind_orders_share_tracking" value="1"<?php checked( $orders->shares_tracking() ); ?>>
+									<?php esc_html_e( 'Share tracking (carrier, number and link, and the shipped date)', 'samomind-ai-assistant' ); ?>
+								</label><br>
+								<label>
+									<input type="checkbox" name="samomind_orders_share_items" value="1"<?php checked( $orders->shares_items() ); ?>>
+									<?php esc_html_e( 'Share item names', 'samomind-ai-assistant' ); ?>
+								</label>
+								<p class="description"><?php esc_html_e( 'The status and the dates are always shared with the customer who verified the order. Addresses, phone numbers, emails, payment details and totals are never sent.', 'samomind-ai-assistant' ); ?></p>
+							</td>
+						</tr>
+					</table>
+					<?php submit_button( __( 'Save order status settings', 'samomind-ai-assistant' ), 'secondary' ); ?>
+				</form>
+			<?php endif; ?>
 		</div>
 		<?php
 	}

@@ -62,6 +62,20 @@ Only if an administrator ticks "Show the Samomind chat widget on this site" and 
 
 Like any web request, the visitor's browser requests to `widget.samomind.com` and `api.samomind.com` reach Samomind's servers with the visitor's IP address and browser user agent. See the privacy policy: https://samomind.com/privacy-policy/
 
+**3. Order status in the chat (0.4.0, unreleased: draft wording, not in the released plugin)**
+
+Off by default. Only if an administrator ticks "Let customers check order status in the chat" under Samomind > Settings, accepts the order-data terms (the version, the administrator's user id and the time are recorded) and pastes an orders key from the Samomind dashboard. WooCommerce must be active; multisite networks are not supported. With this off, the plugin does nothing described in this section.
+
+This is the one case where the plugin also **receives** requests from Samomind's servers: HTTPS POSTs to `/wp-json/samomind/v1/orders/` on this site. Each is signed with the orders key (a key separate from the ingest secret, never sent) and carries a timestamp and a one-time value; a request that is not validly signed is refused. The same WordPress site also answers its own visitors' browsers at `/wp-json/samomind/v1/orders/account-proof` (same site only, for a logged-in customer) and `admin-ajax.php?action=samomind_nonce`.
+
+* When a customer asks the chat about an order and types an order number and the billing email, Samomind sends this site the order number and the typed email address, to be checked. If they match, **this site's own WordPress mail** sends a 6-digit code to the order's billing address, from the sender WooCommerce uses for its emails. The code is stored on this site only as a hash, for 10 minutes by default.
+* When the customer enters the code, Samomind sends the code to be checked. If it is right, this site lets that one chat read that one order for 30 minutes by default.
+* A logged-in customer can skip the email: the browser asks this site for a signed proof that says the visitor is logged in (it names nobody), and this site records the login session it came from. Logging out of the shop ends access at once.
+* While access lasts, Samomind asks for the order and this site answers with the order number, status, dates and, only if you share them, the item names, and the tracking carrier, number and link (read from WooCommerce Shipment Tracking or Advanced Shipment Tracking, if installed). Never sent: addresses, phone numbers, email addresses, payment details, totals, discounts, refunds, customer or order notes, the customer's name or other orders.
+* "Share tracking" is on and "Share item names" is off by default; both are shown next to the opt-in and are enforced on this site.
+* Samomind does not store the email address, the code or orders. See the privacy policy for what it keeps. The plugin's own request log never records an email, a code or order data.
+* No order data is sent unless a customer verifies an order. With the setting off, nothing new leaves or enters this site, and no cookie is added.
+
 No other outbound requests are made. There is no tracking, usage analytics or advertising. The plugin adds no links to your site's pages. When you switch the chat widget on, the chat window's footer shows "Powered by Samomind" with a link to https://samomind.com on plans that include it; on higher plans it can be removed in the Samomind dashboard.
 
 == Installation ==
