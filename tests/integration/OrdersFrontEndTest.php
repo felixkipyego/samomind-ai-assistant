@@ -55,6 +55,34 @@ class OrdersFrontEndTest extends SAMOMIND_Integration_TestCase {
 		delete_option( 'samomind_site_key' );
 	}
 
+	public function test_the_loader_tag_carries_the_rest_root_of_a_sub_folder_shop() {
+		update_option( 'samomind_widget_enabled', '1' );
+		update_option( 'samomind_site_key', 'pk_live_' . str_repeat( 'a', 24 ) );
+
+		// The shop lives at /blog, and a security plugin has taken the api.w.org link out of the head.
+		$sub_folder = static function () {
+			return 'http://localhost/blog';
+		};
+		add_filter( 'pre_option_home', $sub_folder );
+		add_filter( 'pre_option_siteurl', $sub_folder );
+		remove_action( 'wp_head', 'rest_output_link_wp_head' );
+
+		try {
+			$html     = $this->render();
+			$expected = rest_url();
+
+			$this->assertStringContainsString( '/blog/wp-json/', $expected );
+			$this->assertStringContainsString( 'data-samomind-rest-root="' . esc_attr( $expected ) . '"', $html );
+			$this->assertStringNotContainsString( 'api.w.org', $html );
+		} finally {
+			remove_filter( 'pre_option_home', $sub_folder );
+			remove_filter( 'pre_option_siteurl', $sub_folder );
+			add_action( 'wp_head', 'rest_output_link_wp_head', 10, 0 );
+			delete_option( 'samomind_widget_enabled' );
+			delete_option( 'samomind_site_key' );
+		}
+	}
+
 	public function test_the_plugin_adds_no_script_data_about_orders_or_users() {
 		$this->log_in( $this->make_user() );
 		$html = $this->render();
