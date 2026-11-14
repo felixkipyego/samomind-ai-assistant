@@ -515,6 +515,10 @@ class SAMOMIND_Admin {
 			$this->finish( self::SETTINGS_SLUG, 'error', __( 'Order status is not available on multisite networks.', 'samomind-ai-assistant' ) );
 		}
 
+		if ( $orders->woocommerce_active() && $orders->plain_permalinks() ) {
+			$this->finish( self::SETTINGS_SLUG, 'error', __( 'Order status needs pretty permalinks. Go to Settings > Permalinks, pick any option other than Plain, save, and try again.', 'samomind-ai-assistant' ) );
+		}
+
 		$notes = array();
 
 		$key = isset( $_POST['samomind_orders_secret'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['samomind_orders_secret'] ) ) ) : '';
@@ -1164,6 +1168,11 @@ class SAMOMIND_Admin {
 				<p class="description"><?php esc_html_e( 'Order status is not available on multisite networks.', 'samomind-ai-assistant' ); ?></p>
 			<?php elseif ( ! $orders->woocommerce_active() ) : ?>
 				<p class="description"><?php esc_html_e( 'Order status needs WooCommerce.', 'samomind-ai-assistant' ); ?></p>
+			<?php elseif ( $orders->plain_permalinks() ) : ?>
+				<p class="description">
+					<?php esc_html_e( 'Order status needs pretty permalinks. Go to Settings > Permalinks, pick any option other than Plain, save, and come back here.', 'samomind-ai-assistant' ); ?>
+					<a href="<?php echo esc_url( admin_url( 'options-permalink.php' ) ); ?>"><?php esc_html_e( 'Open Permalinks', 'samomind-ai-assistant' ); ?></a>
+				</p>
 			<?php else : ?>
 				<p class="description"><?php esc_html_e( 'Let customers ask the assistant where their order is. A customer proves it is theirs with a code emailed from this shop to the order\'s billing address, or by being logged in. Off by default: nothing about orders is sent to Samomind until you switch this on.', 'samomind-ai-assistant' ); ?></p>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">

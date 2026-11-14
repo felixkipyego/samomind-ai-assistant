@@ -10,6 +10,7 @@
 > 6. **Tracking link.** `order.tracking.url` may be `null` (the carrier and number are kept) when the add-on's link is not https, has credentials, is over 2048 characters or has an IP address as its host.
 > 8. **Old WooCommerce.** `capabilities.orders.reason` gains `woocommerce_too_old` (WooCommerce older than 8.2). Additive.
 > 9. **Proof record lifetime.** The one-time record written at `account-proof` lives for the `account_proof_seconds` of the most recent signed request that carried it (any endpoint), default 60, at most 120.
+> 10. **Plain permalinks.** `capabilities.orders.reason` gains `plain_permalinks` (the shop's `permalink_structure` is empty). Additive. The feature is off and the opt-in screen asks the admin to change Settings > Permalinks. Checked after `woocommerce_too_old` and before `not_opted_in`.
 >
 > Also settled, no change to the text: `shipped` is `null` when tracking is not shared; the key id header is not pinned; an unredeemed account record cannot be deleted by `end` and expires in 60 seconds; the plugin checks the login session by the sha256 of its token against the user's session list, and a site with a custom session store gets `{"loggedIn": false}`.
 

@@ -294,6 +294,21 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 		$this->assertSame( 'woocommerce_too_old', $ping['capabilities']['reason'] );
 	}
 
+	public function test_plain_permalinks_report_their_own_reason_and_refuse_the_feature() {
+		update_option( 'permalink_structure', '' );
+
+		$ping = $this->call( 'ping' )->get_data();
+		$this->assertFalse( $ping['capabilities']['enabled'] );
+		$this->assertSame( 'plain_permalinks', $ping['capabilities']['reason'] );
+
+		$start = $this->call( 'start', array( 'session_ref' => $this->session_ref() ) );
+		$this->assertSame( 403, $start->get_status() );
+		$this->assertSame( array( 'code' => 'not_enabled' ), $start->get_data() );
+
+		update_option( 'permalink_structure', '/%postname%/' );
+		$this->assertNull( SAMOMIND()->orders->disabled_reason() );
+	}
+
 	public function test_ping_reports_the_capabilities() {
 		$data = $this->call( 'ping', array( 'request_id' => wp_generate_uuid4() ) )->get_data();
 

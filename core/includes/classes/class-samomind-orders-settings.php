@@ -193,8 +193,20 @@ class SAMOMIND_Orders_Settings {
 	}
 
 	/**
+	 * Whether the site uses plain permalinks. The signed path is then not the
+	 * REST path of the pretty URLs, so the feature stays off.
+	 *
+	 * @since   0.4.0
+	 * @return  bool
+	 */
+	public function plain_permalinks() {
+		return '' === (string) get_option( 'permalink_structure', '' );
+	}
+
+	/**
 	 * Why the feature is off, or null when it is on. The codes are the ones
-	 * in the contract: multisite, woocommerce_missing, not_opted_in.
+	 * in the contract: multisite, woocommerce_missing, woocommerce_too_old,
+	 * plain_permalinks, not_opted_in.
 	 *
 	 * @since   0.4.0
 	 * @return  string|null
@@ -208,6 +220,9 @@ class SAMOMIND_Orders_Settings {
 		}
 		if ( version_compare( $this->woocommerce_version(), self::MIN_WOOCOMMERCE, '<' ) ) {
 			return 'woocommerce_too_old';
+		}
+		if ( $this->plain_permalinks() ) {
+			return 'plain_permalinks';
 		}
 		if ( ! $this->is_opted_in() || ! $this->terms_are_accepted() || ! $this->has_secret() ) {
 			return 'not_opted_in';

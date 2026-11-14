@@ -44,6 +44,7 @@ abstract class SAMOMIND_Integration_TestCase extends TestCase {
 		parent::setUp();
 		$this->reset_state();
 
+		update_option( 'permalink_structure', '/%postname%/' );
 		update_option( SAMOMIND_Orders_Settings::OPT_IN, '1', false );
 		update_option( SAMOMIND_Orders_Settings::SECRET, self::SECRET, false );
 		update_option( SAMOMIND_Orders_Settings::SHARE_TRACKING, '1', false );
