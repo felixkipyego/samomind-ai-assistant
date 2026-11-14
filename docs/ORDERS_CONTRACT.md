@@ -13,6 +13,8 @@
 >
 > Also settled, no change to the text: `shipped` is `null` when tracking is not shared; the key id header is not pinned; an unredeemed account record cannot be deleted by `end` and expires in 60 seconds; the plugin checks the login session by the sha256 of its token against the user's session list, and a site with a custom session store gets `{"loggedIn": false}`.
 
+> **Signed path (confirmed by the backend, T1a).** The path in the signed message is the shop's full request path as WordPress received it, including any WordPress sub-directory (a site at `https://example.com/blog` signs `/blog/wp-json/samomind/v1/orders/start`). The plugin checks the signature over the raw path of the request (`REQUEST_URI`, without the query string, not decoded). Only where the server gives no request URI does it rebuild the path from the home URL.
+
 ## 13. Implementation split and the contract
 
 ### Tasks and order

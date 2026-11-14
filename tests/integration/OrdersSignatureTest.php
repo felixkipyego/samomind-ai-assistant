@@ -27,6 +27,33 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 		$this->assertSame( 200, $this->call( 'ping', array(), array( 'timestamp' => time() + 100 ) )->get_status() );
 	}
 
+	public function test_signature_covers_the_full_path_of_a_sub_directory_install() {
+		$had = array_key_exists( 'REQUEST_URI', $_SERVER );
+		$was = $had ? $_SERVER['REQUEST_URI'] : null;
+
+		try {
+			// The shop is at https://example.com/blog, so WordPress received the whole path, query string and all.
+			$_SERVER['REQUEST_URI'] = '/blog/wp-json/samomind/v1/orders/ping?x=1';
+
+			$full = $this->call( 'ping', array(), array( 'path' => '/blog/wp-json/samomind/v1/orders/ping' ) );
+			$this->assertSame( 200, $full->get_status() );
+
+			// A signature over the route without the folder is refused.
+			$short = $this->call( 'ping', array(), array( 'path' => '/wp-json/samomind/v1/orders/ping' ) );
+			$this->assertSame( 401, $short->get_status() );
+
+			// So is one that leaves out the REST prefix, as a bare route would.
+			$bare = $this->call( 'ping', array(), array( 'path' => '/samomind/v1/orders/ping' ) );
+			$this->assertSame( 401, $bare->get_status() );
+		} finally {
+			if ( $had ) {
+				$_SERVER['REQUEST_URI'] = $was;
+			} else {
+				unset( $_SERVER['REQUEST_URI'] );
+			}
+		}
+	}
+
 	public function test_signature_not_valid_on_another_path() {
 		// Signed for /orders/ping, sent to /orders/lookup.
 		$request = $this->signed( 'lookup', $this->lookup_body( '1' ), array( 'path' => SAMOMIND_Orders_Auth::request_path( '/samomind/v1/orders/ping' ) ) );

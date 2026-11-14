@@ -149,6 +149,23 @@ class SAMOMIND_Orders_Auth {
 	}
 
 	/**
+	 * The path Samomind signed: the raw path of the request WordPress
+	 * received, without the query string and not decoded, so a sub-directory
+	 * install ("/blog/wp-json/...") and any front controller in the URL are
+	 * covered. Where the server gives no request URI, the route is rebuilt.
+	 *
+	 * @since   0.4.0
+	 * @param   string $route  Route such as "/samomind/v1/orders/start".
+	 * @return  string
+	 */
+	public static function signed_path( $route ) {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- only the path is cut out and it is signed byte for byte, never output.
+		$uri  = isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+		$path = '' !== $uri ? explode( '?', explode( '#', $uri, 2 )[0], 2 )[0] : '';
+		return 0 === strpos( $path, '/' ) ? $path : self::request_path( $route );
+	}
+
+	/**
 	 * Check method, headers, clock, signature and replay, in that order.
 	 * The nonce is stored only after the signature has passed, so a stranger
 	 * cannot fill the store, and a failure to store it refuses the request.
@@ -182,7 +199,7 @@ class SAMOMIND_Orders_Auth {
 
 		$expected = self::sign(
 			$secret,
-			self::canonical( $timestamp, $key_id, $nonce, self::request_path( $request->get_route() ), (string) $request->get_body() )
+			self::canonical( $timestamp, $key_id, $nonce, self::signed_path( $request->get_route() ), (string) $request->get_body() )
 		);
 		if ( ! hash_equals( $expected, $given ) ) {
 			return false;
