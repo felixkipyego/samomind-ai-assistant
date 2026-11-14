@@ -91,13 +91,19 @@ samomind-ai-assistant/
         class-samomind-scheduler.php   Action Scheduler or WP-Cron (A1)
         class-samomind-embed.php       widget enqueue, script attributes, optimiser exclusions
         class-samomind-cli.php         WP-CLI commands (A7)
+        class-samomind-orders-settings.php  order status opt-in, terms, key, sharing, capabilities (A12)
+        class-samomind-orders-auth.php      orders signature, replay check, limit ceilings (A12)
+        class-samomind-orders-store.php     codes, grants, account records in transients (A12)
+        class-samomind-orders-lookup.php    order resolution, fields, tracking (A12)
+        class-samomind-orders-mail.php      code email on shutdown, cron fallback (A12)
+        class-samomind-orders-rest.php      the order endpoints and the browser endpoints (A12)
       assets/
         index.php
         css/backend-styles.css
         js/backend-scripts.js
   templates/index.php
   languages/index.php
-  docs/  tests/  composer.json  phpcs.xml.dist  phpunit.xml.dist  .github/  .wp-env.json   (not shipped, see .distignore)
+  docs/  tests/ (unit and integration)  bin/  composer.json  phpcs.xml.dist  phpunit.xml.dist  .github/  .wp-env.json   (not shipped, see .distignore)
 ```
 
 ## 3. Bootstrap
@@ -399,6 +405,25 @@ logged-out request, jQuery enqueued so there is work to do.
 | W3 Total Cache | 2.11.0 | none needed | `Minify_Plugin.php:1428-1464`: an external script is only touched when it matches `minify.cache.files`, which is empty by default | run: minify and combine on, the page's local scripts went into three bundles with no widget code, our tag untouched, no delay. A site that lists the widget in `minify.cache.files` has to remove it. |
 
 Why: the reference has no front-end script.
+
+**A12. Order status (unreleased, 0.4.0).** The one place the plugin
+answers requests from Samomind. The contract is `docs/ORDERS_CONTRACT.md`
+(a copy of SamoMind's design, section 13); do not change it here. Rules the
+code keeps: nothing is registered to answer unless the shop opted in, and a
+site that never opted in sends the same connect and check-in payloads as
+0.3.x; the signature uses the label `samomind-orders-v1` and the orders key,
+never the ingest secret; the nonce is stored only after the signature has
+passed and a failure to store it refuses the request; every answer to a
+signed request is signed over its exact bytes (`rest_pre_serve_request`);
+the shop is the authority, so `lookup` needs a grant the shop made itself
+(an emailed code, or a one-time record written for a live login session);
+an account grant is re-checked against the WordPress session on every
+lookup; the plugin log never writes an email, a code or order data; only
+WooCommerce's CRUD layer reads orders (HPOS on or off); the code email goes
+out on `shutdown` after the response is flushed, with WP-Cron only as the
+fallback. Tests: `tests/unit/OrdersTest.php` and the integration suite in
+`tests/integration/` (`composer integration`, real WordPress and
+WooCommerce, HPOS off and on).
 
 ## 6. Request flows (contract section 5)
 

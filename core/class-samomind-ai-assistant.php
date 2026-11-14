@@ -89,6 +89,15 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 		public $connection;
 
 		/**
+		 * SAMOMIND order status settings.
+		 *
+		 * @access  public
+		 * @since   0.4.0
+		 * @var     object|SAMOMIND_Orders_Settings
+		 */
+		public $orders;
+
+		/**
 		 * SAMOMIND sync object.
 		 *
 		 * @access  public
@@ -144,6 +153,7 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 				self::$instance->scheduler  = new SAMOMIND_Scheduler();
 				self::$instance->connection = new SAMOMIND_Connection();
 				self::$instance->sync       = new SAMOMIND_Sync();
+				self::$instance->orders     = new SAMOMIND_Orders_Settings();
 
 				// Fire the plugin logic.
 				new SAMOMIND_Run();
@@ -181,6 +191,9 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-scheduler.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-connection.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-sync.php';
+			foreach ( array( 'settings', 'auth', 'store', 'lookup', 'mail', 'rest' ) as $samomind_orders_part ) {
+				require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-orders-' . $samomind_orders_part . '.php';
+			}
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-admin.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-cli.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-run.php';

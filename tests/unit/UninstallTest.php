@@ -107,6 +107,13 @@ class UninstallTest extends SAMOMIND_TestCase {
 				'samomind_queue',
 				'samomind_log',
 				'samomind_lock',
+				'samomind_orders_enabled',
+				'samomind_orders_terms',
+				'samomind_orders_secret',
+				'samomind_orders_share_tracking',
+				'samomind_orders_share_items',
+				'samomind_orders_reported',
+				'samomind_orders_proof_seconds',
 			),
 			$this->deleted
 		);

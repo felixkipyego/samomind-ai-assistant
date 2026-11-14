@@ -16,6 +16,7 @@
 /phpcs.xml.dist
 /phpcs-plugin-check.xml.dist
 /phpunit.xml.dist
+/phpunit-integration.xml.dist
 /CLAUDE.md
 /README.md
 /CHANGELOG.md

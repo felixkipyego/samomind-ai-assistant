@@ -155,6 +155,12 @@ class SAMOMIND_Test_Connection extends SAMOMIND_Connection {
 /**
  * Scheduler that only records.
  */
+class SAMOMIND_Fake_Orders {
+	public function payload_addition() {
+		return array();
+	}
+}
+
 class SAMOMIND_Fake_Scheduler {
 
 	public $scheduled = array();
@@ -267,6 +273,7 @@ class SyncTest extends SAMOMIND_TestCase {
 			'builders'   => new SAMOMIND_Builders(),
 			'scheduler'  => new SAMOMIND_Fake_Scheduler(),
 			'sync'       => $this->sync,
+			'orders'     => new SAMOMIND_Fake_Orders(),
 		);
 	}
 

@@ -50,6 +50,13 @@ $samomind_options = array(
 	'samomind_queue',
 	'samomind_log',
 	'samomind_lock',
+	'samomind_orders_enabled',
+	'samomind_orders_terms',
+	'samomind_orders_secret',
+	'samomind_orders_share_tracking',
+	'samomind_orders_share_items',
+	'samomind_orders_reported',
+	'samomind_orders_proof_seconds',
 );
 
 foreach ( $samomind_options as $samomind_option ) {
@@ -61,9 +68,11 @@ global $wpdb;
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- one-off cleanup of this plugin's transients by prefix.
 $wpdb->query(
 	$wpdb->prepare(
-		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s",
+		"DELETE FROM {$wpdb->options} WHERE option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s OR option_name LIKE %s",
 		$wpdb->esc_like( '_transient_samomind_notice_' ) . '%',
-		$wpdb->esc_like( '_transient_timeout_samomind_notice_' ) . '%'
+		$wpdb->esc_like( '_transient_timeout_samomind_notice_' ) . '%',
+		$wpdb->esc_like( '_transient_samomind_ord_' ) . '%',
+		$wpdb->esc_like( '_transient_timeout_samomind_ord_' ) . '%'
 	)
 );
 
