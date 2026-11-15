@@ -73,6 +73,8 @@ class OrdersFrontEndTest extends SAMOMIND_Integration_TestCase {
 
 			$this->assertStringContainsString( '/blog/wp-json/', $expected );
 			$this->assertStringContainsString( 'data-samomind-rest-root="' . esc_attr( $expected ) . '"', $html );
+			$this->assertStringContainsString( 'data-samomind-ajax-url="' . esc_attr( admin_url( 'admin-ajax.php' ) ) . '"', $html );
+			$this->assertStringContainsString( '/blog/wp-admin/admin-ajax.php', $html );
 			$this->assertStringNotContainsString( 'api.w.org', $html );
 		} finally {
 			remove_filter( 'pre_option_home', $sub_folder );

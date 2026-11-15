@@ -55,6 +55,7 @@ class SAMOMIND_Run {
 
 		// Order status: REST endpoints for Samomind and the shopper's browser (docs/ORDERS_CONTRACT.md).
 		( new SAMOMIND_Orders_Rest( SAMOMIND()->orders ) )->register_hooks();
+		add_action( SAMOMIND_Scheduler::HOURLY_HOOK, array( 'SAMOMIND_Orders_State', 'purge_expired' ) );
 		add_action( 'before_woocommerce_init', array( $this, 'declare_woocommerce_compatibility' ) );
 
 		// Content events (docs/ARCHITECTURE.md A8).

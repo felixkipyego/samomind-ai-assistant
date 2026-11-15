@@ -94,6 +94,7 @@ class SAMOMIND_Orders_Rest {
 	 * @return  void
 	 */
 	public function register_hooks() {
+		add_action( 'init', array( 'SAMOMIND_Orders_State', 'maybe_install' ) );
 		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
 		add_filter( 'rest_post_dispatch', array( $this, 'add_private_headers' ), 10, 3 );
 		add_filter( 'rest_pre_serve_request', array( $this, 'drop_cors_handler' ), 5, 3 );
@@ -347,9 +348,18 @@ class SAMOMIND_Orders_Rest {
 		// reported on every start alike, and the status stays 202.
 		$capped = $store->shop_cap_reached( $limit['shop_emails_per_hour'] );
 
+		// An order's own limit is told only to a caller who knew its billing address, so it cannot be used to find out which orders exist.
+		$order_id = $matches ? (int) $order->get_id() : 0;
+		if ( $matches && $store->order_cap_reached( $order_id ) ) {
+			$capped = true;
+		}
+
 		if ( $matches && ! $capped && $store->allow_send( $session_ref, $limit['resend_gap_seconds'], $limit['sends_per_session_hour'] ) ) {
-			if ( $store->allow_shop_email( $limit['shop_emails_per_hour'] ) ) {
-				$store->put_code( $session_ref, $order->get_id(), $hash, $limit['code_ttl_minutes'] * MINUTE_IN_SECONDS );
+			// The order's count comes first, so the shop-wide count only grows for orders still inside their own limit.
+			if ( ! $store->allow_order_email( $order_id ) ) {
+				$capped = true;
+			} elseif ( $store->allow_shop_email( $limit['shop_emails_per_hour'] ) ) {
+				$store->put_code( $session_ref, $order_id, $hash, $limit['code_ttl_minutes'] * MINUTE_IN_SECONDS );
 				( new SAMOMIND_Orders_Mail( $store ) )->dispatch( $order->get_billing_email(), $code );
 			}
 		}

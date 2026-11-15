@@ -13,6 +13,7 @@ use Brain\Monkey\Functions;
 class SAMOMIND_Fake_Wpdb {
 
 	public $options = 'wp_options';
+	public $prefix  = 'wp_';
 	public $queries = array();
 
 	public function esc_like( $text ) {
@@ -43,6 +44,7 @@ class UninstallTest extends SAMOMIND_TestCase {
 		$deleted  = &$this->deleted;
 		$cleared  = &$this->cleared;
 		$requests = &$this->requests;
+		Functions\when( 'esc_sql' )->returnArg();
 		Functions\when( 'get_option' )->alias(
 			function ( $name, $default = false ) use ( $options ) {
 				return array_key_exists( $name, $options ) ? $options[ $name ] : $default;
@@ -114,6 +116,7 @@ class UninstallTest extends SAMOMIND_TestCase {
 				'samomind_orders_share_items',
 				'samomind_orders_reported',
 				'samomind_orders_proof_seconds',
+				'samomind_orders_db_version',
 			),
 			$this->deleted
 		);

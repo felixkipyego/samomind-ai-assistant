@@ -8,11 +8,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Class SAMOMIND_Orders_Store
  *
- * What the shop holds for a verification (design sections 3 and 5), all in
- * short-lived transients: the hashed code with its try counter, the grant
- * that lets a lookup read one order, the one-time account record, and the
- * counters for resends and emails. The plain code and the email address are
- * never stored here.
+ * What the shop holds for a verification (design sections 3 and 5): the
+ * hashed code with its try counter, the grant that lets a lookup read one
+ * order, the one-time account record, and the counters for resends and
+ * emails. They live in SAMOMIND_Orders_State, whose statements are atomic.
+ * The plain code and the email address are never stored here.
  *
  * @package     SAMOMIND
  * @subpackage  Classes/SAMOMIND_Orders_Store
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SAMOMIND_Orders_Store {
 
 	/**
-	 * Transient prefix of every record in this class; uninstall removes it.
+	 * Transient prefix of the parked emails; uninstall removes it.
 	 *
 	 * @var string
 	 */
@@ -53,18 +53,6 @@ class SAMOMIND_Orders_Store {
 	}
 
 	/**
-	 * Transient name for a kind of record and what identifies it.
-	 *
-	 * @since   0.4.0
-	 * @param   string   $kind   code, grant, index, sends, mail, record or hour.
-	 * @param   string[] $parts  What identifies it.
-	 * @return  string
-	 */
-	private static function name( $kind, array $parts ) {
-		return self::PREFIX . $kind . '_' . substr( hash( 'sha256', implode( '|', $parts ) ), 0, 40 );
-	}
-
-	/**
 	 * The stored form of a code: it ties the code to the chat session and
 	 * the order, so it is useless anywhere else.
 	 *
@@ -79,8 +67,16 @@ class SAMOMIND_Orders_Store {
 	}
 
 	/**
+	 * Most code emails for one order in an hour, whatever the session or
+	 * address the request came from.
+	 *
+	 * @var int
+	 */
+	const ORDER_EMAILS_PER_HOUR = 3;
+
+	/**
 	 * Whether a new code may be created now, and note the send if so.
-	 * A second code inside the gap, or a fourth in an hour, is refused.
+	 * A second code inside the gap, or one past the hourly limit, is refused.
 	 *
 	 * @since   0.4.0
 	 * @param   string $session_ref  Session reference.
@@ -89,22 +85,11 @@ class SAMOMIND_Orders_Store {
 	 * @return  bool
 	 */
 	public function allow_send( $session_ref, $gap, $per_hour ) {
-		$name  = self::name( 'sends', array( $session_ref ) );
-		$state = get_transient( $name );
-		$now   = time();
-		if ( ! is_array( $state ) || ! isset( $state['count'], $state['first'], $state['last'] ) || $now - (int) $state['first'] >= HOUR_IN_SECONDS ) {
-			$state = array(
-				'count' => 0,
-				'first' => $now,
-				'last'  => 0,
-			);
-		}
-		if ( $now - (int) $state['last'] < (int) $gap || (int) $state['count'] >= (int) $per_hour ) {
+		$key = SAMOMIND_Orders_State::key( array( $session_ref ) );
+		if ( 1 !== SAMOMIND_Orders_State::claim( 'gap', $key, time() + (int) $gap, $session_ref ) ) {
 			return false;
 		}
-		$state['count'] = (int) $state['count'] + 1;
-		$state['last']  = $now;
-		return set_transient( $name, $state, HOUR_IN_SECONDS );
+		return SAMOMIND_Orders_State::bump( 'sends', $key, (int) $per_hour, time() + HOUR_IN_SECONDS, $session_ref );
 	}
 
 	/**
@@ -116,24 +101,45 @@ class SAMOMIND_Orders_Store {
 	 * @return  bool
 	 */
 	public function shop_cap_reached( $cap ) {
-		return (int) get_transient( self::name( 'hour', array( gmdate( 'Y-m-d-H' ) ) ) ) >= (int) $cap;
+		return SAMOMIND_Orders_State::count( 'hour', SAMOMIND_Orders_State::key( array( gmdate( 'Y-m-d-H' ) ) ) ) >= (int) $cap;
 	}
 
 	/**
 	 * Count a code email for the whole shop and say whether it is within the
-	 * cap for this hour.
+	 * cap for this hour. It is a guard against floods: it is only asked
+	 * after the order's own count has let the email through, so one order
+	 * adds at most ORDER_EMAILS_PER_HOUR to it.
 	 *
 	 * @since   0.4.0
 	 * @param   int $cap  Emails per hour, already clamped.
 	 * @return  bool
 	 */
 	public function allow_shop_email( $cap ) {
-		$name  = self::name( 'hour', array( gmdate( 'Y-m-d-H' ) ) );
-		$count = (int) get_transient( $name );
-		if ( $count >= (int) $cap ) {
-			return false;
-		}
-		return set_transient( $name, $count + 1, HOUR_IN_SECONDS );
+		return SAMOMIND_Orders_State::bump( 'hour', SAMOMIND_Orders_State::key( array( gmdate( 'Y-m-d-H' ) ) ), (int) $cap, time() + HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Whether an order has used its code emails for this hour. Looks only.
+	 * The key is the order's WooCommerce id, never the number as typed.
+	 *
+	 * @since   0.4.0
+	 * @param   int $order_id  Resolved order id.
+	 * @return  bool
+	 */
+	public function order_cap_reached( $order_id ) {
+		return SAMOMIND_Orders_State::count( 'omail', SAMOMIND_Orders_State::key( array( (string) (int) $order_id ) ) ) >= self::ORDER_EMAILS_PER_HOUR;
+	}
+
+	/**
+	 * Count a code email for one order and say whether it is within its
+	 * hourly limit.
+	 *
+	 * @since   0.4.0
+	 * @param   int $order_id  Resolved order id.
+	 * @return  bool
+	 */
+	public function allow_order_email( $order_id ) {
+		return SAMOMIND_Orders_State::bump( 'omail', SAMOMIND_Orders_State::key( array( (string) (int) $order_id ) ), self::ORDER_EMAILS_PER_HOUR, time() + HOUR_IN_SECONDS );
 	}
 
 	/**
@@ -148,47 +154,30 @@ class SAMOMIND_Orders_Store {
 	 * @return  void
 	 */
 	public function put_code( $session_ref, $order_id, $hash, $ttl ) {
-		set_transient(
-			self::name( 'code', array( $session_ref, (string) (int) $order_id ) ),
-			array(
-				'hash'  => $hash,
-				'tries' => 0,
-				'exp'   => time() + (int) $ttl,
-			),
-			(int) $ttl
-		);
-		$this->index( $session_ref, $order_id, HOUR_IN_SECONDS );
+		SAMOMIND_Orders_State::put( 'code', SAMOMIND_Orders_State::key( array( $session_ref, (string) (int) $order_id ) ), time() + (int) $ttl, array( 'hash' => $hash ), $session_ref );
 	}
 
 	/**
-	 * Check a code. Every wrong try is counted and the code dies at the
-	 * limit; a right one is spent at once, so it works once.
+	 * Check a code. Every try is counted before it is compared, by a
+	 * conditional UPDATE, so parallel guesses cannot get more than the
+	 * allowed number; a right one is spent at once and works once.
 	 *
 	 * @since   0.4.0
 	 * @param   string $session_ref  Session reference.
 	 * @param   int    $order_id     Order id, 0 when the order was not found.
 	 * @param   string $candidate_hash  code_hash() of what was typed.
-	 * @param   int    $max_tries    Wrong tries allowed.
+	 * @param   int    $max_tries    Tries allowed.
 	 * @return  bool
 	 */
 	public function check_code( $session_ref, $order_id, $candidate_hash, $max_tries ) {
-		$name   = self::name( 'code', array( $session_ref, (string) (int) $order_id ) );
-		$record = get_transient( $name );
-		if ( ! is_array( $record ) || empty( $record['hash'] ) || (int) $record['exp'] < time() ) {
-			delete_transient( $name );
+		$row = SAMOMIND_Orders_State::get( 'code', SAMOMIND_Orders_State::key( array( $session_ref, (string) (int) $order_id ) ) );
+		if ( null === $row || empty( $row['data']['hash'] ) ) {
 			return false;
 		}
-		if ( hash_equals( (string) $record['hash'], $candidate_hash ) ) {
-			delete_transient( $name );
-			return true;
+		if ( ! SAMOMIND_Orders_State::try_once( $row['id'], $max_tries ) ) {
+			return false;
 		}
-		$record['tries'] = (int) $record['tries'] + 1;
-		if ( $record['tries'] >= (int) $max_tries ) {
-			delete_transient( $name );
-		} else {
-			set_transient( $name, $record, max( 1, (int) $record['exp'] - time() ) );
-		}
-		return false;
+		return hash_equals( (string) $row['data']['hash'], $candidate_hash ) && SAMOMIND_Orders_State::spend( $row['id'] );
 	}
 
 	/**
@@ -203,17 +192,17 @@ class SAMOMIND_Orders_Store {
 	 * @return  void
 	 */
 	public function put_grant( $session_ref, $order_id, $ttl, array $account = array() ) {
-		set_transient(
-			self::name( 'grant', array( $session_ref, (string) (int) $order_id ) ),
+		SAMOMIND_Orders_State::put(
+			'grant',
+			SAMOMIND_Orders_State::key( array( $session_ref, (string) (int) $order_id ) ),
+			time() + (int) $ttl,
 			array(
 				'order'    => (int) $order_id,
 				'user_id'  => isset( $account['user_id'] ) ? (int) $account['user_id'] : 0,
 				'verifier' => isset( $account['verifier'] ) ? (string) $account['verifier'] : '',
-				'exp'      => time() + (int) $ttl,
 			),
-			(int) $ttl
+			$session_ref
 		);
-		$this->index( $session_ref, $order_id, (int) $ttl );
 	}
 
 	/**
@@ -227,58 +216,35 @@ class SAMOMIND_Orders_Store {
 	 * @return  array|null
 	 */
 	public function get_grant( $session_ref, $order_id ) {
-		$name  = self::name( 'grant', array( $session_ref, (string) (int) $order_id ) );
-		$grant = get_transient( $name );
-		if ( ! is_array( $grant ) || ! isset( $grant['exp'] ) || (int) $grant['exp'] < time() ) {
+		$row = SAMOMIND_Orders_State::get( 'grant', SAMOMIND_Orders_State::key( array( $session_ref, (string) (int) $order_id ) ) );
+		if ( null === $row ) {
 			return null;
 		}
+		$grant = $row['data'] + array(
+			'order'    => (int) $order_id,
+			'user_id'  => 0,
+			'verifier' => '',
+		);
 		if ( (int) $grant['user_id'] > 0 && ! self::login_session_exists( (int) $grant['user_id'], (string) $grant['verifier'] ) ) {
-			delete_transient( $name );
+			SAMOMIND_Orders_State::spend( $row['id'] );
 			return null;
 		}
+		$grant['exp'] = $row['expires'];
 		return $grant;
 	}
 
 	/**
-	 * Delete every code and grant of a session. Unknown sessions are fine.
-	 * A one-time account record is keyed by its challenge, which the shop
-	 * does not tie to a session until it is redeemed; it ends on its own
-	 * within a minute.
+	 * Delete every code, grant and send counter of a session. Unknown
+	 * sessions are fine. A one-time account record is keyed by its
+	 * challenge, which the shop does not tie to a session until it is
+	 * redeemed; it ends on its own within a minute.
 	 *
 	 * @since   0.4.0
 	 * @param   string $session_ref  Session reference.
 	 * @return  void
 	 */
 	public function end_session( $session_ref ) {
-		$index = get_transient( self::name( 'index', array( $session_ref ) ) );
-		if ( is_array( $index ) ) {
-			foreach ( $index as $order_id ) {
-				delete_transient( self::name( 'code', array( $session_ref, (string) (int) $order_id ) ) );
-				delete_transient( self::name( 'grant', array( $session_ref, (string) (int) $order_id ) ) );
-			}
-		}
-		delete_transient( self::name( 'index', array( $session_ref ) ) );
-		delete_transient( self::name( 'sends', array( $session_ref ) ) );
-	}
-
-	/**
-	 * Remember that a session has a code or a grant for an order, so that
-	 * end_session() can find them.
-	 *
-	 * @since   0.4.0
-	 * @param   string $session_ref  Session reference.
-	 * @param   int    $order_id     Order id.
-	 * @param   int    $ttl          Seconds to keep the index.
-	 * @return  void
-	 */
-	private function index( $session_ref, $order_id, $ttl ) {
-		$name  = self::name( 'index', array( $session_ref ) );
-		$index = get_transient( $name );
-		$index = is_array( $index ) ? $index : array();
-		if ( ! in_array( (int) $order_id, $index, true ) ) {
-			$index[] = (int) $order_id;
-		}
-		set_transient( $name, $index, max( (int) $ttl, HOUR_IN_SECONDS ) );
+		SAMOMIND_Orders_State::delete_session( $session_ref, array( 'code', 'grant', 'gap', 'sends' ) );
 	}
 
 	/**
@@ -292,30 +258,29 @@ class SAMOMIND_Orders_Store {
 	 * @return  void
 	 */
 	public function put_record( $challenge, $user_id, $verifier, $ttl ) {
-		set_transient(
-			self::name( 'record', array( $challenge ) ),
+		SAMOMIND_Orders_State::put(
+			'record',
+			SAMOMIND_Orders_State::key( array( $challenge ) ),
+			time() + (int) $ttl,
 			array(
 				'user_id'  => (int) $user_id,
 				'verifier' => (string) $verifier,
-				'exp'      => time() + (int) $ttl,
-			),
-			(int) $ttl
+			)
 		);
 	}
 
 	/**
-	 * Take the record for a challenge. It is deleted on the first look, so
-	 * it can be redeemed once, right or wrong.
+	 * Take the record for a challenge. It is deleted on the first look and
+	 * only the request whose DELETE changed the row gets it, so it can be
+	 * redeemed once, right or wrong, even by two requests at the same time.
 	 *
 	 * @since   0.4.0
 	 * @param   string $challenge  The challenge.
 	 * @return  array|null  The record when it exists and has not expired.
 	 */
 	public function take_record( $challenge ) {
-		$name   = self::name( 'record', array( $challenge ) );
-		$record = get_transient( $name );
-		delete_transient( $name );
-		if ( ! is_array( $record ) || (int) $record['exp'] < time() || (int) $record['user_id'] < 1 ) {
+		$record = SAMOMIND_Orders_State::take( 'record', SAMOMIND_Orders_State::key( array( $challenge ) ) );
+		if ( null === $record || (int) $record['user_id'] < 1 ) {
 			return null;
 		}
 		return $record;
@@ -368,6 +333,17 @@ class SAMOMIND_Orders_Store {
 	}
 
 	/**
+	 * Transient name of a parked email.
+	 *
+	 * @since   0.4.0
+	 * @param   string $id  Random id.
+	 * @return  string
+	 */
+	private static function mail_name( $id ) {
+		return self::PREFIX . 'mail_' . substr( hash( 'sha256', (string) $id ), 0, 40 );
+	}
+
+	/**
 	 * Park a code email until the response has left (see SAMOMIND_Orders_Mail).
 	 *
 	 * @since   0.4.0
@@ -376,7 +352,7 @@ class SAMOMIND_Orders_Store {
 	 * @return  void
 	 */
 	public function park_mail( $id, array $message ) {
-		set_transient( self::name( 'mail', array( $id ) ), $message, 2 * MINUTE_IN_SECONDS );
+		set_transient( self::mail_name( $id ), $message, 2 * MINUTE_IN_SECONDS );
 	}
 
 	/**
@@ -387,7 +363,7 @@ class SAMOMIND_Orders_Store {
 	 * @return  array|null
 	 */
 	public function take_mail( $id ) {
-		$name    = self::name( 'mail', array( $id ) );
+		$name    = self::mail_name( $id );
 		$message = get_transient( $name );
 		delete_transient( $name );
 		return is_array( $message ) ? $message : null;
