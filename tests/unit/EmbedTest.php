@@ -68,6 +68,7 @@ class EmbedTest extends SAMOMIND_TestCase {
 		foreach ( array( 'is_admin', 'is_feed', 'is_embed', 'is_preview', 'is_customize_preview', 'wp_is_json_request' ) as $function ) {
 			Functions\when( $function )->justReturn( false );
 		}
+		Functions\when( 'admin_url' )->justReturn( 'https://example.com/blog/wp-admin/admin-ajax.php' );
 		Functions\when( 'rest_url' )->justReturn( 'https://example.com/blog/wp-json/' );
 		Functions\when( 'esc_url_raw' )->returnArg();
 		Functions\when( 'add_action' )->justReturn( true );
@@ -185,6 +186,7 @@ class EmbedTest extends SAMOMIND_TestCase {
 		$this->assertSame( self::KEY, $attributes['data-site-key'] );
 		$this->assertSame( 'https://api.samomind.com', $attributes['data-base-url'] );
 		$this->assertSame( 'https://example.com/blog/wp-json/', $attributes['data-samomind-rest-root'] );
+		$this->assertSame( 'https://example.com/blog/wp-admin/admin-ajax.php', $attributes['data-samomind-ajax-url'] );
 		$this->assertSame( 'https://widget.samomind.com/widget.js', $attributes['src'] );
 		$this->assertTrue( $attributes['defer'] );
 		$this->assertSame( '1', $attributes['data-no-optimize'] );
@@ -216,6 +218,7 @@ class EmbedTest extends SAMOMIND_TestCase {
 
 		$this->assertArrayNotHasKey( 'data-site-key', $attributes );
 		$this->assertArrayNotHasKey( 'data-samomind-rest-root', $attributes );
+		$this->assertArrayNotHasKey( 'data-samomind-ajax-url', $attributes );
 	}
 
 	public function test_optimiser_exclusions() {

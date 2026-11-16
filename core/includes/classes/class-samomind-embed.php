@@ -148,6 +148,8 @@ class SAMOMIND_Embed {
 		$attributes['data-site-key'] = $helpers->get_site_key();
 		$attributes['data-base-url'] = $helpers->get_api_base_url();
 		// Given outright because a security plugin may remove the api.w.org link the loader would otherwise read, which a shop in a sub-folder cannot do without.
+		// The widget posts to the shop's admin-ajax for the order nonce; given outright so it does not have to guess the folder.
+		$attributes['data-samomind-ajax-url']  = admin_url( 'admin-ajax.php' );
 		$attributes['data-samomind-rest-root'] = esc_url_raw( rest_url() );
 		$attributes['data-no-optimize']        = '1'; // LiteSpeed Cache, SiteGround Optimizer.
 		$attributes['data-noptimize']          = '1'; // Autoptimize.

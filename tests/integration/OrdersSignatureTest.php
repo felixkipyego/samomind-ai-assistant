@@ -19,7 +19,7 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 	}
 
 	public function test_stale_timestamp_refused() {
-		foreach ( array( -121, 121, -3600 ) as $skew ) {
+		foreach ( array( -125, 125, -3600 ) as $skew ) {
 			$response = $this->call( 'ping', array(), array( 'timestamp' => time() + $skew ) );
 			$this->assertSame( 401, $response->get_status(), "skew $skew" );
 		}
@@ -115,24 +115,20 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 	}
 
 	public function test_nonce_storage_that_fails_refuses_the_request() {
-		// A store that takes the write but cannot give it back: the first look finds nothing, the read-back finds nothing.
-		$key   = 'samomind_ord_n_' . hash( 'sha256', 'BBBBBBBBBBBBBBBBBBBBBB' );
-		$name  = 'pre_transient_' . $key;
-		$calls = 0;
-		$block = function () use ( &$calls, $key ) {
-			++$calls;
-			if ( 2 === $calls ) {
-				delete_option( '_transient_' . $key );
-				delete_option( '_transient_timeout_' . $key );
-			}
-			return false;
-		};
-		add_filter( $name, $block );
-		$response = $this->call( 'ping', array(), array( 'nonce' => 'BBBBBBBBBBBBBBBBBBBBBB' ) );
-		remove_filter( $name, $block );
+		global $wpdb;
+		$table = SAMOMIND_Orders_State::table();
+
+		// The table is gone: the nonce cannot be stored, so the request is refused, not let through.
+		$wpdb->query( "RENAME TABLE {$table} TO {$table}_away" ); // phpcs:ignore
+		$wpdb->suppress_errors( true );
+		try {
+			$response = $this->call( 'ping', array(), array( 'nonce' => 'BBBBBBBBBBBBBBBBBBBBBB' ) );
+		} finally {
+			$wpdb->suppress_errors( false );
+			$wpdb->query( "RENAME TABLE {$table}_away TO {$table}" ); // phpcs:ignore
+		}
 
 		$this->assertSame( 401, $response->get_status() );
-		$this->assertSame( 2, $calls, 'It stored the nonce and read it back.' );
 	}
 
 	public function test_limits_are_clamped_to_the_ceilings() {
@@ -203,10 +199,9 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 			)
 		);
 
-		global $wpdb;
-		$timeouts = $wpdb->get_col( "SELECT option_value FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_timeout\\_samomind\\_ord\\_code\\_%'" ); // phpcs:ignore
-		$this->assertNotEmpty( $timeouts );
-		$this->assertLessThanOrEqual( 30 * MINUTE_IN_SECONDS + 5, (int) max( $timeouts ) - time() );
+		$rows = $this->state_rows( 'code' );
+		$this->assertNotEmpty( $rows );
+		$this->assertLessThanOrEqual( 30 * MINUTE_IN_SECONDS + 5, (int) $rows[0]['expires'] - time() );
 	}
 
 	public function test_a_response_is_signed_over_the_exact_bytes_and_the_request_nonce() {

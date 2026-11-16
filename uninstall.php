@@ -76,4 +76,7 @@ $wpdb->query(
 	)
 );
 
+require_once __DIR__ . '/core/includes/classes/class-samomind-orders-state.php';
+SAMOMIND_Orders_State::drop();
+
 ( new SAMOMIND_Scheduler() )->clear_all();

@@ -191,7 +191,7 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-scheduler.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-connection.php';
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-sync.php';
-			foreach ( array( 'settings', 'auth', 'store', 'lookup', 'mail', 'rest' ) as $samomind_orders_part ) {
+			foreach ( array( 'settings', 'state', 'auth', 'store', 'lookup', 'mail', 'rest' ) as $samomind_orders_part ) {
 				require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-orders-' . $samomind_orders_part . '.php';
 			}
 			require_once SAMOMIND_PLUGIN_DIR . 'core/includes/classes/class-samomind-admin.php';
@@ -216,6 +216,7 @@ if ( ! class_exists( 'SamoMind_AI_Assistant' ) ) :
 			add_option( 'samomind_site_key', '', '', true );
 			$this->content->save_default_post_types();
 			$this->scheduler->ensure_hourly();
+			SAMOMIND_Orders_State::maybe_install();
 		}
 
 		/**

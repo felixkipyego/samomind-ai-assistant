@@ -29,6 +29,26 @@ nothing is submitted to WordPress.org.
   or Advanced Shipment Tracking.
 - Changed: when the shop has opted in, connect and check-in also report the
   order status capabilities. Nothing new is sent before that.
+- Changed (security report T5): a code email is limited to 3 an hour per
+  order (keyed on the order's id, whatever the session, address or way the
+  number was typed); the shop-wide cap of 20 an hour now only counts emails
+  that went out, so one order cannot fill it. The answer stays 202, with
+  mail_capped.
+- Changed (security report T5): nonces, code records and their tries, grants,
+  the one-time account record and the counters are kept in one small table
+  (created with dbDelta, versioned, removed on uninstall, expired rows
+  cleaned hourly) and decided by single SQL statements, so requests that
+  arrive at the same moment cannot both win. No transients or add_option for
+  these.
+- Changed (security report T5): a signed request is refused when its path is
+  not the REST path of the route that answers, or when it carries a
+  rest_route parameter on a REST-prefix path.
+- Added: the loader script tag carries data-samomind-ajax-url and
+  data-samomind-rest-root, so the widget does not have to guess the shop's
+  folder.
+- Added: on a host that cannot send the code email straight away
+  (cron_fallback), the settings page and Check in now say so. Order status
+  can still be switched on.
 - Tests: an integration suite in wp-env with WooCommerce, run with HPOS off
   and on (`composer integration`), and a CI job for it.
 

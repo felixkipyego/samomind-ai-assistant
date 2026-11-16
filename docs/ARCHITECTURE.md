@@ -93,7 +93,8 @@ samomind-ai-assistant/
         class-samomind-cli.php         WP-CLI commands (A7)
         class-samomind-orders-settings.php  order status opt-in, terms, key, sharing, capabilities (A12)
         class-samomind-orders-auth.php      orders signature, replay check, limit ceilings (A12)
-        class-samomind-orders-store.php     codes, grants, account records in transients (A12)
+        class-samomind-orders-state.php     the atomic state table: nonces, tries, records, counters (A12)
+        class-samomind-orders-store.php     codes, grants, account records, send limits on that table (A12)
         class-samomind-orders-lookup.php    order resolution, fields, tracking (A12)
         class-samomind-orders-mail.php      code email on shutdown, cron fallback (A12)
         class-samomind-orders-rest.php      the order endpoints and the browser endpoints (A12)
@@ -413,7 +414,15 @@ code keeps: nothing is registered to answer unless the shop opted in, and a
 site that never opted in sends the same connect and check-in payloads as
 0.3.x; the signature uses the label `samomind-orders-v1` and the orders key,
 never the ingest secret; the nonce is stored only after the signature has
-passed and a failure to store it refuses the request; every answer to a
+passed, by one INSERT against a UNIQUE key (no row changed means a replay) and
+a failure to store it refuses the request; nonces, code records with their
+tries, grants, one-time records and counters live in one small table
+(`SAMOMIND_Orders_State`, dbDelta, versioned, dropped on uninstall, expired
+rows removed hourly) and every decision is one SQL statement read from its
+rows-affected count (`UPDATE ... SET tries = tries + 1 WHERE tries < max`,
+a conditional DELETE for a one-time record), never a transient or
+add_option, which are not atomic; the signed path must be the REST path of
+the matched route; a code email is limited per order id (3 an hour); every answer to a
 signed request is signed over its exact bytes (`rest_pre_serve_request`);
 the shop is the authority, so `lookup` needs a grant the shop made itself
 (an emailed code, or a one-time record written for a live login session);

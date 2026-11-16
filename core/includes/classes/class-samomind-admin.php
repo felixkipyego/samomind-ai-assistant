@@ -434,7 +434,29 @@ class SAMOMIND_Admin {
 		if ( is_wp_error( $result ) ) {
 			$this->finish( self::STATUS_SLUG, 'error', self::error_text( __( 'Check-in failed:', 'samomind-ai-assistant' ), $result ) );
 		}
-		$this->finish( self::STATUS_SLUG, 'success', __( 'Checked in.', 'samomind-ai-assistant' ) );
+		$done = $this->checked_in_notice();
+		$this->finish( self::STATUS_SLUG, $done['type'], $done['message'] );
+	}
+
+	/**
+	 * What to say after a successful check-in. A shop that has order status on
+	 * and cannot send code emails straight away is told so.
+	 *
+	 * @since   0.4.0
+	 * @return  array  type and message.
+	 */
+	private function checked_in_notice() {
+		$late = SAMOMIND()->orders->is_opted_in() ? SAMOMIND_Orders_Mail::late_mail_notice() : '';
+		if ( '' === $late ) {
+			return array(
+				'type'    => 'success',
+				'message' => __( 'Checked in.', 'samomind-ai-assistant' ),
+			);
+		}
+		return array(
+			'type'    => 'warning',
+			'message' => __( 'Checked in.', 'samomind-ai-assistant' ) . ' ' . $late,
+		);
 	}
 
 	/**
@@ -545,6 +567,7 @@ class SAMOMIND_Admin {
 		update_option( SAMOMIND_Orders_Settings::OPT_IN, $wants_on ? '1' : '0', false );
 		update_option( SAMOMIND_Orders_Settings::SHARE_TRACKING, ! empty( $_POST['samomind_orders_share_tracking'] ) ? '1' : '0', false );
 		update_option( SAMOMIND_Orders_Settings::SHARE_ITEMS, ! empty( $_POST['samomind_orders_share_items'] ) ? '1' : '0', false );
+		SAMOMIND_Orders_State::maybe_install();
 
 		if ( SAMOMIND()->connection->is_connected() ) {
 			SAMOMIND()->connection->checkin( true, false );
@@ -1175,6 +1198,10 @@ class SAMOMIND_Admin {
 				</p>
 			<?php else : ?>
 				<p class="description"><?php esc_html_e( 'Let customers ask the assistant where their order is. A customer proves it is theirs with a code emailed from this shop to the order\'s billing address, or by being logged in. Off by default: nothing about orders is sent to Samomind until you switch this on.', 'samomind-ai-assistant' ); ?></p>
+				<?php $late_mail = SAMOMIND_Orders_Mail::late_mail_notice(); ?>
+				<?php if ( '' !== $late_mail ) : ?>
+					<p class="description"><strong><?php echo esc_html( $late_mail ); ?></strong></p>
+				<?php endif; ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
 					<?php wp_nonce_field( 'samomind_save_orders' ); ?>
 					<input type="hidden" name="action" value="samomind_save_orders">

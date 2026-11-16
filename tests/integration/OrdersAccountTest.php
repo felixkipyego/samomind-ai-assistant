@@ -127,8 +127,7 @@ class OrdersAccountTest extends SAMOMIND_Integration_TestCase {
 	}
 
 	private function count_records() {
-		global $wpdb;
-		return (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->options} WHERE option_name LIKE '\\\\_transient\\\\_samomind\\\\_ord\\\\_record\\\\_%'" ); // phpcs:ignore
+		return count( $this->state_rows( 'record' ) );
 	}
 
 	/**
@@ -186,13 +185,10 @@ class OrdersAccountTest extends SAMOMIND_Integration_TestCase {
 
 		// Expired: age the stored record.
 		list( $challenge ) = $this->logged_in_proof( $user );
-		global $wpdb;
-		$name   = $wpdb->get_var( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE '\\\\_transient\\\\_samomind\\\\_ord\\\\_record\\\\_%'" ); // phpcs:ignore
-		$key    = substr( $name, strlen( '_transient_' ) );
-		$record = get_transient( $key );
-		$this->assertEqualsWithDelta( time() + 60, $record['exp'], 5 );
-		$record['exp'] = time() - 1;
-		set_transient( $key, $record, 600 );
+		$rows = $this->state_rows( 'record' );
+		$this->assertCount( 1, $rows );
+		$this->assertEqualsWithDelta( time() + 60, (int) $rows[0]['expires'], 5 );
+		$this->age_state( 'record', 3600 );
 		$this->assertSame( array( 'granted' => false ), $this->redeem( $challenge, $order )->get_data() );
 
 		// Wrong order for the user burns the record too: a second try with the right order fails.

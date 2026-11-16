@@ -54,13 +54,6 @@ class SAMOMIND_Orders_Auth {
 	const NONCE_TTL = 300;
 
 	/**
-	 * Transient prefix for remembered nonces.
-	 *
-	 * @var string
-	 */
-	const NONCE_PREFIX = 'samomind_ord_n_';
-
-	/**
 	 * Limits Samomind sends: default, lowest and hard ceiling for each
 	 * (design decision 18). The shop holds every value to its ceiling. The
 	 * resend gap is never shorter than 30 seconds and a session never gets
@@ -166,6 +159,38 @@ class SAMOMIND_Orders_Auth {
 	}
 
 	/**
+	 * Whether the raw request path is the REST path of the route WordPress
+	 * matched. A request that reached the route through a rest_route query
+	 * parameter while its path points at the REST prefix is refused, so the
+	 * signed path is always the path of the endpoint that answers. Where the
+	 * server gives no request URI there is nothing to compare.
+	 *
+	 * @since   0.4.0
+	 * @param   string $route  Route WordPress matched.
+	 * @return  bool
+	 */
+	public static function path_matches_route( $route ) {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- only compared, never output.
+		$uri = isset( $_SERVER['REQUEST_URI'] ) && is_string( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+		if ( '' === $uri ) {
+			return true;
+		}
+		$parts  = explode( '?', explode( '#', $uri, 2 )[0], 2 );
+		$path   = $parts[0];
+		$prefix = '/' . rest_get_url_prefix() . '/';
+
+		if ( isset( $parts[1] ) ) {
+			parse_str( $parts[1], $query );
+			if ( isset( $query['rest_route'] ) && false !== strpos( $path, $prefix ) ) {
+				return false;
+			}
+		}
+
+		$suffix = '/' . rest_get_url_prefix() . $route;
+		return strlen( $path ) >= strlen( $suffix ) && substr( $path, -strlen( $suffix ) ) === $suffix;
+	}
+
+	/**
 	 * Check method, headers, clock, signature and replay, in that order.
 	 * The nonce is stored only after the signature has passed, so a stranger
 	 * cannot fill the store, and a failure to store it refuses the request.
@@ -197,6 +222,10 @@ class SAMOMIND_Orders_Auth {
 			return false;
 		}
 
+		if ( ! self::path_matches_route( $request->get_route() ) ) {
+			return false;
+		}
+
 		$expected = self::sign(
 			$secret,
 			self::canonical( $timestamp, $key_id, $nonce, self::signed_path( $request->get_route() ), (string) $request->get_body() )
@@ -209,22 +238,16 @@ class SAMOMIND_Orders_Auth {
 	}
 
 	/**
-	 * Store a nonce for five minutes. False when it was seen before or when
-	 * it could not be stored and read back (fail closed).
+	 * Remember a nonce for five minutes. One INSERT against a UNIQUE key
+	 * decides: a nonce already there changes no row, which is a replay, and
+	 * a database error refuses the request (fail closed).
 	 *
 	 * @since   0.4.0
 	 * @param   string $nonce  The nonce.
-	 * @return  bool
+	 * @return  bool  True for the first and only use.
 	 */
 	private function remember_nonce( $nonce ) {
-		$name = self::NONCE_PREFIX . hash( 'sha256', $nonce );
-		if ( false !== get_transient( $name ) ) {
-			return false;
-		}
-		if ( ! set_transient( $name, '1', self::NONCE_TTL ) ) {
-			return false;
-		}
-		return false !== get_transient( $name );
+		return 1 === SAMOMIND_Orders_State::claim( 'nonce', SAMOMIND_Orders_State::key( array( $nonce ) ), time() + self::NONCE_TTL );
 	}
 
 	/**

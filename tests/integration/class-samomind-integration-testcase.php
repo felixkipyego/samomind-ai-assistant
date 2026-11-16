@@ -94,8 +94,36 @@ abstract class SAMOMIND_Integration_TestCase extends TestCase {
 		global $wpdb;
 		// phpcs:ignore -- test clean-up of this plugin's transients.
 		$wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE '\\_transient\\_samomind\\_ord\\_%' OR option_name LIKE '\\_transient\\_timeout\\_samomind\\_ord\\_%'" );
+		SAMOMIND_Orders_State::install();
+		$table = SAMOMIND_Orders_State::table();
+		$wpdb->query( "DELETE FROM {$table}" ); // phpcs:ignore
 		wp_cache_flush();
+		wp_unschedule_hook( SAMOMIND_Orders_Mail::CRON_HOOK ); // The parallel tests leave events from the web server.
 		delete_option( SAMOMIND_Log::OPTION );
+	}
+
+	/**
+	 * The rows of one kind in the plugin's state table.
+	 *
+	 * @param string $kind nonce, code, grant, record, gap, sends, omail or hour.
+	 * @return array[]
+	 */
+	protected function state_rows( $kind ) {
+		global $wpdb;
+		$table = SAMOMIND_Orders_State::table();
+		return (array) $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table} WHERE kind = %s ORDER BY id", $kind ), ARRAY_A ); // phpcs:ignore
+	}
+
+	/**
+	 * Move the end of every row of a kind, as the clock would.
+	 *
+	 * @param string $kind    Kind.
+	 * @param int    $seconds Seconds to move it earlier.
+	 */
+	protected function age_state( $kind, $seconds ) {
+		global $wpdb;
+		$table = SAMOMIND_Orders_State::table();
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET expires = expires - %d WHERE kind = %s", $seconds, $kind ) ); // phpcs:ignore
 	}
 
 	public function capture_mail( $pre, $atts ) {

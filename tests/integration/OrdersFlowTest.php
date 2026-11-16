@@ -144,6 +144,49 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 		$this->assertSame( array( 'flush', 'mail' ), $events, 'The response is flushed first, then the mail goes.' );
 	}
 
+	public function test_a_host_without_early_flush_tells_the_admin_in_the_settings_and_the_check_in() {
+		$notice = 'Code emails may arrive late or not at all on this host, because WordPress cannot send them straight away. Signed-in customers are not affected. To fix it, ask your host to allow WordPress to call itself (loopback) or set up a real cron job.';
+
+		// This host can flush early: nothing is said.
+		$this->assertSame( '', SAMOMIND_Orders_Mail::late_mail_notice() );
+
+		remove_filter( 'SAMOMIND/orders/finish_function', array( $this, 'finish_function' ) );
+		add_filter( 'SAMOMIND/orders/finish_function', '__return_null' );
+		try {
+			$this->assertSame( 'cron_fallback', SAMOMIND_Orders_Mail::dispatch_mode() );
+			$this->assertSame( $notice, SAMOMIND_Orders_Mail::late_mail_notice() );
+
+			// The settings page shows it, and order status can still be switched on.
+			wp_set_current_user( $this->make_user( 'administrator' ) );
+			$card = new ReflectionMethod( 'SAMOMIND_Admin', 'render_orders_card' );
+			if ( PHP_VERSION_ID < 80100 ) {
+				$card->setAccessible( true );
+			}
+			ob_start();
+			$admin = ( new ReflectionClass( 'SAMOMIND_Admin' ) )->newInstanceWithoutConstructor();
+			$card->invoke( $admin );
+			$html = (string) ob_get_clean();
+			$this->assertStringContainsString( esc_html( $notice ), $html );
+			$this->assertStringContainsString( 'name="samomind_orders_enabled"', $html );
+			$this->assertNull( SAMOMIND()->orders->disabled_reason(), 'The feature is not blocked by it.' );
+
+			// The connection test (Check in now) says it too, once order status is on.
+			$checked = new ReflectionMethod( 'SAMOMIND_Admin', 'checked_in_notice' );
+			if ( PHP_VERSION_ID < 80100 ) {
+				$checked->setAccessible( true );
+			}
+			$done = $checked->invoke( $admin );
+			$this->assertSame( 'warning', $done['type'] );
+			$this->assertSame( 'Checked in. ' . $notice, $done['message'] );
+
+			update_option( SAMOMIND_Orders_Settings::OPT_IN, '0', false );
+			$this->assertSame( 'success', $checked->invoke( $admin )['type'], 'Not opted in: nothing changes.' );
+		} finally {
+			remove_filter( 'SAMOMIND/orders/finish_function', '__return_null' );
+			add_filter( 'SAMOMIND/orders/finish_function', array( $this, 'finish_function' ) );
+		}
+	}
+
 	public function test_cron_fallback_only_when_no_finish_function() {
 		$order = $this->make_order();
 
@@ -215,13 +258,8 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 	public function test_a_code_expires() {
 		$order = $this->make_order();
 		$code  = $this->start_and_get_code( $order );
-		global $wpdb;
 		// Age the stored code past its end, as the clock would.
-		$name = $wpdb->get_var( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE '\\\\_transient\\\\_samomind\\\\_ord\\\\_code\\\\_%'" ); // phpcs:ignore
-		$key  = substr( $name, strlen( '_transient_' ) );
-		$data = get_transient( $key );
-		$data['exp'] = time() - 1;
-		set_transient( $key, $data, 600 );
+		$this->age_state( 'code', 3600 );
 
 		$this->assertFalse( $this->call( 'verify', $this->verify_body( $order, $code ) )->get_data()['verified'] );
 	}
@@ -255,15 +293,8 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 	}
 
 	private function age_sends( $session, $seconds ) {
-		global $wpdb;
-		$rows = $wpdb->get_col( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE '\\\\_transient\\\\_samomind\\\\_ord\\\\_sends\\\\_%'" ); // phpcs:ignore
-		foreach ( $rows as $row ) {
-			$key   = substr( $row, strlen( '_transient_' ) );
-			$state = get_transient( $key );
-			$state['last']  -= $seconds;
-			$state['first'] -= 0;
-			set_transient( $key, $state, HOUR_IN_SECONDS );
-		}
+		// The gap is a row that ends when the gap does; the hourly count keeps its own end.
+		$this->age_state( 'gap', $seconds );
 		unset( $session );
 	}
 
@@ -306,8 +337,9 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 
 	public function test_resend_limits_come_from_samomind_within_the_ceilings() {
 		$order = $this->make_order();
-		$body  = function () use ( $order ) {
-			return $this->start_body( $order->get_id(), $order->get_billing_email() ) + array(
+		$body  = function ( $for = null ) use ( $order ) {
+			$for = null === $for ? $order : $for;
+			return $this->start_body( $for->get_id(), $for->get_billing_email() ) + array(
 				'limits' => array(
 					'resend_gap_seconds'     => 1,
 					'sends_per_session_hour' => 100,
@@ -319,8 +351,8 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 		$this->run_plugin_shutdown();
 		$this->assertCount( 1, $this->mails );
 
-		// A gap of 1 is held to 30 seconds: 29 seconds later is too soon, 31 is fine.
-		$this->age_sends( 'a', 29 );
+		// A gap of 1 is held to 30 seconds: 25 seconds later is too soon (with room for the clock to tick), 31 is fine.
+		$this->age_sends( 'a', 25 );
 		$this->call( 'start', $body() );
 		$this->run_plugin_shutdown();
 		$this->assertCount( 1, $this->mails );
@@ -329,10 +361,10 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 		$this->run_plugin_shutdown();
 		$this->assertCount( 2, $this->mails );
 
-		// A cap of 100 an hour is held to 10.
+		// A cap of 100 an hour is held to 10 for the session. Each send is for another order, since one order has its own limit of three.
 		for ( $i = 0; $i < 12; $i++ ) {
 			$this->age_sends( 'a', 31 );
-			$this->call( 'start', $body() );
+			$this->call( 'start', $body( $this->make_order() ) );
 			$this->run_plugin_shutdown();
 		}
 		$this->assertCount( 10, $this->mails );
@@ -356,19 +388,15 @@ class OrdersFlowTest extends SAMOMIND_Integration_TestCase {
 		$this->call( 'verify', $this->verify_body( $order, $code ) );
 		$this->assertTrue( $this->lookup_found( $order )['found'] );
 
-		global $wpdb;
-		$name = $wpdb->get_var( "SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE '\\\\_transient\\\\_samomind\\\\_ord\\\\_grant\\\\_%'" ); // phpcs:ignore
-		$key   = substr( $name, strlen( '_transient_' ) );
-		$grant = get_transient( $key );
-		$this->assertEqualsWithDelta( time() + 1800, $grant['exp'], 5 );
+		$grant = $this->state_rows( 'grant' )[0];
+		$this->assertEqualsWithDelta( time() + 1800, (int) $grant['expires'], 5 );
 
 		// Looking again never moves the end.
 		$this->lookup_found( $order );
-		$this->assertSame( $grant['exp'], get_transient( $key )['exp'] );
+		$this->assertSame( $grant['expires'], $this->state_rows( 'grant' )[0]['expires'] );
 
 		// Past the end it is gone, even if the row is still stored.
-		$grant['exp'] = time() - 1;
-		set_transient( $key, $grant, 600 );
+		$this->age_state( 'grant', 3600 );
 		$this->assertFalse( $this->lookup_found( $order )['found'] );
 	}
 

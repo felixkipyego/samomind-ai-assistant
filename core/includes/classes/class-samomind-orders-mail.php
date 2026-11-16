@@ -83,6 +83,20 @@ class SAMOMIND_Orders_Mail {
 	}
 
 	/**
+	 * What to tell an administrator when this host cannot send the code
+	 * email straight away, or an empty string when it can.
+	 *
+	 * @since   0.4.0
+	 * @return  string
+	 */
+	public static function late_mail_notice() {
+		if ( 'cron_fallback' !== self::dispatch_mode() ) {
+			return '';
+		}
+		return __( 'Code emails may arrive late or not at all on this host, because WordPress cannot send them straight away. Signed-in customers are not affected. To fix it, ask your host to allow WordPress to call itself (loopback) or set up a real cron job.', 'samomind-ai-assistant' );
+	}
+
+	/**
 	 * Arrange for a code to be emailed after the response has left.
 	 *
 	 * @since   0.4.0
