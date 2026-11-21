@@ -76,6 +76,9 @@ $wpdb->query(
 	)
 );
 
+// Which notices each user dismissed.
+delete_metadata( 'user', 0, 'samomind_dismissed_notices', '', true );
+
 require_once __DIR__ . '/core/includes/classes/class-samomind-orders-state.php';
 SAMOMIND_Orders_State::drop();
 

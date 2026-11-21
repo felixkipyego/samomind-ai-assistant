@@ -1,9 +1,21 @@
 # Changelog
 
-## Unreleased (0.4.0)
+## 0.4.0 (release candidate)
 
-Task F-3 T3. Built on a branch; the released version stays 0.3.6 and
-nothing is submitted to WordPress.org.
+The first public WordPress.org upload, built from main, with order status.
+Written up for the release in readme.txt (External services, Changelog,
+Upgrade Notice).
+
+- Changed: the order-data terms are the final text, version 2026-11. The
+  "draft, pending legal review" wording is gone.
+- Fixed: the "WooCommerce is active, but products are not synced" notice
+  comes back after it is dismissed. Dismissing is now remembered per user
+  (user meta `samomind_dismissed_notices`, removed on uninstall).
+- Tests: a release checks suite on real WordPress (the terms text, the order
+  settings always shown with no payment wording, the dismissed notice, and no
+  outbound request before keys are saved or a code is pasted).
+
+Task F-3 T3.
 
 - Added: order status in the chat, built against SamoMind's
   docs/design/F-3-order-status.md (contract copied to

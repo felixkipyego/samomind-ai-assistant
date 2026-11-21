@@ -332,6 +332,9 @@ class ShopDataTest extends SAMOMIND_TestCase {
 	 */
 	private function render_notice( $can, $not_synced ) {
 		Functions\when( 'current_user_can' )->justReturn( $can );
+		Functions\when( 'get_current_user_id' )->justReturn( 7 );
+		Functions\when( 'get_user_meta' )->justReturn( '' );
+		Functions\when( 'esc_attr' )->returnArg( 1 );
 		Functions\when( 'esc_html__' )->alias(
 			function ( $text ) {
 				return htmlspecialchars( $text, ENT_NOQUOTES );

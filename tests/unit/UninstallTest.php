@@ -35,6 +35,7 @@ class UninstallTest extends SAMOMIND_TestCase {
 	private $deleted  = array();
 	private $cleared  = array();
 	private $requests = array();
+	private $user_meta_deleted = array();
 
 	private function run_uninstall( array $options ) {
 		if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
@@ -53,6 +54,13 @@ class UninstallTest extends SAMOMIND_TestCase {
 		Functions\when( 'delete_option' )->alias(
 			function ( $name ) use ( &$deleted ) {
 				$deleted[] = $name;
+				return true;
+			}
+		);
+		$user_meta_deleted = &$this->user_meta_deleted;
+		Functions\when( 'delete_metadata' )->alias(
+			function ( $type, $object_id, $key, $value, $delete_all ) use ( &$user_meta_deleted ) {
+				$user_meta_deleted[] = array( $type, $object_id, $key, $value, $delete_all );
 				return true;
 			}
 		);
@@ -124,6 +132,7 @@ class UninstallTest extends SAMOMIND_TestCase {
 		$this->assertContains( 'SAMOMIND/hourly', $this->cleared );
 		$this->assertStringContainsString( 'samomind\\_notice\\_', $GLOBALS['wpdb']->queries[0] );
 		$this->assertSame( array(), $this->requests );
+		$this->assertSame( array( array( 'user', 0, 'samomind_dismissed_notices', '', true ) ), $this->user_meta_deleted, 'Every user\'s dismissed notices go.' );
 	}
 
 	public function test_disconnects_a_site_that_is_still_connected() {

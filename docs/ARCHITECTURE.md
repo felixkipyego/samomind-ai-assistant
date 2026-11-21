@@ -408,7 +408,7 @@ logged-out request, jQuery enqueued so there is work to do.
 
 Why: the reference has no front-end script.
 
-**A12. Order status (unreleased, 0.4.0).** The one place the plugin
+**A12. Order status (0.4.0).** The one place the plugin
 answers requests from Samomind. The contract is `docs/ORDERS_CONTRACT.md`
 (a copy of SamoMind's design, section 13); do not change it here. Rules the
 code keeps: nothing is registered to answer unless the shop opted in, and a
@@ -435,7 +435,7 @@ fallback. Tests: `tests/unit/OrdersTest.php` and the integration suite in
 `tests/integration/` (`composer integration`, real WordPress and
 WooCommerce, HPOS off and on).
 
-**A14. Connect with a code (unreleased, 0.4.0).** `SAMOMIND_Plugin_Connect`
+**A14. Connect with a code (0.4.0).** `SAMOMIND_Plugin_Connect`
 trades a one-time code (`smc_` + 32 base32) for the site key, ingest key id and
 a new ingest secret (Samomind `docs/api/plugin-connect.md`). It writes the
 options manual setup uses (`samomind_site_key`, `samomind_key_id`,

@@ -75,3 +75,17 @@
 .samomind-connect .button-link {
 	margin-left: 12px;
 }
+
+.samomind-terms {
+	max-width: 680px;
+	margin-bottom: 12px;
+}
+
+.samomind-terms h3 {
+	margin: 0 0 8px;
+}
+
+.samomind-terms ol {
+	margin: 0 0 8px 20px;
+	list-style: decimal;
+}

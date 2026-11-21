@@ -53,6 +53,20 @@ class SAMOMIND_Admin {
 	const NOTICE_TRANSIENT = 'samomind_notice_';
 
 	/**
+	 * User meta holding the ids of the notices this user dismissed.
+	 *
+	 * @var string
+	 */
+	const DISMISSED_NOTICES_META = 'samomind_dismissed_notices';
+
+	/**
+	 * Id of the "WooCommerce is active, but products are not synced" notice.
+	 *
+	 * @var string
+	 */
+	const NOTICE_SHOP_PRODUCTS = 'shop_products';
+
+	/**
 	 * Actions posted to admin-post.php, each with its own nonce.
 	 *
 	 * @var string[]
@@ -679,13 +693,56 @@ class SAMOMIND_Admin {
 	 * @return  void
 	 */
 	private function render_shop_notice() {
-		if ( ! current_user_can( 'manage_options' ) || ! SAMOMIND()->content->shop_products_not_synced() ) {
+		if ( ! current_user_can( 'manage_options' ) || ! SAMOMIND()->content->shop_products_not_synced() || $this->notice_is_dismissed( self::NOTICE_SHOP_PRODUCTS ) ) {
 			return;
 		}
+		// The dismiss button is added by WordPress; backend-scripts.js tells us it was used.
 		printf(
-			'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
+			'<div class="notice notice-warning is-dismissible" data-samomind-notice="%1$s"><p>%2$s</p></div>',
+			esc_attr( self::NOTICE_SHOP_PRODUCTS ),
 			esc_html__( 'WooCommerce is active, but products are not synced. Tick Products under Samomind > Settings > What is synced.', 'samomind-ai-assistant' )
 		);
+	}
+
+	/**
+	 * Whether the current user dismissed a notice. Dismissing is per user and
+	 * lasts until the user meta is removed.
+	 *
+	 * @since   0.4.0
+	 * @param   string $id  One of the NOTICE_* ids.
+	 * @return  bool
+	 */
+	private function notice_is_dismissed( $id ) {
+		$dismissed = get_user_meta( get_current_user_id(), self::DISMISSED_NOTICES_META, true );
+		return is_array( $dismissed ) && in_array( $id, $dismissed, true );
+	}
+
+	/**
+	 * AJAX: remember that the current user dismissed a notice, so it does not
+	 * come back on the next page load.
+	 *
+	 * @since   0.4.0
+	 * @return  void
+	 */
+	public function ajax_dismiss_notice() {
+		check_ajax_referer( 'samomind_nonce', 'nonce' );
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'You do not have permission to do this.', 'samomind-ai-assistant' ) ), 403 );
+		}
+
+		$id = isset( $_POST['notice'] ) ? sanitize_key( wp_unslash( $_POST['notice'] ) ) : '';
+		if ( ! in_array( $id, array( self::NOTICE_SHOP_PRODUCTS ), true ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unknown notice.', 'samomind-ai-assistant' ) ), 400 );
+		}
+
+		$user_id   = get_current_user_id();
+		$dismissed = get_user_meta( $user_id, self::DISMISSED_NOTICES_META, true );
+		$dismissed = is_array( $dismissed ) ? $dismissed : array();
+		if ( ! in_array( $id, $dismissed, true ) ) {
+			$dismissed[] = $id;
+			update_user_meta( $user_id, self::DISMISSED_NOTICES_META, $dismissed );
+		}
+		wp_send_json_success();
 	}
 
 	/**
@@ -1289,8 +1346,8 @@ class SAMOMIND_Admin {
 	}
 
 	/**
-	 * The order status card: opt-in, terms, orders key, sharing choices.
-	 * The terms text is a draft until the legal review.
+	 * The order status card: opt-in, the order-data terms (version
+	 * SAMOMIND_Orders_Settings::TERMS_VERSION), orders key, sharing choices.
 	 * The saved key is never printed.
 	 *
 	 * @since   0.4.0
@@ -1333,11 +1390,30 @@ class SAMOMIND_Admin {
 						<tr>
 							<th scope="row"><?php esc_html_e( 'Order-data terms', 'samomind-ai-assistant' ); ?></th>
 							<td>
-								<p class="description"><strong><?php esc_html_e( 'DRAFT wording, pending legal review. It may change before release.', 'samomind-ai-assistant' ); ?></strong></p>
-								<p class="description">
-									<?php esc_html_e( 'You are responsible for your shop\'s order data and need a lawful basis to show it to the customer it belongs to. Tell your customers that their order status may be shown to them through an AI assistant. Samomind handles order data for you only to answer a customer\'s own question about their order, and does not store orders, email addresses or codes. Keep the orders key secret and replace it if you think it has leaked.', 'samomind-ai-assistant' ); ?>
-									<a href="https://samomind.com/terms-and-conditions/" target="_blank" rel="noopener"><?php esc_html_e( 'Terms of service', 'samomind-ai-assistant' ); ?></a>
-								</p>
+								<div class="samomind-terms">
+									<h3>
+										<?php
+										/* translators: %s: version of the order-data terms, for example 2026-11 */
+										echo esc_html( sprintf( __( 'Order status: order data terms (version %s)', 'samomind-ai-assistant' ), SAMOMIND_Orders_Settings::TERMS_VERSION ) );
+										?>
+									</h3>
+									<p><?php esc_html_e( 'Before you switch on order status, please confirm that you accept these terms.', 'samomind-ai-assistant' ); ?></p>
+									<ol>
+										<li><?php esc_html_e( 'Your customers can check only their own orders. Each check needs either a 6-digit code that your shop emails to the order\'s billing address, or the customer being signed in to your shop. The assistant never decides who someone is.', 'samomind-ai-assistant' ); ?></li>
+										<li><?php esc_html_e( 'Samomind looks each order up live from your shop and keeps no copy of your orders. It never receives addresses, phone numbers or payment details. The billing email and the code pass through Samomind only while the check runs and are not stored.', 'samomind-ai-assistant' ); ?></li>
+										<li><?php esc_html_e( 'The order number, status and dates are always shown to a verified customer. You choose whether item names and tracking details are also shown.', 'samomind-ai-assistant' ); ?></li>
+										<li><?php esc_html_e( 'You are the controller of your shop\'s order data, and Samomind processes it for you under Schedule 1 of the Samomind Terms of Service. You confirm that you have a lawful basis to let customers check their orders this way and that your shop\'s privacy notice tells them.', 'samomind-ai-assistant' ); ?></li>
+										<li><?php esc_html_e( 'Keep your orders key secret. If you think it has been exposed, replace it in the Samomind dashboard.', 'samomind-ai-assistant' ); ?></li>
+										<li><?php esc_html_e( 'The code emails are sent by your own shop, from its own email address.', 'samomind-ai-assistant' ); ?></li>
+									</ol>
+									<p><?php esc_html_e( 'You can switch order status off at any time on this page.', 'samomind-ai-assistant' ); ?></p>
+									<p>
+										<?php esc_html_e( 'Terms of Service:', 'samomind-ai-assistant' ); ?>
+										<a href="https://samomind.com/terms-and-conditions/" target="_blank" rel="noopener">https://samomind.com/terms-and-conditions/</a><br>
+										<?php esc_html_e( 'Privacy Policy:', 'samomind-ai-assistant' ); ?>
+										<a href="https://samomind.com/privacy-policy/" target="_blank" rel="noopener">https://samomind.com/privacy-policy/</a>
+									</p>
+								</div>
 								<label>
 									<input type="checkbox" id="samomind_orders_terms" name="samomind_orders_terms" value="1"<?php checked( $orders->terms_are_accepted() ); ?>>
 									<?php

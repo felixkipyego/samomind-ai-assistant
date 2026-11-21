@@ -49,6 +49,7 @@ class SAMOMIND_Run {
 
 		// AJAX handler (logged-in admins only).
 		add_action( 'wp_ajax_samomind_sync_progress', array( $admin, 'ajax_sync_progress' ) );
+		add_action( 'wp_ajax_samomind_dismiss_notice', array( $admin, 'ajax_dismiss_notice' ) );
 
 		// Widget snippet in the front-end footer.
 		new SAMOMIND_Embed();
