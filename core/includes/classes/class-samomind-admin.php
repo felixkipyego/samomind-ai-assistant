@@ -207,8 +207,18 @@ class SAMOMIND_Admin {
 	 * @return  void
 	 */
 	private function keep_out_of_autoload( $option ) {
+		// add_option() runs the sanitizer that called us. While the row is being made, do nothing, or the two call each other until memory runs out.
+		static $creating = array();
+		if ( isset( $creating[ $option ] ) ) {
+			return;
+		}
 		if ( false === get_option( $option, false ) ) {
-			add_option( $option, '', '', false );
+			$creating[ $option ] = true;
+			try {
+				add_option( $option, '', '', false );
+			} finally {
+				unset( $creating[ $option ] );
+			}
 		}
 	}
 
@@ -746,14 +756,32 @@ class SAMOMIND_Admin {
 	}
 
 	/**
+	 * Whether the current admin screen is one that may show the health
+	 * notice: this plugin's own pages, the Plugins screen and the Dashboard.
+	 * Anywhere else in the admin it stays quiet.
+	 *
+	 * @since   0.4.0
+	 * @return  bool
+	 */
+	private function is_health_notice_screen() {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+		if ( ! $screen || ! isset( $screen->id ) ) {
+			return false;
+		}
+		return in_array( $screen->id, array( 'dashboard', 'plugins' ), true ) || false !== strpos( $screen->id, 'samomind' );
+	}
+
+	/**
 	 * Tell admins when sync is blocked, or failing for over 24 hours
-	 * (contract 5.7).
+	 * (contract 5.7). Only on this plugin's pages, the Plugins screen and the
+	 * Dashboard; it is not dismissible and goes by itself once the problem is
+	 * solved.
 	 *
 	 * @since   0.1.0
 	 * @return  void
 	 */
 	public function render_health_notice() {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! current_user_can( 'manage_options' ) || ! $this->is_health_notice_screen() ) {
 			return;
 		}
 		$connection = SAMOMIND()->connection;

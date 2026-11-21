@@ -131,7 +131,7 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Screenshots ==
 
-1. Samomind > Settings: the ingest key, the content types that are synced and the chat widget switch with its site key.
+1. Samomind > Settings: connect with a code, the Advanced fold for entering keys by hand, the content types that are synced, the chat widget switch and the order status settings.
 2. The content types list and the sync status, with the number of items kept in step with Samomind.
 3. The chat widget's welcome screen on a live site, with suggested questions.
 4. An answer from the chat widget, with a link to the source page.
@@ -144,6 +144,8 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * New: connect with a code. Paste a one-time code from the Samomind dashboard under Samomind > Settings and the plugin sets itself up and starts the first sync. Entering keys by hand still works, under "Advanced".
 * Changed: the API address must be https (plain http only for localhost).
 * Fixed: the "WooCommerce is active, but products are not synced" notice now stays dismissed once you dismiss it.
+* Changed: the notice about a paused or failing sync shows only on Samomind's own pages, the Plugins screen and the Dashboard, and goes away by itself once the problem is solved.
+* Fixed: saving the key id or the API address when its setting was missing from the database could use up all memory. It now saves normally.
 
 = 0.3.6 =
 * Stock and price changes from orders, imports, the REST API and scheduled sales now reach the assistant within a minute. Clearer prices for sales and variable products. Hidden products are never sent.
