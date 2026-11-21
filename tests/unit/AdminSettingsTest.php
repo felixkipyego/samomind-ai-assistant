@@ -86,9 +86,10 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 		$this->assertSame( 'https://api.samomind.com', $this->admin->sanitize_api_base_url( '' ) );
 	}
 
-	public function test_base_url_allows_http_only_for_local_hosts() {
+	public function test_base_url_allows_http_only_for_loopback_hosts() {
 		$this->assertSame( 'http://localhost:8000', $this->admin->sanitize_api_base_url( 'http://localhost:8000' ) );
-		$this->assertSame( 'http://samomind.test', $this->admin->sanitize_api_base_url( 'http://samomind.test' ) );
+		$this->assertSame( 'http://127.0.0.1:8000', $this->admin->sanitize_api_base_url( 'http://127.0.0.1:8000' ) );
+		$this->assertSame( 'http://[::1]:8000', $this->admin->sanitize_api_base_url( 'http://[::1]:8000' ) );
 		$this->assertSame( array(), $this->errors );
 	}
 
@@ -103,6 +104,9 @@ class AdminSettingsTest extends SAMOMIND_TestCase {
 	public function bad_base_urls() {
 		return array(
 			'plain http'   => array( 'http://api.samomind.com' ),
+			'a .test host' => array( 'http://samomind.test' ),
+			'a .local host' => array( 'http://samomind.local' ),
+			'lan address'  => array( 'http://192.168.1.5' ),
 			'no scheme'    => array( 'api.samomind.com' ),
 			'ftp'          => array( 'ftp://api.samomind.com' ),
 			'credentials'  => array( 'https://user:pass@api.samomind.com' ),

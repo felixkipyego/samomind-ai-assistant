@@ -52,6 +52,30 @@ nothing is submitted to WordPress.org.
 - Tests: an integration suite in wp-env with WooCommerce, run with HPOS off
   and on (`composer integration`), and a CI job for it.
 
+Task F-20 (plugin side), with the F-20.1 safeguards.
+
+- Added: "Connect to Samomind" at the top of Settings. Paste a connection
+  code (smc_ and 32 base32 characters) from the dashboard; the plugin posts
+  it to `/api/v1/plugin/connect` on the API host it already uses, saves the
+  site key, ingest key id, ingest secret and API address in the options
+  manual setup uses, and starts the same first connection and sync. When
+  connected it shows "Connected to <site name>", Disconnect (clears the keys
+  on this site only) and "Use a new code". A site whose website address is not
+  allowed yet is told to click Allow in the dashboard.
+- Changed: the manual key id, secret and API base URL fields sit under
+  "Advanced: enter keys manually". Existing installs keep working unchanged.
+- Safeguards: the code is sent only to an https API address (plain http only
+  for localhost, 127.0.0.1 and ::1), and an api_base in the answer that is
+  not https is refused with nothing saved. Certificates are always checked and
+  redirects are not followed. The code, the answer and the secret are never
+  logged or stored in a transient; the log keeps a status code and the
+  "error" field only. The secret option is not autoloaded and never printed.
+- Changed: the manual API base URL field now follows the same rule. http is
+  accepted for localhost, 127.0.0.1 and ::1 only (0.4.0 also accepted .local
+  and .test hosts for the saved value).
+- A secret defined in wp-config.php (SAMOMIND_API_SECRET) is not replaced by a
+  code, because the new secret would be ignored and the old one revoked.
+
 ## 0.3.6 (2026-11-12)
 
 Step 7.6.m.

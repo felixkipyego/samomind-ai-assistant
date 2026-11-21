@@ -91,6 +91,7 @@ samomind-ai-assistant/
         class-samomind-scheduler.php   Action Scheduler or WP-Cron (A1)
         class-samomind-embed.php       widget enqueue, script attributes, optimiser exclusions
         class-samomind-cli.php         WP-CLI commands (A7)
+        class-samomind-plugin-connect.php  connect with a code, disconnect keys on this site (A14)
         class-samomind-orders-settings.php  order status opt-in, terms, key, sharing, capabilities (A12)
         class-samomind-orders-auth.php      orders signature, replay check, limit ceilings (A12)
         class-samomind-orders-state.php     the atomic state table: nonces, tries, records, counters (A12)
@@ -433,6 +434,24 @@ out on `shutdown` after the response is flushed, with WP-Cron only as the
 fallback. Tests: `tests/unit/OrdersTest.php` and the integration suite in
 `tests/integration/` (`composer integration`, real WordPress and
 WooCommerce, HPOS off and on).
+
+**A14. Connect with a code (unreleased, 0.4.0).** `SAMOMIND_Plugin_Connect`
+trades a one-time code (`smc_` + 32 base32) for the site key, ingest key id and
+a new ingest secret (Samomind `docs/api/plugin-connect.md`). It writes the
+options manual setup uses (`samomind_site_key`, `samomind_key_id`,
+`samomind_api_secret`, `samomind_api_base_url`), then calls
+`SAMOMIND_Connection::connect()`, the same first connection and sync as the
+Connect button on Status. The name and the "allow the website address" flag
+are kept in the connection state. Rules: the code goes only to an https API
+address (loopback hosts may use http), `sslverify` is true and redirects are
+off; an `api_base` that is not https in the answer is refused before anything
+is saved; the code, the body and the secret are never logged, put in a
+transient or printed (the request log gets a status and the "error" field
+only); the secret option is not autoloaded; a secret set by
+`SAMOMIND_API_SECRET` is never replaced. Disconnect clears the keys on this
+site only and sends nothing. The orders key is not involved. The one address
+rule lives in `SAMOMIND_Helpers::clean_api_base_url()` and the manual API base
+URL field uses it too.
 
 ## 6. Request flows (contract section 5)
 

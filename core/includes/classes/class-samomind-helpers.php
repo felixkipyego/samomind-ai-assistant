@@ -25,6 +25,13 @@ class SAMOMIND_Helpers {
 	const DEFAULT_API_BASE_URL = 'https://api.samomind.com';
 
 	/**
+	 * Hosts that may use plain http, so local tests work. Nothing else may.
+	 *
+	 * @var string[]
+	 */
+	const LOOPBACK_HOSTS = array( 'localhost', '127.0.0.1', '::1' );
+
+	/**
 	 * Name of the wp-config.php constant that overrides the stored secret.
 	 *
 	 * @var string
@@ -43,6 +50,33 @@ class SAMOMIND_Helpers {
 			$url = self::DEFAULT_API_BASE_URL;
 		}
 		return untrailingslashit( $url );
+	}
+
+	/**
+	 * An API address the plugin may send to or save: https, or http for a
+	 * loopback host. Returns it cleaned (no query, fragment or trailing
+	 * slash), or an empty string when it is not allowed.
+	 *
+	 * @since   0.4.0
+	 * @param   mixed $url  Address to check.
+	 * @return  string
+	 */
+	public static function clean_api_base_url( $url ) {
+		$parts = wp_parse_url( trim( (string) $url ) );
+		if ( ! is_array( $parts ) || empty( $parts['scheme'] ) || empty( $parts['host'] ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
+			return '';
+		}
+
+		$scheme = strtolower( $parts['scheme'] );
+		$host   = strtolower( $parts['host'] );
+		$https  = 'https' === $scheme;
+		$local  = 'http' === $scheme && in_array( trim( $host, '[]' ), self::LOOPBACK_HOSTS, true );
+		if ( ! $https && ! $local ) {
+			return '';
+		}
+
+		$clean = $scheme . '://' . $host . ( isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '' ) . ( isset( $parts['path'] ) ? $parts['path'] : '' );
+		return untrailingslashit( esc_url_raw( $clean, array( 'https', 'http' ) ) );
 	}
 
 	/**

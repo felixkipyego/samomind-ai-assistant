@@ -41,8 +41,9 @@ Privacy policy: https://samomind.com/privacy-policy/
 
 **1. The Samomind API, from the server**
 
-Nothing is sent when the plugin is installed or activated. Requests start only after an administrator saves an ingest key and clicks Connect (or runs `wp samomind connect`). Every request is a signed POST to `/api/v1/ingest/...`. Each carries the API version, the key id, a timestamp, a request id and an HMAC signature in headers; the secret itself is never sent. WordPress adds its standard User-Agent, which names the WordPress version and this site's address, and Samomind sees the server's IP address.
+Nothing is sent when the plugin is installed or activated. Requests start only after an administrator saves an ingest key and clicks Connect (or runs `wp samomind connect`), or pastes a connection code and clicks Connect (0.4.0, unreleased: draft wording, not in the released plugin). Every request below except the connection code is a signed POST to `/api/v1/ingest/...`. Each carries the API version, the key id, a timestamp, a request id and an HMAC signature in headers; the secret itself is never sent. WordPress adds its standard User-Agent, which names the WordPress version and this site's address, and Samomind sees the server's IP address.
 
+* Connect with a code (`/api/v1/plugin/connect`, 0.4.0, unreleased): an unsigned HTTPS POST that carries the connection code the owner pasted, the site's home address and site address, the plugin version and the WordPress version. When: only when an administrator pastes a code under Samomind > Settings and clicks Connect, never in the background. Why: to trade the one-time code for this site's keys, so the owner does not have to copy three values by hand. Returns the public site key (for the chat widget), an ingest key id, a new ingest secret and the API address, which the plugin saves in its own settings (the secret is stored like a password, kept out of autoload and never shown again). The code is never saved or logged. The plugin sends it only to an https address (plain http only for localhost), checks the server's certificate and does not follow redirects.
 * Connect, Reconnect (`/connect`): the site address, the word "wordpress", the plugin version and the WordPress version. Returns an id for this connection, the service's limits and the check-in interval. A first sync follows.
 * Check-in (`/checkin`): the connection id, the plugin version, the WordPress version and, if the last request failed, that error's code and message (up to 500 characters). When: about once a day from WP-Cron, when an administrator clicks "Check in now" or opens Samomind > Status (at most once a minute), or runs `wp samomind checkin`. Returns the connection status and how often to check in.
 * Sync (`/sync` and `/documents`): when a sync starts and finishes, and in batches in between, for each published, public, not password-protected item of the post types ticked in Settings: its post id, address, title, text (the content as plain text, the excerpt and, for products, the short description), type (post, page, product or custom), last modified time and the names of its public categories and tags. Products add price and stock status. When: on Connect, on "Sync now" and `wp samomind sync`. Returns, per item, whether it was accepted, unchanged or refused.
@@ -128,6 +129,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 5. The chat widget on a phone-sized screen.
 
 == Changelog ==
+
+= 0.4.0 (unreleased) =
+* Connect with a code: paste a one-time connection code from the Samomind dashboard under Samomind > Settings and the plugin sets itself up and starts the first sync. Entering keys by hand still works, under "Advanced". The API address must be https (plain http only for localhost).
 
 = 0.3.6 =
 * Stock and price changes from orders, imports, the REST API and scheduled sales now reach the assistant within a minute. Clearer prices for sales and variable products. Hidden products are never sent.
