@@ -21,10 +21,13 @@ smoke_check( 'the secret is still not autoloaded', ! isset( wp_load_alloptions()
 smoke_check( 'still connected', SAMOMIND()->connection->is_connected() );
 smoke_check( 'the widget is still on', SAMOMIND()->helpers->widget_is_active() );
 
-// What 0.4.0 needs, made without an activation hook.
-smoke_check( 'the orders table exists', SAMOMIND_Orders_State::table() === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', SAMOMIND_Orders_State::table() ) ) );
-smoke_check( 'the orders table is at its version', SAMOMIND_Orders_State::DB_VERSION === (string) get_option( 'samomind_orders_db_version', '' ) );
+// What 0.4.0 needs, with no activation hook.
+$orders_table = SAMOMIND_Orders_State::table();
+$table_exists = function () use ( $wpdb, $orders_table ) {
+	return $orders_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_table ) );
+};
 smoke_check( 'the hourly tick is scheduled', false !== wp_next_scheduled( SAMOMIND_Scheduler::HOURLY_HOOK ) );
+smoke_check( 'no orders table yet: a site that never used order status gets none', ! $table_exists() );
 
 // The admin pages load, with the new sections.
 $admin_id = wp_insert_user(
@@ -50,6 +53,16 @@ smoke_check( 'the Settings page loads', false !== strpos( $settings, 'Samomind S
 smoke_check( 'Settings has the Connect box', false !== strpos( $settings, 'Connect to Samomind' ) );
 smoke_check( 'Settings has the Advanced fold', false !== strpos( $settings, 'Advanced: enter keys manually' ) );
 smoke_check( 'Settings has the order status card', false !== strpos( $settings, 'samomind_orders_enabled' ) );
+
+// Switch order status on, as the order settings form does, and use it.
+update_option( SAMOMIND_Orders_Settings::SECRET, SMOKE_ORDERS_SECRET, false );
+update_option( SAMOMIND_Orders_Settings::OPT_IN, '1', false );
+SAMOMIND()->orders->accept_terms( $admin_id );
+SAMOMIND_Orders_State::maybe_install();
+smoke_check( 'switching order status on makes the orders table', $table_exists() && SAMOMIND_Orders_State::DB_VERSION === (string) get_option( 'samomind_orders_db_version', '' ) );
+smoke_check( 'order status is enabled', SAMOMIND()->orders->is_enabled() );
+smoke_check( 'a signed ping from Samomind is answered (HTTP 200)', 200 === smoke_signed_ping() );
+smoke_check( 'the same ping signed with a wrong key is refused', 401 === smoke_signed_ping_with_wrong_key() );
 
 // Saving the same settings through the Settings API changes nothing.
 update_option( 'samomind_key_id', SMOKE_KEY_ID );

@@ -9,6 +9,8 @@ require __DIR__ . '/mock-samomind.php';
 
 smoke_check( 'old plugin is running', defined( 'SAMOMIND_VERSION' ) && '0.4.0' !== SAMOMIND_VERSION );
 
+// A shop with pretty permalinks, which order status needs.
+update_option( 'permalink_structure', '/%postname%/' );
 update_option( 'samomind_api_base_url', SMOKE_API_BASE, false );
 update_option( 'samomind_key_id', SMOKE_KEY_ID, false );
 update_option( 'samomind_api_secret', SMOKE_SECRET, false );

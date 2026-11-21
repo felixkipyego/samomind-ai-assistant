@@ -9,6 +9,7 @@
 
 define( 'SMOKE_KEY_ID', '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10' );
 define( 'SMOKE_SECRET', 'smik_UpdateTestFakeSecret0000000000000000000000' );
+define( 'SMOKE_ORDERS_SECRET', 'smok_UpdateTestFakeOrdersKey000000000000000' );
 define( 'SMOKE_SITE_KEY', 'pk_live_Jc3x9Qw2Lm8Vb5Nt0Zr7Yh4Kd1Sf6Ua-_Gp8eTqWcA' );
 define( 'SMOKE_API_BASE', 'https://api.samomind.com' );
 
@@ -88,4 +89,34 @@ function smoke_check( $label, $condition ) {
 	if ( ! $condition ) {
 		$GLOBALS['smoke_failed'] = true;
 	}
+}
+
+/**
+ * A signed order status ping, as Samomind sends it. Returns the HTTP status.
+ */
+function smoke_signed_ping( $secret = SMOKE_ORDERS_SECRET ) {
+	$route     = '/samomind/v1/orders/ping';
+	$raw       = '{}';
+	$timestamp = (string) time();
+	$nonce     = substr( strtr( base64_encode( random_bytes( 16 ) ), '+/', '-_' ), 0, 22 );
+	$path      = SAMOMIND_Orders_Auth::request_path( $route );
+
+	$request = new WP_REST_Request( 'POST', $route );
+	$request->set_header( 'Content-Type', 'application/json' );
+	$request->set_header( 'X-SamoMind-Orders-Key-Id', SMOKE_KEY_ID );
+	$request->set_header( 'X-SamoMind-Orders-Timestamp', $timestamp );
+	$request->set_header( 'X-SamoMind-Orders-Nonce', $nonce );
+	$request->set_header( 'X-SamoMind-Orders-Version', '1' );
+	$request->set_header( 'X-SamoMind-Orders-Signature', SAMOMIND_Orders_Auth::sign( $secret, SAMOMIND_Orders_Auth::canonical( $timestamp, SMOKE_KEY_ID, $nonce, $path, $raw ) ) );
+	$request->set_body( $raw );
+
+	$GLOBALS['wp_rest_server'] = null;
+	return rest_get_server()->dispatch( $request )->get_status();
+}
+
+/**
+ * The same ping, signed with a key the site does not have.
+ */
+function smoke_signed_ping_with_wrong_key() {
+	return smoke_signed_ping( 'smok_not_the_key_of_this_site' );
 }

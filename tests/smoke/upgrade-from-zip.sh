@@ -31,11 +31,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Run wp in the tests site, without the npm engine warnings, keeping the exit status.
-wp() {
+# Run a command in the tests site container, without the npm engine warnings, keeping the exit status.
+in_container() {
 	if $WP_ENV run tests-cli "$@" >"$WORK/out" 2>&1; then status=0; else status=$?; fi
 	grep -v "EBADENGINE\|npm warn\|^[[:space:]]*package:\|^[[:space:]]*required:\|^[[:space:]]*current:\|^}\|^$\|^ℹ\|^✔" "$WORK/out" || true
 	return "$status"
+}
+
+wp() {
+	in_container wp "$@"
 }
 
 echo "== Install the old release"
@@ -56,22 +60,26 @@ JSON
 cd "$WORK"
 $WP_ENV start >"$WORK/start.log" 2>&1 || { tail -5 "$WORK/start.log"; exit 1; }
 
-echo "old version: $(wp plugin get "$SLUG" --field=version)"
-wp plugin list --name="$SLUG" --field=status | sed 's/^/old status: /'
+OLD_VERSION=$(wp plugin get "$SLUG" --field=version)
+echo "old version: $OLD_VERSION"
+case "$OLD_VERSION" in 0.4.*) echo "FAIL  the starting zip is not an older release" >&2; exit 1 ;; esac
+echo "old status: $(wp plugin get "$SLUG" --field=status)"
 
 echo "== Step 1: a connected site on the old release"
 wp eval-file smoke/before.php
 
 echo "== Replace the files, as an update does (no activation)"
-wp sh -c 'rm -f /var/www/html/wp-content/debug.log' >/dev/null
+in_container sh -c 'rm -f /var/www/html/wp-content/debug.log' >/dev/null
 UNPACKED="$WORK/new"
 mkdir -p "$UNPACKED"
 unzip -q "$NEW_ZIP" -d "$UNPACKED"
 # Replace what is inside the folder, not the folder: Docker mounts that very folder.
 find "${WORK:?}/$SLUG" -mindepth 1 -delete
 cp -R "$UNPACKED/$SLUG/." "$WORK/$SLUG/"
-echo "new version: $(wp plugin get "$SLUG" --field=version)"
-wp plugin list --name="$SLUG" --field=status | sed 's/^/new status: /'
+NEW_VERSION=$(wp plugin get "$SLUG" --field=version)
+echo "new version: $NEW_VERSION"
+[ "$NEW_VERSION" != "$OLD_VERSION" ] || { echo "FAIL  the files were not replaced" >&2; exit 1; }
+echo "new status: $(wp plugin get "$SLUG" --field=status)"
 
 echo "== Step 2: the same site on the new release"
 wp eval-file smoke/after.php
