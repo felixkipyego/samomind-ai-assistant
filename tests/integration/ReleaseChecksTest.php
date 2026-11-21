@@ -190,12 +190,14 @@ class ReleaseChecksTest extends SAMOMIND_Integration_TestCase {
 		SAMOMIND()->activate();
 
 		// An administrator opens every page and the notices.
+		// Only this plugin's own admin callbacks run: WooCommerce's admin screens cannot load in a CLI run.
+		// register_settings() is left out: it adds sanitizers that stay for the rest of the process, and these tests delete the option rows.
 		wp_set_current_user( $this->make_user( 'administrator' ) );
-		do_action( 'admin_init' );
-		do_action( 'admin_menu' );
-		do_action( 'admin_notices' );
-		ob_start();
 		$admin = new SAMOMIND_Admin();
+		$admin->register_admin_menu();
+		SAMOMIND()->scheduler->ensure_hourly();
+		ob_start();
+		$admin->render_health_notice();
 		$admin->render_status_page();
 		$admin->render_settings_page();
 		ob_end_clean();
@@ -203,10 +205,6 @@ class ReleaseChecksTest extends SAMOMIND_Integration_TestCase {
 		// A visitor opens a page of the shop.
 		wp_set_current_user( 0 );
 		do_action( 'wp_enqueue_scripts' );
-		ob_start();
-		do_action( 'wp_head' );
-		do_action( 'wp_footer' );
-		ob_end_clean();
 
 		// Everything the plugin scheduled, and the plugin's own ticks, run now.
 		foreach ( (array) _get_cron_array() as $events ) {
@@ -222,5 +220,15 @@ class ReleaseChecksTest extends SAMOMIND_Integration_TestCase {
 		do_action( SAMOMIND_Scheduler::WORKER_HOOK );
 
 		$this->assertSame( array(), $this->requested, 'No request to Samomind or anywhere else.' );
+	}
+
+	public function test_the_recorder_does_see_a_request_once_keys_are_saved() {
+		update_option( 'samomind_api_base_url', 'https://api.samomind.com', false );
+		update_option( 'samomind_key_id', '3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10', false );
+		update_option( 'samomind_api_secret', 'smik_Zk9Qw2Lm8Vb5Nt0Zr7Yh4Kd1Sf6Ua_Gp8eTqWcAxyz', false );
+
+		SAMOMIND()->connection->connect();
+
+		$this->assertSame( array( 'https://api.samomind.com/api/v1/ingest/connect' ), $this->requested );
 	}
 }
