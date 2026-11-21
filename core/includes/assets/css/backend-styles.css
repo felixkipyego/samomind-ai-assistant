@@ -60,3 +60,18 @@
   margin: 0 8px;
   vertical-align: middle;
 }
+
+.samomind-advanced {
+	max-width: 760px;
+	margin: 12px 0 16px;
+}
+
+.samomind-advanced > summary {
+	cursor: pointer;
+	font-weight: 600;
+	margin-bottom: 12px;
+}
+
+.samomind-connect .button-link {
+	margin-left: 12px;
+}

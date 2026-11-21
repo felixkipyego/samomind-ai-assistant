@@ -57,7 +57,7 @@ class SAMOMIND_Admin {
 	 *
 	 * @var string[]
 	 */
-	const ACTIONS = array( 'connect', 'disconnect', 'sync_now', 'checkin', 'reconcile', 'clear_log', 'replace_secret', 'save_orders' );
+	const ACTIONS = array( 'connect', 'disconnect', 'sync_now', 'checkin', 'reconcile', 'clear_log', 'replace_secret', 'save_orders', 'plugin_connect', 'plugin_disconnect' );
 
 	/**
 	 * Our SAMOMIND_Admin constructor to run the plugin logic.
@@ -199,8 +199,8 @@ class SAMOMIND_Admin {
 	}
 
 	/**
-	 * Sanitize the API base URL: https, or http for a local development
-	 * host; no query or fragment; no trailing slash.
+	 * Sanitize the API base URL: https, or http for a loopback host only;
+	 * no query or fragment; no trailing slash.
 	 *
 	 * @since   0.1.0
 	 * @param   mixed $value  Submitted value.
@@ -213,19 +213,12 @@ class SAMOMIND_Admin {
 			return SAMOMIND_Helpers::DEFAULT_API_BASE_URL;
 		}
 
-		$parts = wp_parse_url( $value );
-		$host  = isset( $parts['host'] ) ? strtolower( $parts['host'] ) : '';
-		$https = isset( $parts['scheme'] ) && 'https' === strtolower( $parts['scheme'] );
-		$local = isset( $parts['scheme'] ) && 'http' === strtolower( $parts['scheme'] )
-			&& ( in_array( $host, array( 'localhost', '127.0.0.1' ), true ) || preg_match( '/\.(local|test)$/', $host ) );
-
-		if ( '' === $host || ( ! $https && ! $local ) || isset( $parts['user'] ) || isset( $parts['pass'] ) ) {
-			add_settings_error( self::SETTINGS_GROUP, 'samomind_api_base_url', esc_html__( 'The API base URL must be an https address (http is accepted only for localhost, .local and .test hosts). The previous value was kept.', 'samomind-ai-assistant' ) );
+		$clean = SAMOMIND_Helpers::clean_api_base_url( $value );
+		if ( '' === $clean ) {
+			add_settings_error( self::SETTINGS_GROUP, 'samomind_api_base_url', esc_html__( 'The API base URL must be an https address (http is accepted only for localhost). The previous value was kept.', 'samomind-ai-assistant' ) );
 			return SAMOMIND()->helpers->get_api_base_url();
 		}
-
-		$url = $parts['scheme'] . '://' . $host . ( isset( $parts['port'] ) ? ':' . (int) $parts['port'] : '' ) . ( isset( $parts['path'] ) ? $parts['path'] : '' );
-		return untrailingslashit( esc_url_raw( $url, array( 'https', 'http' ) ) );
+		return $clean;
 	}
 
 	/**
@@ -387,6 +380,47 @@ class SAMOMIND_Admin {
 			$this->finish( self::STATUS_SLUG, 'error', self::error_text( __( 'Connect failed:', 'samomind-ai-assistant' ), $result ) );
 		}
 		$this->finish( self::STATUS_SLUG, 'success', __( 'Connected. The first sync has started in the background.', 'samomind-ai-assistant' ) );
+	}
+
+	/**
+	 * Connect with a code from the Samomind dashboard.
+	 *
+	 * @since   0.4.0
+	 * @return  void
+	 */
+	public function handle_plugin_connect() {
+		$this->verify_action( 'plugin_connect' );
+
+		// The code is read once, checked by the connect class, and never kept or shown again.
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified by verify_action() above.
+		$typed  = isset( $_POST['samomind_connect_code'] ) ? sanitize_text_field( wp_unslash( $_POST['samomind_connect_code'] ) ) : '';
+		$result = SAMOMIND()->plugin_connect->connect( $typed );
+		if ( is_wp_error( $result ) ) {
+			$this->finish( self::SETTINGS_SLUG, 'error', $result->get_error_message() );
+		}
+
+		$message = __( 'Connected. The first sync has started in the background.', 'samomind-ai-assistant' );
+		if ( ! $result['home_url_allowed'] ) {
+			$message .= ' ' . __( 'Finish in your Samomind dashboard: click Allow next to your website address.', 'samomind-ai-assistant' );
+		}
+		$this->finish( self::SETTINGS_SLUG, $result['home_url_allowed'] ? 'success' : 'warning', $message );
+	}
+
+	/**
+	 * Clear the keys on this site only.
+	 *
+	 * @since   0.4.0
+	 * @return  void
+	 */
+	public function handle_plugin_disconnect() {
+		$this->verify_action( 'plugin_disconnect' );
+
+		SAMOMIND()->plugin_connect->disconnect();
+		$message = __( 'Disconnected on this site. To stop these keys working everywhere, create a new code in your Samomind dashboard.', 'samomind-ai-assistant' );
+		if ( SAMOMIND()->helpers->secret_is_constant() ) {
+			$message .= ' ' . __( 'The secret in wp-config.php was not removed.', 'samomind-ai-assistant' );
+		}
+		$this->finish( self::SETTINGS_SLUG, 'success', $message );
 	}
 
 	/**
@@ -1025,14 +1059,19 @@ class SAMOMIND_Admin {
 		?>
 		<div class="wrap samomind-admin-wrap">
 			<h1><?php esc_html_e( 'Samomind Settings', 'samomind-ai-assistant' ); ?></h1>
-			<p class="description">
-				<?php esc_html_e( 'In the Samomind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
-			</p>
 			<hr class="wp-header-end">
 
 			<?php $this->render_action_notice(); ?>
 			<?php $this->render_shop_notice(); ?>
 			<?php settings_errors( self::SETTINGS_GROUP ); ?>
+
+			<?php $this->render_connect_box(); ?>
+
+			<details class="samomind-advanced">
+				<summary><?php esc_html_e( 'Advanced: enter keys manually', 'samomind-ai-assistant' ); ?></summary>
+				<p class="description">
+					<?php esc_html_e( 'In the Samomind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
+				</p>
 
 			<div class="samomind-card">
 				<h2><?php esc_html_e( 'Ingest secret', 'samomind-ai-assistant' ); ?></h2>
@@ -1072,33 +1111,36 @@ class SAMOMIND_Admin {
 			</div>
 
 			<div class="samomind-card">
-				<form method="post" action="options.php">
-					<?php settings_fields( self::SETTINGS_GROUP ); ?>
+				<h2><?php esc_html_e( 'Connection', 'samomind-ai-assistant' ); ?></h2>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="samomind_key_id"><?php esc_html_e( 'Key id', 'samomind-ai-assistant' ); ?></label></th>
+						<td>
+							<input type="text" form="samomind-settings-form" id="samomind_key_id" name="samomind_key_id" class="regular-text code" spellcheck="false"
+								value="<?php echo esc_attr( $helpers->get_key_id() ); ?>"
+								placeholder="3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10">
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="samomind_api_base_url"><?php esc_html_e( 'API base URL', 'samomind-ai-assistant' ); ?></label></th>
+						<td>
+							<input type="url" form="samomind-settings-form" id="samomind_api_base_url" name="samomind_api_base_url" class="regular-text code"
+								value="<?php echo esc_attr( $helpers->get_api_base_url() ); ?>">
+							<p class="description">
+								<?php
+								/* translators: %s: default API URL */
+								echo esc_html( sprintf( __( 'Leave as %s unless Samomind asks you to use a staging address. The plugin sends requests only to this address.', 'samomind-ai-assistant' ), SAMOMIND_Helpers::DEFAULT_API_BASE_URL ) );
+								?>
+							</p>
+						</td>
+					</tr>
+				</table>
+			</div>
+			</details>
 
-					<h2><?php esc_html_e( 'Connection', 'samomind-ai-assistant' ); ?></h2>
-					<table class="form-table" role="presentation">
-						<tr>
-							<th scope="row"><label for="samomind_key_id"><?php esc_html_e( 'Key id', 'samomind-ai-assistant' ); ?></label></th>
-							<td>
-								<input type="text" id="samomind_key_id" name="samomind_key_id" class="regular-text code" spellcheck="false"
-									value="<?php echo esc_attr( $helpers->get_key_id() ); ?>"
-									placeholder="3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10">
-							</td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="samomind_api_base_url"><?php esc_html_e( 'API base URL', 'samomind-ai-assistant' ); ?></label></th>
-							<td>
-								<input type="url" id="samomind_api_base_url" name="samomind_api_base_url" class="regular-text code"
-									value="<?php echo esc_attr( $helpers->get_api_base_url() ); ?>">
-								<p class="description">
-									<?php
-									/* translators: %s: default API URL */
-									echo esc_html( sprintf( __( 'Leave as %s unless Samomind asks you to use a staging address. The plugin sends requests only to this address.', 'samomind-ai-assistant' ), SAMOMIND_Helpers::DEFAULT_API_BASE_URL ) );
-									?>
-								</p>
-							</td>
-						</tr>
-					</table>
+			<div class="samomind-card">
+				<form method="post" action="options.php" id="samomind-settings-form">
+					<?php settings_fields( self::SETTINGS_GROUP ); ?>
 
 					<h2><?php esc_html_e( 'What is synced', 'samomind-ai-assistant' ); ?></h2>
 					<table class="form-table" role="presentation">
@@ -1169,6 +1211,79 @@ class SAMOMIND_Admin {
 			</div>
 
 			<?php $this->render_orders_card(); ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The "Connect to Samomind" box at the top of Settings: a code field when
+	 * not connected, the connected state with Disconnect when it is. The saved
+	 * keys are never printed.
+	 *
+	 * @since   0.4.0
+	 * @return  void
+	 */
+	private function render_connect_box() {
+		$connection = SAMOMIND()->connection;
+		$connected  = $connection->is_connected() && SAMOMIND()->helpers->has_credentials();
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- only decides whether the code field is shown.
+		$new_code = isset( $_GET['new_code'] ) && '1' === $_GET['new_code'];
+		$state    = $connection->get_state();
+		$info     = isset( $state['code_connect'] ) && is_array( $state['code_connect'] ) ? $state['code_connect'] : array();
+		$name     = isset( $info['site_name'] ) ? (string) $info['site_name'] : '';
+
+		$new_code_url = add_query_arg(
+			array(
+				'page'     => self::SETTINGS_SLUG,
+				'new_code' => '1',
+			),
+			admin_url( 'admin.php' )
+		);
+		?>
+		<div class="samomind-card samomind-connect">
+			<h2><?php esc_html_e( 'Connect to Samomind', 'samomind-ai-assistant' ); ?></h2>
+
+			<?php if ( $connected ) : ?>
+				<p>
+					<strong>
+						<?php
+						if ( '' !== $name ) {
+							/* translators: %s: the site's name in the Samomind dashboard */
+							echo esc_html( sprintf( __( 'Connected to %s', 'samomind-ai-assistant' ), $name ) );
+						} else {
+							esc_html_e( 'Connected to Samomind', 'samomind-ai-assistant' );
+						}
+						?>
+					</strong>
+				</p>
+				<?php if ( isset( $info['home_url_allowed'] ) && false === $info['home_url_allowed'] ) : ?>
+					<p><strong><?php esc_html_e( 'Finish in your Samomind dashboard: click Allow next to your website address.', 'samomind-ai-assistant' ); ?></strong></p>
+				<?php endif; ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<?php wp_nonce_field( 'samomind_plugin_disconnect' ); ?>
+					<input type="hidden" name="action" value="samomind_plugin_disconnect">
+					<?php submit_button( __( 'Disconnect', 'samomind-ai-assistant' ), 'secondary', 'submit', false ); ?>
+					<a class="button-link" href="<?php echo esc_url( $new_code_url ); ?>"><?php esc_html_e( 'Use a new code', 'samomind-ai-assistant' ); ?></a>
+				</form>
+				<p class="description"><?php esc_html_e( 'Disconnect clears the keys on this site only. To stop these keys working everywhere, create a new code in your Samomind dashboard.', 'samomind-ai-assistant' ); ?></p>
+			<?php endif; ?>
+
+			<?php if ( ! $connected || $new_code ) : ?>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
+					<?php wp_nonce_field( 'samomind_plugin_connect' ); ?>
+					<input type="hidden" name="action" value="samomind_plugin_connect">
+					<p class="description"><?php esc_html_e( 'In your Samomind dashboard, open Install > WordPress and create a connection code. Paste it here. The code works once and expires soon.', 'samomind-ai-assistant' ); ?></p>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><label for="samomind_connect_code"><?php esc_html_e( 'Connection code', 'samomind-ai-assistant' ); ?></label></th>
+							<td>
+								<input type="text" id="samomind_connect_code" name="samomind_connect_code" class="regular-text code" value="" autocomplete="off" spellcheck="false" placeholder="smc_...">
+							</td>
+						</tr>
+					</table>
+					<?php submit_button( __( 'Connect', 'samomind-ai-assistant' ), 'primary', 'submit', false ); ?>
+				</form>
+			<?php endif; ?>
 		</div>
 		<?php
 	}
