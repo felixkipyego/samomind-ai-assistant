@@ -15,17 +15,31 @@ with the site's public content, and adds the Samomind chat widget.
 2. Activate **Samomind AI Assistant** in Plugins. A **Samomind** menu
    appears with **Status** and **Settings**.
 
-## Connect
+## Connect with a code
 
-1. In the Samomind dashboard (app.samomind.com), open **Sources**, then the
-   **WordPress** card, and click **Create an ingest key**. The dashboard
-   shows a key id (a UUID) and a secret (`smik_...`). The secret is shown
-   only once. Creating a new key revokes the old one at once, so every
-   connected site stops until it gets the new key.
-2. In WordPress, open **Samomind > Settings**. Paste the secret and click
-   **Save secret**. Paste the key id and click **Save Settings**. Leave
-   the API base URL at `https://api.samomind.com` unless Samomind gives you
-   a staging address.
+1. In the Samomind dashboard (app.samomind.com), open **Install >
+   WordPress** and click **Create connection code**. The code works once
+   and expires.
+2. In WordPress, open **Samomind > Settings**, paste the code under
+   **Connect to Samomind** and click **Connect**. The plugin saves its keys
+   itself and the first full sync starts in the background. If it asks you
+   to finish in your dashboard, click **Allow** next to your website
+   address under **Install > WordPress**.
+
+**Disconnect** in the same box clears the keys on this site only. To stop
+the old keys working everywhere, create a new code and connect again.
+
+## Manual setup
+
+1. In the Samomind dashboard, open **Install > WordPress > Advanced: show
+   keys for manual setup** and click **Create an ingest key**. The
+   dashboard shows a key id (a UUID) and a secret (`smik_...`). The secret
+   is shown only once. Creating a new key revokes the old one at once, so
+   every connected site stops until it gets the new key.
+2. In WordPress, open **Samomind > Settings**, and under **Advanced: enter
+   keys manually** paste the secret and click **Save secret**. Paste the
+   key id and click **Save Settings**. Leave the API base URL at
+   `https://api.samomind.com` unless Samomind gives you a staging address.
 
    To keep the secret out of the database, put it in `wp-config.php`
    instead; the constant wins and the field becomes read-only:
@@ -35,8 +49,8 @@ with the site's public content, and adds the Samomind chat widget.
    ```
 
 3. Open **Samomind > Status** and click **Connect**. The site appears in
-   the dashboard's WordPress card, and the first full sync starts in the
-   background. A refusal is shown with the API's own message and code.
+   the dashboard, and the first full sync starts in the background. A
+   refusal is shown with the API's own message and code.
 
 The saved secret is never shown again, never logged, and only used to sign
 requests (HMAC-SHA256, contract section 5.2). It is never sent.
@@ -135,13 +149,14 @@ Another builder's storage meta key can be added with
 ## Chat widget
 
 Under **Samomind > Settings > Chat widget**, tick "Show the Samomind chat
-widget on this site" and enter the site key from the dashboard's **Widget**
-screen. The plugin enqueues `https://widget.samomind.com/widget.js` in the
+widget on this site". Connecting with a code fills in the site key; for a
+manual setup, enter it from **Install > WordPress > Advanced: show keys for
+manual setup**. The plugin enqueues `https://widget.samomind.com/widget.js` in the
 footer with the `defer` strategy and adds the key as `data-site-key` through
 the `wp_script_attributes` filter, so there is no inline script and nothing
 to paste. It is off by default, and never loads in the admin, on the login
-page, in feeds, REST responses or previews. Add the site address shown under
-the setting to **Allowed origins** in the Samomind dashboard first.
+page, in feeds, REST responses or previews. Allow the site address shown under
+the setting in the Samomind dashboard (**Install > WordPress**) first.
 
 The script is excluded from combine, minify and delay in WP Rocket
 (`rocket_exclude_js`, `rocket_exclude_defer_js`, `rocket_delay_js_exclusions`),

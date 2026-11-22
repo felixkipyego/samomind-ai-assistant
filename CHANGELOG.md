@@ -26,6 +26,13 @@ Upgrade Notice).
 - Changed: the site key hint and the allowed-address note on the Settings page,
   and the readme FAQ, name Install > WordPress in the Samomind dashboard instead
   of "Allowed origins" and the Widget screen.
+- Changed: the readme installation steps, description, FAQ and screenshot
+  captions follow the connect-with-a-code flow and name Install > WordPress,
+  Orders > Setup and Advanced: show keys for manual setup in the Samomind
+  dashboard. Two admin messages (the site key error and the manual keys
+  hint) say the same. README.md and the reviewer note follow.
+- Changed: screenshots 1, 3, 4 and 5 retaken, and a new screenshot 6 of the
+  order status card (`.wordpress-org/`, not in the zip).
 - Tests: `tests/contract/` holds one real example of every message in both
   directions, a script that checks them against Samomind's own models and
   signing code, and two integration tests (`ContractExamplesTest`,

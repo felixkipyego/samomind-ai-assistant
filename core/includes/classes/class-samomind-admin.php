@@ -316,7 +316,7 @@ class SAMOMIND_Admin {
 		if ( '' === $value || SAMOMIND_Embed::is_valid_site_key( $value ) ) {
 			return $value;
 		}
-		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from the Widget screen of the Samomind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
+		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
 		return SAMOMIND()->helpers->get_site_key();
 	}
 
@@ -1155,7 +1155,7 @@ class SAMOMIND_Admin {
 			<details class="samomind-advanced">
 				<summary><?php esc_html_e( 'Advanced: enter keys manually', 'samomind-ai-assistant' ); ?></summary>
 				<p class="description">
-					<?php esc_html_e( 'In the Samomind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
+					<?php esc_html_e( 'In the Samomind dashboard, open Install > WordPress > Advanced: show keys for manual setup and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
 				</p>
 
 			<div class="samomind-card">

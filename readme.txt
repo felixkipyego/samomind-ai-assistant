@@ -14,8 +14,9 @@ Keeps your Samomind AI assistant in sync with your site's content, adds the chat
 
 Visitors ask the same questions again and again: what do you charge, where are you, how do I book. Samomind AI Assistant lets your site answer them for you, from your own pages, and links to the page each answer came from.
 
-The plugin connects this site to your Samomind account. Your public pages, posts and products are pushed to your Samomind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the Samomind chat widget on your site with one switch and a site key. A Samomind account is needed. Create one at https://app.samomind.com; it starts with a 7-day free trial, and plans are on https://samomind.com/pricing/.
+The plugin connects this site to your Samomind account. Your public pages, posts and products are pushed to your Samomind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the Samomind chat widget on your site with one switch. A Samomind account is needed. Create one at https://app.samomind.com; it starts with a 7-day free trial, and plans are on https://samomind.com/pricing/.
 
+* Connect with a one-time code from your Samomind dashboard: nothing to copy by hand.
 * Full sync on connect, then updates as you publish, edit, trash or unpublish.
 * Pages, posts and WooCommerce products by default; public custom post types if you tick them.
 * Daily check-in and reconcile, so Samomind and the site stay in step.
@@ -28,7 +29,7 @@ The plugin connects this site to your Samomind account. Your public pages, posts
 
 Order status is part of the Samomind service for shops running WooCommerce 8.2 or newer. A customer asks the assistant where their order is, and proves it is theirs in one of two ways: a 6-digit code that your shop emails to the order's billing address, or by being signed in to your shop. The assistant shows the order number, status and dates, and, if you choose, the item names and the tracking details.
 
-It is off until you switch it on under Samomind > Settings > Order status in the chat, accept the order-data terms and paste an orders key from your Samomind dashboard. You can switch it off again at any time on the same page. It works with WooCommerce's order tables (HPOS) on or off. The settings are always shown on that page; if something is missing (WooCommerce, pretty permalinks), the page says what.
+It is off until you switch it on under Samomind > Settings > Order status in the chat, accept the order-data terms and paste an orders key from your Samomind dashboard (Orders > Setup). You can switch it off again at any time on the same page. It works with WooCommerce's order tables (HPOS) on or off. The settings are always shown on that page; if something is missing (WooCommerce, pretty permalinks), the page says what.
 
 = What is sent =
 
@@ -85,25 +86,25 @@ This is the one case where the plugin also **receives** requests from Samomind's
 * Samomind does not store the email address, the code or orders. See the privacy policy for what it keeps. The plugin's own request log never records an email, a code or order data.
 * No order data is sent unless a customer verifies an order. With the setting off, nothing new leaves or enters this site, and no cookie is added.
 
-No other outbound requests are made. There is no tracking, usage analytics or advertising. The plugin adds no links to your site's pages. When you switch the chat widget on, the chat window's footer shows "Powered by Samomind" with a link to https://samomind.com on plans that include it; on higher plans it can be removed in the Samomind dashboard.
+No other outbound requests are made. There is no tracking, usage analytics or advertising. The plugin adds no links to your site's pages. When you switch the chat widget on, the chat window's footer shows "Powered by Samomind" with a link to https://samomind.com on plans that include it; it is left out on higher plans.
 
 == Installation ==
 
-1. Upload the `samomind-ai-assistant` folder to `/wp-content/plugins/`, or install the zip from Plugins > Add New > Upload Plugin.
+1. In WordPress, go to Plugins > Add New Plugin, search for "Samomind AI Assistant" and click Install Now. (Or upload the zip under Plugins > Add New Plugin > Upload Plugin.)
 2. Activate the plugin.
 3. In the Samomind dashboard, open Install, then WordPress, and create a connection code. It works once and expires.
-4. In WordPress, open Samomind > Settings, paste the code under "Connect to Samomind" and click Connect. The plugin sets itself up and the first sync starts in the background.
-5. Prefer to enter keys by hand? Under "Advanced: enter keys manually" on the same page, save the ingest key id and secret (from Sources, then the WordPress card, "Create an ingest key"), then open Samomind > Status and click Connect. You can define `SAMOMIND_API_SECRET` in `wp-config.php` instead of saving the secret.
-6. Optional, for WooCommerce 8.2 or newer: under Samomind > Settings > Order status in the chat, tick the box, accept the order-data terms and paste the orders key from the dashboard.
-7. Optional: to show the chat, add your site address to Allowed origins in the Samomind dashboard, then in Samomind > Settings > Chat widget tick "Show the Samomind chat widget on this site" and enter the site key from the dashboard's Widget screen. There is nothing to paste into your theme or pages.
+4. In WordPress, open Samomind > Settings, paste the code under "Connect to Samomind" and click Connect. The plugin sets itself up and the first sync starts in the background. If it asks you to finish in your dashboard, click Allow next to your website address under Install > WordPress.
+5. Prefer to enter keys by hand? In the Samomind dashboard, open Install > WordPress > Advanced: show keys for manual setup. In WordPress, under "Advanced: enter keys manually" on Samomind > Settings, save the ingest key id and secret, then open Samomind > Status and click Connect. You can define `SAMOMIND_API_SECRET` in `wp-config.php` instead of saving the secret.
+6. Optional, for WooCommerce 8.2 or newer: in the Samomind dashboard, open Orders > Setup and create an orders key. Under Samomind > Settings > Order status in the chat, paste it, accept the order-data terms, tick the box and save. Then click Test connection in Orders > Setup.
+7. Optional: to show the chat, tick "Show the Samomind chat widget on this site" under Samomind > Settings > Chat widget. Connecting with a code fills in the site key, and your site address must be allowed in the Samomind dashboard (Install > WordPress). There is nothing to paste into your theme or pages.
 
-The full guide, with screenshots, is at https://samomind.com/help/wordpress-plugin/.
+The full guide is at https://samomind.com/help/wordpress-plugin/.
 
 == Frequently Asked Questions ==
 
 = Do I need a Samomind account? =
 
-Yes. The plugin is free, but it sends your content to your Samomind knowledge base, so you need a Samomind account and an ingest key from the dashboard (Sources, then the WordPress card). Create an account at https://app.samomind.com. It starts with a 7-day free trial, and plans are on https://samomind.com/pricing/. Your Samomind plan sets how many pages the knowledge base holds; when the limit is reached the sync stops with `plan_page_cap` on Samomind > Status. Upgrade the plan or remove pages in the dashboard, then click "Sync now".
+Yes. The plugin is free, but it sends your content to your Samomind knowledge base, so you need a Samomind account and a connection code from the dashboard (Install > WordPress). Create an account at https://app.samomind.com. It starts with a 7-day free trial, and plans are on https://samomind.com/pricing/. Your Samomind plan sets how many pages the knowledge base holds; when the limit is reached the sync stops with `plan_page_cap` on Samomind > Status. Upgrade the plan or remove pages in the dashboard, then click "Sync now".
 
 = What exactly is sent to Samomind? =
 
@@ -127,15 +128,16 @@ The setting is on and a site key is saved; your site address (shown under the se
 
 = What happens when I deactivate, delete or disconnect? =
 
-Deactivating only stops the plugin's scheduled work. Nothing is sent, your documents stay in Samomind and the connection is kept, so reactivating carries on without a full sync; changes made while it was inactive are picked up by the next daily reconcile. Deleting the plugin disconnects the site if it is still connected (Samomind then removes the documents it received from this site) and removes all of the plugin's settings, logs and scheduled events. Disconnect on the Status page removes your content from Samomind but keeps the plugin and its settings. If someone disconnects the site in the Samomind dashboard, the dashboard wins: the plugin stops sending, shows "Disconnected from the Samomind dashboard." on Samomind > Status and does not reconnect until you click Connect.
+Deactivating only stops the plugin's scheduled work. Nothing is sent, your documents stay in Samomind and the connection is kept, so reactivating carries on without a full sync; changes made while it was inactive are picked up by the next daily reconcile. Deleting the plugin disconnects the site if it is still connected (Samomind then removes the documents it received from this site) and removes all of the plugin's settings, logs and scheduled events. Disconnect on the Status page removes your content from Samomind but keeps the plugin and its settings. Disconnect in the "Connect to Samomind" box on Samomind > Settings clears the keys on this site only; to stop the old keys working everywhere, create a new code and connect again. If someone disconnects the site in the Samomind dashboard, the dashboard wins: the plugin stops sending, shows "Disconnected from the Samomind dashboard." on Samomind > Status and does not reconnect until you click Connect.
 
 == Screenshots ==
 
-1. Samomind > Settings: connect with a code, the Advanced fold for entering keys by hand, the content types that are synced, the chat widget switch and the order status settings.
+1. Samomind > Settings: connect with a code, the Advanced fold for entering keys by hand, the content types that are synced and the chat widget switch.
 2. The content types list and the sync status, with the number of items kept in step with Samomind.
 3. The chat widget's welcome screen on a live site, with suggested questions.
 4. An answer from the chat widget, with a link to the source page.
 5. The chat widget on a phone-sized screen.
+6. Order status in the chat: the opt-in, the order-data terms, the orders key and what the assistant may say.
 
 == Changelog ==
 

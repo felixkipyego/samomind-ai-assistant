@@ -85,7 +85,7 @@ msgid "The key id is a UUID such as 3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10. The pr
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:309
-msgid "The site key looks like pk_live_ followed by letters and numbers. Copy it from the Widget screen of the Samomind dashboard, without a script tag. The previous key was kept."
+msgid "The site key looks like pk_live_ followed by letters and numbers. Copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard, without a script tag. The previous key was kept."
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:340
@@ -453,7 +453,7 @@ msgid "Advanced: enter keys manually"
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:1130
-msgid "In the Samomind dashboard, open Sources, then the WordPress card, and click \"Create an ingest key\". Copy the key id and the secret here. The secret is shown only once there."
+msgid "In the Samomind dashboard, open Install > WordPress > Advanced: show keys for manual setup and click \"Create an ingest key\". Copy the key id and the secret here. The secret is shown only once there."
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:1134
