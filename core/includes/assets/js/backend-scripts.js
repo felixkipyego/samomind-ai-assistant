@@ -35,6 +35,15 @@
 		// Auto-dismiss success notices after 4 seconds.
 		$( '.samomind-admin-wrap .notice-success.is-dismissible' ).delay( 4000 ).fadeOut( 400 );
 
+		// Remember a dismissed notice, so it stays gone after the page reloads.
+		$( document ).on( 'click', '.samomind-admin-wrap [data-samomind-notice] .notice-dismiss', function () {
+			$.post( samomind_params.ajaxurl, {
+				action: 'samomind_dismiss_notice',
+				nonce: samomind_params.nonce,
+				notice: $( this ).closest( '[data-samomind-notice]' ).attr( 'data-samomind-notice' )
+			} );
+		} );
+
 		// Confirm destructive actions.
 		$( '[data-samomind-confirm]' ).on( 'click', function ( event ) {
 			if ( ! window.confirm( $( this ).attr( 'data-samomind-confirm' ) ) ) {

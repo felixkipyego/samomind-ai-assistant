@@ -4,11 +4,11 @@ Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 0.3.6
+Stable tag: 0.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Keeps your Samomind AI assistant's knowledge base in sync with this site's public pages, posts and products, and adds the chat widget.
+Keeps your Samomind AI assistant in sync with your site's content, adds the chat widget, and lets shoppers check their WooCommerce order status.
 
 == Description ==
 
@@ -21,13 +21,20 @@ The plugin connects this site to your Samomind account. Your public pages, posts
 * Daily check-in and reconcile, so Samomind and the site stay in step.
 * Runs in the background on Action Scheduler (with WooCommerce) or WP-Cron.
 * Optional: adds the Samomind chat widget to every page.
+* Optional, for WooCommerce 8.2 or newer: customers check the status of their own orders in the chat. Off until you switch it on.
 * WP-CLI: `wp samomind status|connect|disconnect|sync|reconcile|checkin`.
+
+= Order status in the chat =
+
+Order status is part of the Samomind service for shops running WooCommerce 8.2 or newer. A customer asks the assistant where their order is, and proves it is theirs in one of two ways: a 6-digit code that your shop emails to the order's billing address, or by being signed in to your shop. The assistant shows the order number, status and dates, and, if you choose, the item names and the tracking details.
+
+It is off until you switch it on under Samomind > Settings > Order status in the chat, accept the order-data terms and paste an orders key from your Samomind dashboard. You can switch it off again at any time on the same page. It works with WooCommerce's order tables (HPOS) on or off. The settings are always shown on that page; if something is missing (WooCommerce, pretty permalinks), the page says what.
 
 = What is sent =
 
 Only published, public content that is not password-protected: for each page, post, public custom post type item or WooCommerce product, its id, address, title, text (the rendered content as plain text, the excerpt and, for products, the short description), type, last modified time and the names of its public categories and tags. Products add the price as the shop shows it to visitors (for example "$70.00 (was $100.00)" or "$30.00 to $50.00") and the stock status.
 
-Never sent: drafts, scheduled, private or password-protected content, users, visitors, comments, form entries, orders, carts, customers or media files. WooCommerce products whose catalog visibility is Hidden are never sent; products set to Shop only or Search results only are, because their pages are public.
+Never sent by the content sync: drafts, scheduled, private or password-protected content, users, visitors, comments, form entries, orders, carts, customers or media files. Order status is separate: it reads one order at a time, only when a verified customer asks about it (see External services). WooCommerce products whose catalog visibility is Hidden are never sent; products set to Shop only or Search results only are, because their pages are public.
 
 Choose the post types under Samomind > Settings > What is synced (posts, pages and WooCommerce products are ticked by default, other types start unticked). Unticking a type removes its items from Samomind. Developers can also use the `SAMOMIND/content/post_types` filter (it runs after that setting) and `SAMOMIND/content/excluded_ids` to leave out single posts.
 
@@ -41,9 +48,9 @@ Privacy policy: https://samomind.com/privacy-policy/
 
 **1. The Samomind API, from the server**
 
-Nothing is sent when the plugin is installed or activated. Requests start only after an administrator saves an ingest key and clicks Connect (or runs `wp samomind connect`), or pastes a connection code and clicks Connect (0.4.0, unreleased: draft wording, not in the released plugin). Every request below except the connection code is a signed POST to `/api/v1/ingest/...`. Each carries the API version, the key id, a timestamp, a request id and an HMAC signature in headers; the secret itself is never sent. WordPress adds its standard User-Agent, which names the WordPress version and this site's address, and Samomind sees the server's IP address.
+Nothing is sent when the plugin is installed or activated. Requests start only after an administrator saves an ingest key and clicks Connect (or runs `wp samomind connect`), or pastes a connection code and clicks Connect. Every request below except the connection code is a signed POST to `/api/v1/ingest/...`. Each carries the API version, the key id, a timestamp, a request id and an HMAC signature in headers; the secret itself is never sent. WordPress adds its standard User-Agent, which names the WordPress version and this site's address, and Samomind sees the server's IP address.
 
-* Connect with a code (`/api/v1/plugin/connect`, 0.4.0, unreleased): an unsigned HTTPS POST that carries the connection code the owner pasted, the site's home address and site address, the plugin version and the WordPress version. When: only when an administrator pastes a code under Samomind > Settings and clicks Connect, never in the background. Why: to trade the one-time code for this site's keys, so the owner does not have to copy three values by hand. Returns the public site key (for the chat widget), an ingest key id, a new ingest secret and the API address, which the plugin saves in its own settings (the secret is stored like a password, kept out of autoload and never shown again). The code is never saved or logged. The plugin sends it only to an https address (plain http only for localhost), checks the server's certificate and does not follow redirects.
+* Connect with a code (`/api/v1/plugin/connect`): an unsigned HTTPS POST that carries the connection code the owner pasted, the site's home address and site address, the plugin version and the WordPress version. When: only when an administrator pastes a code under Samomind > Settings and clicks Connect, never in the background. Why: to trade the one-time code for this site's keys, so the owner does not have to copy three values by hand. Returns the public site key (for the chat widget), an ingest key id, a new ingest secret and the API address, which the plugin saves in its own settings (the secret is stored like a password, kept out of autoload and never shown again). The code is never saved or logged. The plugin sends it only to an https address (plain http only for localhost), checks the server's certificate and does not follow redirects.
 * Connect, Reconnect (`/connect`): the site address, the word "wordpress", the plugin version and the WordPress version. Returns an id for this connection, the service's limits and the check-in interval. A first sync follows.
 * Check-in (`/checkin`): the connection id, the plugin version, the WordPress version and, if the last request failed, that error's code and message (up to 500 characters). When: about once a day from WP-Cron, when an administrator clicks "Check in now" or opens Samomind > Status (at most once a minute), or runs `wp samomind checkin`. Returns the connection status and how often to check in.
 * Sync (`/sync` and `/documents`): when a sync starts and finishes, and in batches in between, for each published, public, not password-protected item of the post types ticked in Settings: its post id, address, title, text (the content as plain text, the excerpt and, for products, the short description), type (post, page, product or custom), last modified time and the names of its public categories and tags. Products add price and stock status. When: on Connect, on "Sync now" and `wp samomind sync`. Returns, per item, whether it was accepted, unchanged or refused.
@@ -63,9 +70,9 @@ Only if an administrator ticks "Show the Samomind chat widget on this site" and 
 
 Like any web request, the visitor's browser requests to `widget.samomind.com` and `api.samomind.com` reach Samomind's servers with the visitor's IP address and browser user agent. See the privacy policy: https://samomind.com/privacy-policy/
 
-**3. Order status in the chat (0.4.0, unreleased: draft wording, not in the released plugin)**
+**3. Order status in the chat (WooCommerce 8.2 or newer)**
 
-Off by default. Only if an administrator ticks "Let customers check order status in the chat" under Samomind > Settings, accepts the order-data terms (the version, the administrator's user id and the time are recorded) and pastes an orders key from the Samomind dashboard. WooCommerce must be active; multisite networks are not supported. With this off, the plugin does nothing described in this section.
+Part of the Samomind service. Off by default. Only if an administrator ticks "Let customers check order status in the chat" under Samomind > Settings, accepts the order-data terms (the version, the administrator's user id and the time are recorded) and pastes an orders key from the Samomind dashboard. WooCommerce must be active; multisite networks are not supported. With this off, the plugin does nothing described in this section. The one exception is the short report below, which goes with the connect and check-in requests of section 1.
 
 This is the one case where the plugin also **receives** requests from Samomind's servers: HTTPS POSTs to `/wp-json/samomind/v1/orders/` on this site. Each is signed with the orders key (a key separate from the ingest secret, never sent) and carries a timestamp and a one-time value; a request that is not validly signed is refused. The same WordPress site also answers its own visitors' browsers at `/wp-json/samomind/v1/orders/account-proof` (same site only, for a logged-in customer) and `admin-ajax.php?action=samomind_nonce`.
 
@@ -73,6 +80,7 @@ This is the one case where the plugin also **receives** requests from Samomind's
 * When the customer enters the code, Samomind sends the code to be checked. If it is right, this site lets that one chat read that one order for 30 minutes by default.
 * A logged-in customer can skip the email: the browser asks this site for a signed proof that says the visitor is logged in (it names nobody), and this site records the login session it came from. Logging out of the shop ends access at once.
 * While access lasts, Samomind asks for the order and this site answers with the order number, status, dates and, only if you share them, the item names, and the tracking carrier, number and link (read from WooCommerce Shipment Tracking or Advanced Shipment Tracking, if installed). Never sent: addresses, phone numbers, email addresses, payment details, totals, discounts, refunds, customer or order notes, the customer's name or other orders.
+* Once order status is on, the connect and check-in requests of section 1 also carry a short report: whether order status is on, the version of the order-data terms accepted, whether item names and tracking are shared, which tracking plugin was found (if any), whether the shop uses WooCommerce's order tables, the WooCommerce version, how code emails are sent, and the reason if it is off. After you switch it off, one more report says so, and then the report stops.
 * "Share tracking" is on and "Share item names" is off by default; both are shown next to the opt-in and are enforced on this site.
 * Samomind does not store the email address, the code or orders. See the privacy policy for what it keeps. The plugin's own request log never records an email, a code or order data.
 * No order data is sent unless a customer verifies an order. With the setting off, nothing new leaves or enters this site, and no cookie is added.
@@ -83,10 +91,11 @@ No other outbound requests are made. There is no tracking, usage analytics or ad
 
 1. Upload the `samomind-ai-assistant` folder to `/wp-content/plugins/`, or install the zip from Plugins > Add New > Upload Plugin.
 2. Activate the plugin.
-3. In the Samomind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret (the secret is shown only once).
-4. In WordPress, open Samomind > Settings. Save the secret, then the key id. You can define `SAMOMIND_API_SECRET` in `wp-config.php` instead of saving the secret.
-5. Open Samomind > Status and click Connect. The first sync starts in the background.
-6. Optional: to show the chat, add your site address to Allowed origins in the Samomind dashboard, then in Samomind > Settings > Chat widget tick "Show the Samomind chat widget on this site" and enter the site key from the dashboard's Widget screen. There is nothing to paste into your theme or pages.
+3. In the Samomind dashboard, open Install, then WordPress, and create a connection code. It works once and expires.
+4. In WordPress, open Samomind > Settings, paste the code under "Connect to Samomind" and click Connect. The plugin sets itself up and the first sync starts in the background.
+5. Prefer to enter keys by hand? Under "Advanced: enter keys manually" on the same page, save the ingest key id and secret (from Sources, then the WordPress card, "Create an ingest key"), then open Samomind > Status and click Connect. You can define `SAMOMIND_API_SECRET` in `wp-config.php` instead of saving the secret.
+6. Optional, for WooCommerce 8.2 or newer: under Samomind > Settings > Order status in the chat, tick the box, accept the order-data terms and paste the orders key from the dashboard.
+7. Optional: to show the chat, add your site address to Allowed origins in the Samomind dashboard, then in Samomind > Settings > Chat widget tick "Show the Samomind chat widget on this site" and enter the site key from the dashboard's Widget screen. There is nothing to paste into your theme or pages.
 
 The full guide, with screenshots, is at https://samomind.com/help/wordpress-plugin/.
 
@@ -98,7 +107,7 @@ Yes. The plugin is free, but it sends your content to your Samomind knowledge ba
 
 = What exactly is sent to Samomind? =
 
-Only published, public content that is not password-protected, and only the post types ticked under Samomind > Settings > What is synced. Drafts, private content, users, comments, orders and customers are never sent. See "What is sent" above for the full list. Samomind > Status shows the last 200 requests (time, endpoint, HTTP status and error code); request bodies and credentials are never logged.
+Only published, public content that is not password-protected, and only the post types ticked under Samomind > Settings > What is synced. Drafts, private content, users, comments, orders and customers are never part of the content sync. See "What is sent" above for the full list; order status is described under External services. Samomind > Status shows the last 200 requests (time, endpoint, HTTP status and error code); request bodies and credentials are never logged.
 
 = Does it work with Elementor, Divi and other page builders? =
 
@@ -122,7 +131,7 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Screenshots ==
 
-1. Samomind > Settings: the ingest key, the content types that are synced and the chat widget switch with its site key.
+1. Samomind > Settings: connect with a code, the Advanced fold for entering keys by hand, the content types that are synced, the chat widget switch and the order status settings.
 2. The content types list and the sync status, with the number of items kept in step with Samomind.
 3. The chat widget's welcome screen on a live site, with suggested questions.
 4. An answer from the chat widget, with a link to the source page.
@@ -130,8 +139,13 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 
 == Changelog ==
 
-= 0.4.0 (unreleased) =
-* Connect with a code: paste a one-time connection code from the Samomind dashboard under Samomind > Settings and the plugin sets itself up and starts the first sync. Entering keys by hand still works, under "Advanced". The API address must be https (plain http only for localhost).
+= 0.4.0 =
+* New: order status in the chat, part of the Samomind service for WooCommerce 8.2 or newer. Customers check only their own orders, with a 6-digit code emailed from your shop or by being signed in. It is off until you switch it on and accept the order-data terms. You choose whether item names and tracking are shown. Works with the order tables (HPOS) on or off.
+* New: connect with a code. Paste a one-time code from the Samomind dashboard under Samomind > Settings and the plugin sets itself up and starts the first sync. Entering keys by hand still works, under "Advanced".
+* Changed: the API address must be https (plain http only for localhost).
+* Fixed: the "WooCommerce is active, but products are not synced" notice now stays dismissed once you dismiss it.
+* Changed: the notice about a paused or failing sync shows only on Samomind's own pages, the Plugins screen and the Dashboard, and goes away by itself once the problem is solved.
+* Fixed: saving the key id or the API address when its setting was missing from the database could use up all memory. It now saves normally.
 
 = 0.3.6 =
 * Stock and price changes from orders, imports, the REST API and scheduled sales now reach the assistant within a minute. Clearer prices for sales and variable products. Hidden products are never sent.
@@ -167,6 +181,9 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * First release: connect, full sync, event-driven updates and deletes, daily check-in and reconcile, request log, widget embed, WP-CLI commands.
 
 == Upgrade Notice ==
+
+= 0.4.0 =
+Adds order status in the chat for WooCommerce 8.2 or newer (off until you switch it on) and Connect with a code on the Settings page. Entering keys by hand still works.
 
 = 0.3.6 =
 Stock and price changes from orders, imports, the REST API and scheduled sales now reach the assistant within a minute. Clearer prices for sales and variable products. Hidden products are never sent.

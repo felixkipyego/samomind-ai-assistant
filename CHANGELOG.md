@@ -1,9 +1,30 @@
 # Changelog
 
-## Unreleased (0.4.0)
+## 0.4.0 (release candidate)
 
-Task F-3 T3. Built on a branch; the released version stays 0.3.6 and
-nothing is submitted to WordPress.org.
+The first public WordPress.org upload, built from main, with order status.
+Written up for the release in readme.txt (External services, Changelog,
+Upgrade Notice).
+
+- Changed: the order-data terms are the final text, version 2026-11. The
+  "draft, pending legal review" wording is gone.
+- Fixed: the "WooCommerce is active, but products are not synced" notice
+  comes back after it is dismissed. Dismissing is now remembered per user
+  (user meta `samomind_dismissed_notices`, removed on uninstall).
+- Changed: the sync health notice (paused, disconnected in the dashboard,
+  failing for over a day) shows only on Samomind's own pages, the Plugins
+  screen and the Dashboard, and still goes by itself once solved.
+- Fixed: `keep_out_of_autoload()` and the key id and API address sanitizers
+  called each other without end when the option row was missing and the
+  Settings sanitizers were registered. A guard stops the second call.
+- Tests: the missing-row case (integration), the notice screens and exact
+  words (unit), and an update test from a release zip
+  (`tests/smoke/upgrade-from-zip.sh`, no activation hook, mocked API).
+- Tests: a release checks suite on real WordPress (the terms text, the order
+  settings always shown with no payment wording, the dismissed notice, and no
+  outbound request before keys are saved or a code is pasted).
+
+Task F-3 T3.
 
 - Added: order status in the chat, built against SamoMind's
   docs/design/F-3-order-status.md (contract copied to
