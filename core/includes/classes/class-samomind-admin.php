@@ -1268,7 +1268,7 @@ class SAMOMIND_Admin {
 									<?php
 									echo wp_kses(
 										/* translators: %s: the site address, for example https://example.com */
-										sprintf( __( 'Before you turn this on, add <code>%s</code> to <strong>Allowed origins</strong> in the Samomind dashboard. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
+										sprintf( __( 'Before you turn this on, allow <code>%s</code> in the Samomind dashboard under Install > WordPress. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
 										array(
 											'code'   => array(),
 											'strong' => array(),
@@ -1286,7 +1286,7 @@ class SAMOMIND_Admin {
 							<td>
 								<input type="text" id="samomind_site_key" name="samomind_site_key" class="regular-text code" spellcheck="false" autocomplete="off"
 									value="<?php echo esc_attr( $helpers->get_site_key() ); ?>" placeholder="pk_live_...">
-								<p class="description"><?php esc_html_e( 'Copy the site key from the Widget screen of the Samomind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Filled in when you connect with a code. For a manual setup, copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>

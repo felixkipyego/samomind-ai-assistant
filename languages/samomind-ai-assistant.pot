@@ -539,7 +539,7 @@ msgstr ""
 #. translators: %s: the site address, for example https://example.com
 #: core/includes/classes/class-samomind-admin.php:1243
 #, php-format
-msgid "Before you turn this on, add <code>%s</code> to <strong>Allowed origins</strong> in the Samomind dashboard. The chat will not load on this site until you do."
+msgid "Before you turn this on, allow <code>%s</code> in the Samomind dashboard under Install > WordPress. The chat will not load on this site until you do."
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:1252
@@ -551,7 +551,7 @@ msgid "Site key"
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:1261
-msgid "Copy the site key from the Widget screen of the Samomind dashboard. Only the key, not a script tag."
+msgid "Filled in when you connect with a code. For a manual setup, copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard. Only the key, not a script tag."
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:1266

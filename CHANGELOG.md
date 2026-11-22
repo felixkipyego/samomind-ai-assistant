@@ -23,6 +23,9 @@ Upgrade Notice).
 - Changed: the orders key description on the Settings page now points to
   Orders > Setup in the Samomind dashboard ("Create an orders key"), where the
   key lives since F-19.
+- Changed: the site key hint and the allowed-address note on the Settings page,
+  and the readme FAQ, name Install > WordPress in the Samomind dashboard instead
+  of "Allowed origins" and the Widget screen.
 - Tests: `tests/contract/` holds one real example of every message in both
   directions, a script that checks them against Samomind's own models and
   signing code, and two integration tests (`ContractExamplesTest`,
