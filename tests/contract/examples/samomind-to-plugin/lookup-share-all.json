@@ -1,0 +1,19 @@
+{
+  "message": "lookup-share-all",
+  "direction": "Samomind to shop",
+  "model": "LookupRequest",
+  "path": "/wp-json/samomind/v1/orders/lookup",
+  "route": "/samomind/v1/orders/lookup",
+  "secret": "smok_ContractFixtureSecret0000000000000000000",
+  "key_id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+  "timestamp": "1731412345",
+  "nonce": "7cbc79c5a858118aadea4c",
+  "headers": {
+    "X-SamoMind-Orders-Key-Id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+    "X-SamoMind-Orders-Timestamp": "1731412345",
+    "X-SamoMind-Orders-Nonce": "7cbc79c5a858118aadea4c",
+    "X-SamoMind-Orders-Signature": "v1=09b743569edfae0b523d00ce472ba66c1948d1eca06237bb6d1474bc144fb169",
+    "X-SamoMind-Orders-Version": "1"
+  },
+  "body_raw": "{\"request_id\":\"a1a64b28-c856-f22c-4f6a-976af42c0439\",\"session_ref\":\"a7e38430f6e857f7701c0444906e37c7\",\"order_number\":\"SM-1234\",\"share\":{\"items\":true,\"tracking\":true}}"
+}

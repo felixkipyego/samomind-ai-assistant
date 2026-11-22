@@ -1,0 +1,10 @@
+{
+    "message": "shop-start-mail-capped",
+    "direction": "shop to Samomind",
+    "model": "StartResponse",
+    "status": 202,
+    "nonce": "5Qlzc9hFgUbEppEgkqfdW7",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=51749580e570badaa00b6e0092d0b819964e69ad8fddf2e074e8ec2fcd017fd8",
+    "body_raw": "{\"accepted\":true,\"mail_capped\":true}"
+}

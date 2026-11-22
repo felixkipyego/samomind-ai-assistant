@@ -1,0 +1,10 @@
+{
+    "message": "shop-verify-wrong",
+    "direction": "shop to Samomind",
+    "model": "VerifyResponse",
+    "status": 200,
+    "nonce": "cgl9nW7KVkUJJ7bFFxrsdx",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=287e13aa387cf7dc34550c872fe5ce90f72ebfd94d09f7afae37ce14286eca59",
+    "body_raw": "{\"verified\":false}"
+}

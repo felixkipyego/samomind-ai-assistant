@@ -1,0 +1,19 @@
+{
+  "message": "end",
+  "direction": "Samomind to shop",
+  "model": "EndRequest",
+  "path": "/wp-json/samomind/v1/orders/end",
+  "route": "/samomind/v1/orders/end",
+  "secret": "smok_ContractFixtureSecret0000000000000000000",
+  "key_id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+  "timestamp": "1731412345",
+  "nonce": "361e48d0308f20e32dba5f",
+  "headers": {
+    "X-SamoMind-Orders-Key-Id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+    "X-SamoMind-Orders-Timestamp": "1731412345",
+    "X-SamoMind-Orders-Nonce": "361e48d0308f20e32dba5f",
+    "X-SamoMind-Orders-Signature": "v1=ec3cfd0c6a1ff917571acb45d215b515d6975f39fc2e3d521f8488966bf65335",
+    "X-SamoMind-Orders-Version": "1"
+  },
+  "body_raw": "{\"request_id\":\"361e48d0-308f-20e3-2dba-5fb56328baf1\",\"session_ref\":\"a7e38430f6e857f7701c0444906e37c7\"}"
+}

@@ -1471,7 +1471,7 @@ class SAMOMIND_Admin {
 									<?php endif; ?>
 								</p>
 								<input type="password" id="samomind_orders_secret" name="samomind_orders_secret" class="regular-text" value="" autocomplete="new-password" spellcheck="false" placeholder="smok_...">
-								<p class="description"><?php esc_html_e( 'A separate key from the ingest secret. Create it in the Samomind dashboard, next to the ingest key. The saved key is never shown; paste a new one to replace it.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'A separate key from the ingest secret. In the Samomind dashboard, open Orders > Setup and click Create an orders key. The saved key is never shown; paste a new one to replace it.', 'samomind-ai-assistant' ); ?></p>
 								<?php if ( $orders->has_secret() ) : ?>
 									<label><input type="checkbox" name="samomind_orders_remove_key" value="1"> <?php esc_html_e( 'Remove the saved key (this switches order status off)', 'samomind-ai-assistant' ); ?></label>
 								<?php endif; ?>

@@ -1,0 +1,7 @@
+{
+    "message": "shop-account-proof",
+    "direction": "shop to the widget, then Samomind",
+    "model": "AccountProof",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "body_raw": "{\"v\":1,\"challenge\":\"JvGKGOGX7z861bbomlMWyw\",\"exp\":1795336322,\"sig\":\"aefa90f3be08d74cd3b8a7b19abd6e71df677b7d3593d5247817622f2dc8e564\"}"
+}

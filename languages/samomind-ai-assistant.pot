@@ -696,7 +696,7 @@ msgid "No key saved"
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:1446
-msgid "A separate key from the ingest secret. Create it in the Samomind dashboard, next to the ingest key. The saved key is never shown; paste a new one to replace it."
+msgid "A separate key from the ingest secret. In the Samomind dashboard, open Orders > Setup and click Create an orders key. The saved key is never shown; paste a new one to replace it."
 msgstr ""
 
 #: core/includes/classes/class-samomind-admin.php:1448

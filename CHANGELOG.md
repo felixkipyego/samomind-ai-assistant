@@ -17,6 +17,16 @@ Upgrade Notice).
 - Fixed: `keep_out_of_autoload()` and the key id and API address sanitizers
   called each other without end when the option row was missing and the
   Settings sanitizers were registered. A guard stops the second call.
+- Fixed: the answer to Samomind's connection test (`orders/ping`) sent the
+  capabilities flat. Samomind expects `"capabilities": {"orders": {...}}`, as at
+  check-in, refuses unknown fields, and so refused every ping.
+- Changed: the orders key description on the Settings page now points to
+  Orders > Setup in the Samomind dashboard ("Create an orders key"), where the
+  key lives since F-19.
+- Tests: `tests/contract/` holds one real example of every message in both
+  directions, a script that checks them against Samomind's own models and
+  signing code, and two integration tests (`ContractExamplesTest`,
+  `ContractRequestsTest`). Run it before every release.
 - Tests: the missing-row case (integration), the notice screens and exact
   words (unit), and an update test from a release zip
   (`tests/smoke/upgrade-from-zip.sh`, no activation hook, mocked API).

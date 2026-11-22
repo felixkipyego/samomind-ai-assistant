@@ -1,0 +1,10 @@
+{
+    "message": "shop-redeem-refused",
+    "direction": "shop to Samomind",
+    "model": "RedeemResponse",
+    "status": 200,
+    "nonce": "me4QwcQVruni-58EuhZP_f",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=0e305b0418027dbb849f00423fa58320ba724c3c4db139715a5dd1e4f1902baa",
+    "body_raw": "{\"granted\":false}"
+}

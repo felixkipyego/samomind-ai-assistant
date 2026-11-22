@@ -1,0 +1,15 @@
+{
+    "message": "plugin-sync-ingest-sync-2",
+    "direction": "plugin to Samomind",
+    "path": "/api/v1/ingest/sync",
+    "secret": "smik_ContractFixtureIngestSecret000000000000",
+    "headers": {
+        "X-SamoMind-API-Version": "1",
+        "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
+        "X-SamoMind-Timestamp": "1795336263",
+        "Idempotency-Key": "wp-df13422a539deb5b86febac01d44f112bf5fdfe2",
+        "X-SamoMind-Signature": "v1=bbf76997853f6853f2830c4dc6a6cb177d9db409da1d371e664e3f11220c393c",
+        "Content-Type": "application/json"
+    },
+    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"action\":\"complete\"}"
+}
