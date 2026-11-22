@@ -12,7 +12,7 @@ Keeps your Samomind AI chatbot in sync with your site's content, adds the chat w
 
 == Description ==
 
-Visitors ask the same questions again and again: what do you charge, where are you, how do I book. Samomind – AI Chatbot That Answers From Your Content lets your site answer them for you, from your own pages, and links to the page each answer came from.
+Visitors ask the same questions again and again: what do you charge, where are you, how do I book. Samomind lets your site answer them for you, from your own pages, and links to the page each answer came from.
 
 Running a WooCommerce shop? Your customers can also ask "Where is my order?" and check their own order in the chat, after proving it is theirs.
 
