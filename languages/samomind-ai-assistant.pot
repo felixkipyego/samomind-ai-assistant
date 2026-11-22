@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-22T10:28:54+00:00\n"
+"POT-Creation-Date: 2026-11-22T11:28:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: samomind-ai-assistant\n"
@@ -26,7 +26,7 @@ msgstr ""
 
 #. Description of the plugin
 #: samomind-ai-assistant.php
-msgid "Keeps your Samomind AI assistant's knowledge base in sync with this site's public pages, posts and products, and adds the Samomind chat widget."
+msgid "Keeps your Samomind AI chatbot's knowledge base in sync with this site's public pages, posts and products, adds the Samomind chat widget, and lets shoppers check their WooCommerce order status."
 msgstr ""
 
 #. Author of the plugin
