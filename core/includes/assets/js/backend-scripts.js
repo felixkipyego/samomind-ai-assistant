@@ -1,6 +1,6 @@
 /**
  * SAMOMIND — Backend Scripts
- * Samomind AI Assistant
+ * Samomind – AI Chatbot That Answers From Your Content
  */
 ( function ( $ ) {
 	'use strict';

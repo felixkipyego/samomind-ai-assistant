@@ -9,7 +9,7 @@
 require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
 define( 'ABSPATH', __DIR__ . '/' );
-define( 'SAMOMIND_NAME', 'Samomind AI Assistant' );
+define( 'SAMOMIND_NAME', 'Samomind – AI Chatbot That Answers From Your Content' );
 define( 'SAMOMIND_VERSION', '0.4.0' );
 define( 'SAMOMIND_PLUGIN_DIR', dirname( __DIR__ ) . '/' );
 define( 'MINUTE_IN_SECONDS', 60 );

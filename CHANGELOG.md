@@ -33,6 +33,10 @@ Upgrade Notice).
   hint) say the same. README.md and the reviewer note follow.
 - Changed: screenshots 1, 3, 4 and 5 retaken, and a new screenshot 6 of the
   order status card (`.wordpress-org/`, not in the zip).
+- Changed: the display name is "Samomind – AI Chatbot That Answers From Your
+  Content" (Plugin Name header, readme title). The readme short description,
+  tags and description follow, and the readme adds a line for WooCommerce
+  shops. The slug, folder, text domain, constants and options are unchanged.
 - Tests: `tests/contract/` holds one real example of every message in both
   directions, a script that checks them against Samomind's own models and
   signing code, and two integration tests (`ContractExamplesTest`,

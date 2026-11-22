@@ -1,4 +1,4 @@
-# Samomind AI Assistant
+# Samomind – AI Chatbot That Answers From Your Content
 
 WordPress plugin that keeps a Samomind AI assistant's knowledge base in sync
 with the site's public content, and adds the Samomind chat widget.
@@ -12,7 +12,7 @@ with the site's public content, and adds the Samomind chat widget.
 
 1. Zip the plugin without the development files (`.distignore` lists
    them), or copy the folder to `wp-content/plugins/samomind-ai-assistant`.
-2. Activate **Samomind AI Assistant** in Plugins. A **Samomind** menu
+2. Activate **Samomind – AI Chatbot That Answers From Your Content** in Plugins. A **Samomind** menu
    appears with **Status** and **Settings**.
 
 ## Connect with a code

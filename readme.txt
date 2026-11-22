@@ -1,6 +1,6 @@
-=== Samomind AI Assistant ===
+=== Samomind – AI Chatbot That Answers From Your Content ===
 Contributors: samomind, kipyegofelix
-Tags: ai assistant, chatbot, knowledge base, woocommerce, sync
+Tags: ai chatbot, chatbot, woocommerce, order tracking, customer support
 Requires at least: 6.4
 Tested up to: 7.1
 Requires PHP: 7.4
@@ -8,11 +8,13 @@ Stable tag: 0.4.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Keeps your Samomind AI assistant in sync with your site's content, adds the chat widget, and lets shoppers check their WooCommerce order status.
+Keeps your Samomind AI chatbot in sync with your site's content, adds the chat widget, and lets shoppers check their WooCommerce order status.
 
 == Description ==
 
-Visitors ask the same questions again and again: what do you charge, where are you, how do I book. Samomind AI Assistant lets your site answer them for you, from your own pages, and links to the page each answer came from.
+Visitors ask the same questions again and again: what do you charge, where are you, how do I book. Samomind – AI Chatbot That Answers From Your Content lets your site answer them for you, from your own pages, and links to the page each answer came from.
+
+Running a WooCommerce shop? Your customers can also ask "Where is my order?" and check their own order in the chat, after proving it is theirs.
 
 The plugin connects this site to your Samomind account. Your public pages, posts and products are pushed to your Samomind knowledge base and kept up to date as you edit, so the assistant never answers from stale content. You can then show the Samomind chat widget on your site with one switch. A Samomind account is needed. Create one at https://app.samomind.com; it starts with a 7-day free trial, and plans are on https://samomind.com/pricing/.
 
@@ -90,7 +92,7 @@ No other outbound requests are made. There is no tracking, usage analytics or ad
 
 == Installation ==
 
-1. In WordPress, go to Plugins > Add New Plugin, search for "Samomind AI Assistant" and click Install Now. (Or upload the zip under Plugins > Add New Plugin > Upload Plugin.)
+1. In WordPress, go to Plugins > Add New Plugin, search for "Samomind" and click Install Now. (Or upload the zip under Plugins > Add New Plugin > Upload Plugin.)
 2. Activate the plugin.
 3. In the Samomind dashboard, open Install, then WordPress, and create a connection code. It works once and expires.
 4. In WordPress, open Samomind > Settings, paste the code under "Connect to Samomind" and click Connect. The plugin sets itself up and the first sync starts in the background. If it asks you to finish in your dashboard, click Allow next to your website address under Install > WordPress.

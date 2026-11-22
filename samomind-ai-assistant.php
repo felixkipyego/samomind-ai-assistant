@@ -1,6 +1,6 @@
 <?php
 /**
- * Samomind AI Assistant
+ * Samomind – AI Chatbot That Answers From Your Content
  *
  * @package       SAMOMIND
  * @author        SoftwaresKe Ltd
@@ -8,7 +8,7 @@
  * @version       0.4.0
  *
  * @wordpress-plugin
- * Plugin Name:       Samomind AI Assistant
+ * Plugin Name:       Samomind – AI Chatbot That Answers From Your Content
  * Plugin URI:        https://samomind.com/help/wordpress-plugin/
  * Description:       Keeps your Samomind AI assistant's knowledge base in sync with this site's public pages, posts and products, and adds the Samomind chat widget.
  * Version:           0.4.0
@@ -22,7 +22,7 @@
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  *
  * You should have received a copy of the GNU General Public License
- * along with Samomind AI Assistant. If not, see <https://www.gnu.org/licenses/gpl-2.0.html>.
+ * along with Samomind – AI Chatbot That Answers From Your Content. If not, see <https://www.gnu.org/licenses/gpl-2.0.html>.
  */
 
 // Exit if accessed directly.
@@ -31,7 +31,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Plugin name.
-define( 'SAMOMIND_NAME', 'Samomind AI Assistant' );
+define( 'SAMOMIND_NAME', 'Samomind – AI Chatbot That Answers From Your Content' );
 
 // Plugin version.
 define( 'SAMOMIND_VERSION', '0.4.0' );

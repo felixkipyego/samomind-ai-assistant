@@ -1,6 +1,6 @@
 <?php
 /**
- * Removes everything Samomind AI Assistant stored on this site.
+ * Removes everything Samomind – AI Chatbot That Answers From Your Content stored on this site.
  *
  * If a source id is stored, disconnect with reason "uninstall" (contract
  * section 9), best effort, then delete every option, transient and
