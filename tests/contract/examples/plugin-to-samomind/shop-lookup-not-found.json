@@ -1,0 +1,10 @@
+{
+    "message": "shop-lookup-not-found",
+    "direction": "shop to Samomind",
+    "model": "LookupResponse",
+    "status": 200,
+    "nonce": "HbUeZ5JsiB1Jlh34XGncnI",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=bf13ad67787bf8f89917442451176e9edd947eb9864fd960c2b7e88b009546ed",
+    "body_raw": "{\"found\":false}"
+}

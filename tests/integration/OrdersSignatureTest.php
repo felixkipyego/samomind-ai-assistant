@@ -270,8 +270,8 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 		// Ping still answers a validly signed request, and says why the feature is off.
 		$ping = $this->call( 'ping' );
 		$this->assertSame( 200, $ping->get_status() );
-		$this->assertFalse( $ping->get_data()['capabilities']['enabled'] );
-		$this->assertSame( 'not_opted_in', $ping->get_data()['capabilities']['reason'] );
+		$this->assertFalse( $ping->get_data()['capabilities']['orders']['enabled'] );
+		$this->assertSame( 'not_opted_in', $ping->get_data()['capabilities']['orders']['reason'] );
 
 		update_option( SAMOMIND_Orders_Settings::OPT_IN, '1', false );
 		delete_option( SAMOMIND_Orders_Settings::TERMS );
@@ -285,16 +285,16 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 		$ping    = $this->call( 'ping' )->get_data();
 		$wc->version = $version;
 
-		$this->assertFalse( $ping['capabilities']['enabled'] );
-		$this->assertSame( 'woocommerce_too_old', $ping['capabilities']['reason'] );
+		$this->assertFalse( $ping['capabilities']['orders']['enabled'] );
+		$this->assertSame( 'woocommerce_too_old', $ping['capabilities']['orders']['reason'] );
 	}
 
 	public function test_plain_permalinks_report_their_own_reason_and_refuse_the_feature() {
 		update_option( 'permalink_structure', '' );
 
 		$ping = $this->call( 'ping' )->get_data();
-		$this->assertFalse( $ping['capabilities']['enabled'] );
-		$this->assertSame( 'plain_permalinks', $ping['capabilities']['reason'] );
+		$this->assertFalse( $ping['capabilities']['orders']['enabled'] );
+		$this->assertSame( 'plain_permalinks', $ping['capabilities']['orders']['reason'] );
 
 		$start = $this->call( 'start', array( 'session_ref' => $this->session_ref() ) );
 		$this->assertSame( 403, $start->get_status() );
@@ -309,7 +309,7 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 
 		$this->assertSame( SAMOMIND_VERSION, $data['plugin_version'] );
 		$this->assertSame( 1, $data['api'] );
-		$caps = $data['capabilities'];
+		$caps = $data['capabilities']['orders'];
 		$this->assertSame( 1, $caps['api'] );
 		$this->assertTrue( $caps['enabled'] );
 		$this->assertSame( SAMOMIND_Orders_Settings::TERMS_VERSION, $caps['terms_accepted_version'] );

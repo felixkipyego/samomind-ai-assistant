@@ -1,0 +1,11 @@
+{
+    "message": "plugin-opted-out-plugin-connect",
+    "direction": "plugin to Samomind",
+    "path": "/api/v1/plugin/connect",
+    "secret": "smik_ContractFixtureIngestSecret000000000000",
+    "headers": {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+    },
+    "body_raw": "{\"code\":\"smc_ABCDEFGHIJKLMNOPQRSTUVWXYZ234567\",\"home_url\":\"http:\\/\\/localhost:8889\",\"site_url\":\"http:\\/\\/localhost:8889\",\"plugin_version\":\"0.4.0\",\"wp_version\":\"7.1.5\"}"
+}

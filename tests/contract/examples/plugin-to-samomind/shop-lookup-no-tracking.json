@@ -1,0 +1,10 @@
+{
+    "message": "shop-lookup-no-tracking",
+    "direction": "shop to Samomind",
+    "model": "LookupResponse",
+    "status": 200,
+    "nonce": "T2F1ofBy3uJtjUs5PYMSAE",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=f3ca0a27f4400a54b8a2ba7f9c8c0bbd960bc29b495aad41f1692f08109a9e52",
+    "body_raw": "{\"found\":true,\"order\":{\"order_number\":\"SM-1234\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-22\",\"paid\":null,\"shipped\":null,\"completed\":null,\"items\":[{\"name\":\"Blue mug\",\"qty\":2}],\"tracking\":null}}"
+}

@@ -1,0 +1,15 @@
+{
+    "message": "plugin-opted-out-ingest-connect",
+    "direction": "plugin to Samomind",
+    "path": "/api/v1/ingest/connect",
+    "secret": "smik_ContractFixtureIngestSecret000000000000",
+    "headers": {
+        "X-SamoMind-API-Version": "1",
+        "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
+        "X-SamoMind-Timestamp": "1795336263",
+        "Idempotency-Key": "connect-98d2158f-4d4e-4bbd-aa02-34143c208183",
+        "X-SamoMind-Signature": "v1=4ea9a0c59fb0d75e97126cc705e390db226218e761b8f7ddbfdd0269d758ab46",
+        "Content-Type": "application/json"
+    },
+    "body_raw": "{\"site_url\":\"http://localhost:8889\",\"connector\":\"wordpress\",\"connector_version\":\"0.4.0\",\"platform_version\":\"7.1.5\"}"
+}

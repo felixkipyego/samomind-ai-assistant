@@ -1,0 +1,15 @@
+{
+    "message": "plugin-sync-ingest-reconcile",
+    "direction": "plugin to Samomind",
+    "path": "/api/v1/ingest/reconcile",
+    "secret": "smik_ContractFixtureIngestSecret000000000000",
+    "headers": {
+        "X-SamoMind-API-Version": "1",
+        "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
+        "X-SamoMind-Timestamp": "1795336263",
+        "Idempotency-Key": "wp-beddba02660f23c8fc2e86661324778080d481d9",
+        "X-SamoMind-Signature": "v1=e8276c6ddb6adac2e7a6389c26a39647efcc36f56f67888261f961e08b7b45ab",
+        "Content-Type": "application/json"
+    },
+    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"range_start\":null,\"range_end\":null,\"entries\":[{\"external_id\":\"1\",\"modified_at\":\"2026-11-22T08:25:39+00:00\"},{\"external_id\":\"2\",\"modified_at\":\"2026-11-22T08:25:39+00:00\"},{\"external_id\":\"36\",\"modified_at\":\"2026-11-22T08:31:02+00:00\"},{\"external_id\":\"37\",\"modified_at\":\"2026-11-22T08:31:02+00:00\"},{\"external_id\":\"5\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"6\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"7\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"8\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"}]}"
+}

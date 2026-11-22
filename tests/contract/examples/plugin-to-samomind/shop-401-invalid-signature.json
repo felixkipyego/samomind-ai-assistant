@@ -1,0 +1,10 @@
+{
+    "message": "shop-401-invalid-signature",
+    "direction": "shop to Samomind",
+    "model": "InvalidSignatureBody",
+    "status": 401,
+    "nonce": "0i6J5ujkrFycWkMIhQC84s",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": null,
+    "body_raw": "{\"code\":\"invalid_signature\",\"server_time\":1795336261}"
+}

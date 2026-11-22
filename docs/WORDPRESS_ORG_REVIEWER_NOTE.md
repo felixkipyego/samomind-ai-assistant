@@ -36,6 +36,6 @@ Test dashboard: [Felix fills in]
 Site key: [Felix fills in]
 Ingest key: [Felix fills in]
 
-To see the widget on your test site, add that site's address to Allowed origins in the test dashboard.
+To see the widget on your test site, allow that site's address under Install > WordPress in the test dashboard.
 
 Thank you for the review.

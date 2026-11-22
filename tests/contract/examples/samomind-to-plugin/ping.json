@@ -1,0 +1,19 @@
+{
+  "message": "ping",
+  "direction": "Samomind to shop",
+  "model": "PingRequest",
+  "path": "/wp-json/samomind/v1/orders/ping",
+  "route": "/samomind/v1/orders/ping",
+  "secret": "smok_ContractFixtureSecret0000000000000000000",
+  "key_id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+  "timestamp": "1731412345",
+  "nonce": "758d61f26a44448384e5c4",
+  "headers": {
+    "X-SamoMind-Orders-Key-Id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+    "X-SamoMind-Orders-Timestamp": "1731412345",
+    "X-SamoMind-Orders-Nonce": "758d61f26a44448384e5c4",
+    "X-SamoMind-Orders-Signature": "v1=28c8cf1662d6561828b3a4c5bc172ffe060a1e5a10d7190ac946d72838ee23cf",
+    "X-SamoMind-Orders-Version": "1"
+  },
+  "body_raw": "{\"request_id\":\"758d61f2-6a44-4483-84e5-c4468a0dcb7a\",\"limits\":{\"code_ttl_minutes\":10,\"code_tries\":3,\"shop_emails_per_hour\":20,\"grant_minutes\":30,\"account_proof_seconds\":60,\"resend_gap_seconds\":60,\"sends_per_session_hour\":3}}"
+}

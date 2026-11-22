@@ -1,0 +1,10 @@
+{
+    "message": "shop-403-not-enabled",
+    "direction": "shop to Samomind",
+    "model": "",
+    "status": 403,
+    "nonce": "jxiBe6l68pTkXQIaExawjY",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=c037cca85a9339544bba66e8a0fde8254b616d87c9edc90bbb3e4907565f47d7",
+    "body_raw": "{\"code\":\"not_enabled\"}"
+}

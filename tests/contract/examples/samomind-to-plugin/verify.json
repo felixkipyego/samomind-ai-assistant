@@ -1,0 +1,19 @@
+{
+  "message": "verify",
+  "direction": "Samomind to shop",
+  "model": "VerifyRequest",
+  "path": "/wp-json/samomind/v1/orders/verify",
+  "route": "/samomind/v1/orders/verify",
+  "secret": "smok_ContractFixtureSecret0000000000000000000",
+  "key_id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+  "timestamp": "1731412345",
+  "nonce": "a12dd3a7fd3203a452eb34",
+  "headers": {
+    "X-SamoMind-Orders-Key-Id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+    "X-SamoMind-Orders-Timestamp": "1731412345",
+    "X-SamoMind-Orders-Nonce": "a12dd3a7fd3203a452eb34",
+    "X-SamoMind-Orders-Signature": "v1=0c99caf724183d49a5ca5bf2d349a22bce129f7d82e43de6295e5095c129e537",
+    "X-SamoMind-Orders-Version": "1"
+  },
+  "body_raw": "{\"request_id\":\"a12dd3a7-fd32-03a4-52eb-34d91a9be205\",\"session_ref\":\"a7e38430f6e857f7701c0444906e37c7\",\"order_number\":\"SM-1234\",\"code\":\"123456\",\"limits\":{\"code_ttl_minutes\":10,\"code_tries\":3,\"shop_emails_per_hour\":20,\"grant_minutes\":30,\"account_proof_seconds\":60,\"resend_gap_seconds\":60,\"sends_per_session_hour\":3}}"
+}

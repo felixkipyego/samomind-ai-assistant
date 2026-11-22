@@ -316,7 +316,7 @@ class SAMOMIND_Orders_Rest {
 			array(
 				'plugin_version' => SAMOMIND_VERSION,
 				'api'            => SAMOMIND_Orders_Settings::API_VERSION,
-				'capabilities'   => $this->settings->capabilities(),
+				'capabilities'   => array( 'orders' => $this->settings->capabilities() ),
 				'server_time'    => time(),
 			),
 			200

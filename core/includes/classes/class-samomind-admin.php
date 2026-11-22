@@ -316,7 +316,7 @@ class SAMOMIND_Admin {
 		if ( '' === $value || SAMOMIND_Embed::is_valid_site_key( $value ) ) {
 			return $value;
 		}
-		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from the Widget screen of the Samomind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
+		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
 		return SAMOMIND()->helpers->get_site_key();
 	}
 
@@ -1155,7 +1155,7 @@ class SAMOMIND_Admin {
 			<details class="samomind-advanced">
 				<summary><?php esc_html_e( 'Advanced: enter keys manually', 'samomind-ai-assistant' ); ?></summary>
 				<p class="description">
-					<?php esc_html_e( 'In the Samomind dashboard, open Sources, then the WordPress card, and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
+					<?php esc_html_e( 'In the Samomind dashboard, open Install > WordPress > Advanced: show keys for manual setup and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
 				</p>
 
 			<div class="samomind-card">
@@ -1268,7 +1268,7 @@ class SAMOMIND_Admin {
 									<?php
 									echo wp_kses(
 										/* translators: %s: the site address, for example https://example.com */
-										sprintf( __( 'Before you turn this on, add <code>%s</code> to <strong>Allowed origins</strong> in the Samomind dashboard. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
+										sprintf( __( 'Before you turn this on, allow <code>%s</code> in the Samomind dashboard under Install > WordPress. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
 										array(
 											'code'   => array(),
 											'strong' => array(),
@@ -1286,7 +1286,7 @@ class SAMOMIND_Admin {
 							<td>
 								<input type="text" id="samomind_site_key" name="samomind_site_key" class="regular-text code" spellcheck="false" autocomplete="off"
 									value="<?php echo esc_attr( $helpers->get_site_key() ); ?>" placeholder="pk_live_...">
-								<p class="description"><?php esc_html_e( 'Copy the site key from the Widget screen of the Samomind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Filled in when you connect with a code. For a manual setup, copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>
@@ -1471,7 +1471,7 @@ class SAMOMIND_Admin {
 									<?php endif; ?>
 								</p>
 								<input type="password" id="samomind_orders_secret" name="samomind_orders_secret" class="regular-text" value="" autocomplete="new-password" spellcheck="false" placeholder="smok_...">
-								<p class="description"><?php esc_html_e( 'A separate key from the ingest secret. Create it in the Samomind dashboard, next to the ingest key. The saved key is never shown; paste a new one to replace it.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'A separate key from the ingest secret. In the Samomind dashboard, open Orders > Setup and click Create an orders key. The saved key is never shown; paste a new one to replace it.', 'samomind-ai-assistant' ); ?></p>
 								<?php if ( $orders->has_secret() ) : ?>
 									<label><input type="checkbox" name="samomind_orders_remove_key" value="1"> <?php esc_html_e( 'Remove the saved key (this switches order status off)', 'samomind-ai-assistant' ); ?></label>
 								<?php endif; ?>

@@ -1,0 +1,10 @@
+{
+    "message": "shop-400-bad-request",
+    "direction": "shop to Samomind",
+    "model": "",
+    "status": 400,
+    "nonce": "hM9_7ikdrWUcbnC5p4R29v",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=8d21080675a58ccdacb893efd4a1db52b1394c27c8f333757b838fe7c5aebed4",
+    "body_raw": "{\"code\":\"bad_request\"}"
+}

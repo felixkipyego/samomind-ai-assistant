@@ -1,0 +1,10 @@
+{
+    "message": "shop-redeem",
+    "direction": "shop to Samomind",
+    "model": "RedeemResponse",
+    "status": 200,
+    "nonce": "E0wcE9jvcH1cXL5GStHPAp",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=ad2d0835ba1c4baf01c6d678fbfd9b23cfaf1b808d5b6e9369d7a54806fb770c",
+    "body_raw": "{\"granted\":true,\"grant_expires_in\":1800}"
+}

@@ -1,0 +1,10 @@
+{
+    "message": "shop-end",
+    "direction": "shop to Samomind",
+    "model": "",
+    "status": 204,
+    "nonce": "xBbIMSMhU8gsc5aVkkavsr",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=2ebaf2430b8cc7c495ad8c79093ef345acfe6085bbcb21ec9ecdcc2bc090770f",
+    "body_raw": ""
+}

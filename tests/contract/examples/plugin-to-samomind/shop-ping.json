@@ -1,0 +1,10 @@
+{
+    "message": "shop-ping",
+    "direction": "shop to Samomind",
+    "model": "PingResponse",
+    "status": 200,
+    "nonce": "lrwtT_n9HNjFgWzNPWj0mH",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=21da655476e3c70e4ae9ac314d624a64d3dcaa54543fc94f0597235045ef2ba3",
+    "body_raw": "{\"plugin_version\":\"0.4.0\",\"api\":1,\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":true,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":null}},\"server_time\":1795336261}"
+}

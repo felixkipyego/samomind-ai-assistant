@@ -1,0 +1,15 @@
+{
+    "message": "plugin-switched-off-ingest-checkin",
+    "direction": "plugin to Samomind",
+    "path": "/api/v1/ingest/checkin",
+    "secret": "smik_ContractFixtureIngestSecret000000000000",
+    "headers": {
+        "X-SamoMind-API-Version": "1",
+        "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
+        "X-SamoMind-Timestamp": "1795336263",
+        "Idempotency-Key": "checkin-cfbdfe06-fe4b-49fd-a263-23a7cf4bd2d1",
+        "X-SamoMind-Signature": "v1=8a1ee23e5a046ac0133e8755fe21d66f661a14cab8d66d752cb388eeffaeb060",
+        "Content-Type": "application/json"
+    },
+    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"connector_version\":\"0.4.0\",\"platform_version\":\"7.1.5\",\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":false,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":\"not_opted_in\"}}}"
+}
