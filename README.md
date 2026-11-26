@@ -73,7 +73,7 @@ add price and stock status and, for the product cards in the chat, three card
 fields: `image_url` (the main image at WooCommerce's thumbnail size, https
 only, at most 2048 characters, else null), `price_display` (the price as the
 shop shows it to a guest, without "(was ...)", "(some on sale)" or the suffix)
-and `regular_price_display` (a simple product on sale). The API refuses a whole
+and `regular_price_display` (a simple or external product on sale). The API refuses a whole
 body for one value that breaks a rule, so each is checked and sent as null
 when it does. After the update to 0.4.1 every product is sent once more.
 

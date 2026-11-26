@@ -5,13 +5,13 @@
 Product cards and order history, with the new dashboard menu name. Written
 up for the release in readme.txt (External services, Changelog, Upgrade
 Notice). Contract: SamoMind docs/design/F-3-order-status.md section 15, as
-of c955f9282963.
+of 22913b9.
 
 - New: product fields for the chat's product cards. The document `fields`
   gain `image_url` (the main image at WooCommerce's thumbnail size, https
   only), `price_display` (the guest price without "(was ...)", "(some on
-  sale)" or the suffix) and `regular_price_display` (a simple product on
-  sale). The API refuses a whole body for one bad value, so each is checked
+  sale)" or the suffix) and `regular_price_display` (a simple or external
+  product on sale). The API refuses a whole body for one bad value, so each is checked
   here and sent as null when it breaks a rule.
 - New: after the update every synced product is sent once more (a full sync
   of the product type only, through the normal batches). Marked done in the
@@ -31,6 +31,9 @@ of c955f9282963.
   `POST /orders/account/redeem` with `scope: "account"` and no order number
   makes a customer grant (needs the 2026-11-26 terms; the login session is
   checked again on every list and lookup).
+- Changed: every lookup answer, version 1 or 2, is held under 60 KB: item
+  images go first (last item back), then item names are shortened, longest
+  first, ending with an ellipsis. Items are never dropped.
 - Changed: the order terms are version 2026-11-26 (items 1 to 3 reworded for
   order history). Shops that accepted 2026-11 keep order status exactly as
   before; the order status card shows the updated terms with an Accept

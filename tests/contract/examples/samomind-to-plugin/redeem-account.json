@@ -1,0 +1,19 @@
+{
+  "message": "redeem-account",
+  "direction": "Samomind to shop",
+  "model": "RedeemRequestV2",
+  "path": "/wp-json/samomind/v1/orders/account/redeem",
+  "route": "/samomind/v1/orders/account/redeem",
+  "secret": "smok_ContractFixtureSecret0000000000000000000",
+  "key_id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+  "timestamp": "1731412345",
+  "nonce": "8ae8132d69c64f9201b98b",
+  "headers": {
+    "X-SamoMind-Orders-Key-Id": "3f2b6c1e-8d4a-4f0b-9a7e-2c5d1b6e9f10",
+    "X-SamoMind-Orders-Timestamp": "1731412345",
+    "X-SamoMind-Orders-Nonce": "8ae8132d69c64f9201b98b",
+    "X-SamoMind-Orders-Signature": "v1=329ba85fc1302b57be3f680b819c2662f3f0373dcbe5a28ec16066d1868f3d84",
+    "X-SamoMind-Orders-Version": "1"
+  },
+  "body_raw": "{\"request_id\":\"8ae8132d-69c6-4f92-01b9-8beb9dfb88a3\",\"session_ref\":\"a7e38430f6e857f7701c0444906e37c7\",\"challenge\":\"Zk9Qw2Lm8Vb5Nt0Zr7Yh4K\",\"scope\":\"account\",\"limits\":{\"code_ttl_minutes\":10,\"code_tries\":3,\"shop_emails_per_hour\":20,\"grant_minutes\":30,\"account_proof_seconds\":60,\"resend_gap_seconds\":60,\"sends_per_session_hour\":3}}"
+}

@@ -6,9 +6,9 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795724438",
-        "Idempotency-Key": "wp-6a0da660684217e5983b14b59a5ffdc0319ec6d8",
-        "X-SamoMind-Signature": "v1=a0f839136e01cce1969f92bd603c106fdacf6892bebc00c04197fbe5c30b9c87",
+        "X-SamoMind-Timestamp": "1795725996",
+        "Idempotency-Key": "wp-b1f27ae9fdc48971a8444d245a68923b3733874b",
+        "X-SamoMind-Signature": "v1=738b6a260ad12aef37d24d587b5acd3d8e72b49bd719c12469b533fcbb09d285",
         "Content-Type": "application/json"
     },
     "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"action\":\"complete\"}"

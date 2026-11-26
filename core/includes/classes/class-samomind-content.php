@@ -507,7 +507,7 @@ class SAMOMIND_Content {
 	}
 
 	/**
-	 * The regular price of a simple product that is on sale at a different
+	 * The regular price of a simple or external product that is on sale at a different
 	 * price, as the shop formats it ("$110.00"); empty for everything else.
 	 *
 	 * @since   0.4.1
@@ -515,7 +515,7 @@ class SAMOMIND_Content {
 	 * @return  string
 	 */
 	public function product_regular_price_display( $product ) {
-		if ( ! is_object( $product ) || ! $product->is_type( 'simple' ) || ! $product->is_on_sale() || '' === $product->get_price() || '' === $product->get_regular_price() ) {
+		if ( ! is_object( $product ) || ! $product->is_type( array( 'simple', 'external' ) ) || ! $product->is_on_sale() || '' === $product->get_price() || '' === $product->get_regular_price() ) {
 			return '';
 		}
 		if ( '' === trim( wp_strip_all_tags( (string) $product->get_price_html() ) ) ) {

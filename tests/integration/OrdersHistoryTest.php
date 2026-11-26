@@ -28,6 +28,8 @@ class OrdersHistoryTest extends SAMOMIND_Integration_TestCase {
 
 	protected function tearDown(): void {
 		remove_filter( 'image_downsize', array( $this, 'image_for' ), 10 );
+		remove_filter( 'wc_order_statuses', array( $this, 'wide_statuses' ) );
+		WC_Shipment_Tracking_Actions::$items = array();
 		parent::tearDown();
 	}
 
@@ -916,6 +918,99 @@ class OrdersHistoryTest extends SAMOMIND_Integration_TestCase {
 		$this->assertGreaterThan( 10, $kept, 'The first items keep their image.' );
 		$this->assertLessThan( 50, $kept );
 		$product->delete( true );
+	}
+
+	/**
+	 * A custom order status whose label is 40 emoji, the longest the shop sends.
+	 */
+	public function wide_statuses( $statuses ) {
+		$statuses['wc-wide'] = str_repeat( "\u{1F600}", 40 );
+		return $statuses;
+	}
+
+	private function register_wide_status() {
+		register_post_status( 'wc-wide', array( 'label' => 'wide', 'public' => false ) );
+		add_filter( 'wc_order_statuses', array( $this, 'wide_statuses' ) );
+	}
+
+	private function worst_order() {
+		$this->register_wide_status();
+		$this->images[ 8050 ] = 'https://shop.example/' . str_repeat( 'a', 2048 - 21 );
+		$product              = $this->product( 'Emoji', 8050 );
+		$order                = $this->make_order( array( 'items' => array(), 'status' => 'wide' ) );
+		$name                 = str_repeat( "\u{1F600}", 200 );
+		for ( $i = 0; $i < 50; $i++ ) {
+			$item = new WC_Order_Item_Product();
+			$item->set_product( $product );
+			$item->set_name( $name );
+			$item->set_quantity( 1 );
+			$item->set_total( 10 );
+			$order->add_item( $item );
+		}
+		$order->save();
+		WC_Shipment_Tracking_Actions::$items = array(
+			array(
+				'formatted_tracking_provider' => str_repeat( "\u{1F600}", 80 ),
+				'tracking_number'             => str_repeat( "\u{1F600}", 80 ),
+				'formatted_tracking_link'     => 'https://t.example/' . str_repeat( 'a', 2048 - 18 ),
+				'date_shipped'                => strtotime( '2026-11-10 12:00:00' ),
+			),
+		);
+		return array( $order, $product );
+	}
+
+	public function test_the_worst_lookup_fits_under_the_limit_for_version_2() {
+		list( $order, $product ) = $this->worst_order();
+		$this->grant_email();
+
+		$data = $this->lookup( $order )->get_data();
+
+		$this->assertTrue( $data['found'] );
+		$this->assertCount( 50, $data['order']['items'] );
+		$this->assertLessThan( SAMOMIND_Orders_Lookup::MAX_ANSWER_BYTES + 1, strlen( (string) wp_json_encode( $data ) ) );
+		$this->assertSame( 2048, strlen( $data['order']['tracking']['url'] ) );
+		$this->assertSame( str_repeat( "\u{1F600}", 40 ), $data['order']['status_label'] );
+		$product->delete( true );
+	}
+
+	public function test_the_worst_lookup_fits_under_the_limit_for_version_1() {
+		update_option( SAMOMIND_Orders_Settings::TERMS, array( 'version' => '2026-11', 'user_id' => 1, 'time' => time() ), false );
+		list( $order, $product ) = $this->worst_order();
+		$code = $this->start_and_get_code( $order );
+		$this->assertTrue( $this->call( 'verify', $this->verify_body( $order, $code ) )->get_data()['verified'] );
+
+		$data = $this->lookup( $order )->get_data();
+
+		$this->assertTrue( $data['found'] );
+		$this->assertArrayNotHasKey( 'total', $data['order'] );
+		$this->assertCount( 50, $data['order']['items'] );
+		$this->assertSame( array( 'name', 'qty' ), array_keys( $data['order']['items'][0] ) );
+		$this->assertLessThan( SAMOMIND_Orders_Lookup::MAX_ANSWER_BYTES + 1, strlen( (string) wp_json_encode( $data ) ) );
+		$product->delete( true );
+	}
+
+	public function test_an_answer_that_fits_is_not_shortened() {
+		$order = $this->make_order( array( 'items' => array( str_repeat( "\u{1F600}", 200 ) => 1, 'Blue mug' => 2 ) ) );
+		$this->grant_email();
+
+		$items = $this->lookup( $order )->get_data()['order']['items'];
+
+		$this->assertSame( str_repeat( "\u{1F600}", 200 ), $items[0]['name'] );
+		$this->assertSame( 'Blue mug', $items[1]['name'] );
+	}
+
+	public function test_a_list_of_fifty_at_the_widest_values_fits() {
+		$this->register_wide_status();
+		for ( $i = 0; $i < 50; $i++ ) {
+			$this->make_order( array( 'status' => 'wide', 'total' => '123456789012.99', 'date' => strtotime( '2026-01-01 00:00:00' ) + $i * 60 ) );
+		}
+		$this->grant_email();
+
+		$data = $this->list_orders( 'a', 50 )->get_data();
+
+		$this->assertCount( 50, $data['orders'] );
+		$this->assertLessThan( 60000, strlen( (string) wp_json_encode( $data ) ) );
+		$this->assertSame( str_repeat( "\u{1F600}", 40 ), $data['orders'][0]['status_label'] );
 	}
 
 	public function test_fifty_items_with_short_addresses_keep_every_image() {

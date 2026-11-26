@@ -22,12 +22,22 @@ smoke_check( 'still connected', SAMOMIND()->connection->is_connected() );
 smoke_check( 'the widget is still on', SAMOMIND()->helpers->widget_is_active() );
 
 // What 0.4.1 needs, with no activation hook.
+// A site that starts before 0.4.0 has no order status yet: the shop switches it on, with the 2026-11 terms, after the update.
+$from_before_orders = version_compare( (string) get_option( 'smoke_from_version', '0.4.0' ), '0.4.0', '<' );
+if ( $from_before_orders ) {
+	smoke_check( 'a site from before 0.4.0 has order status off after the update', ! SAMOMIND()->orders->is_enabled() && false === SAMOMIND()->orders->capabilities()['history'] );
+	update_option( 'samomind_orders_secret', SMOKE_ORDERS_SECRET, false );
+	update_option( 'samomind_orders_enabled', '1', false );
+	update_option( 'samomind_orders_share_items', '1', false );
+	update_option( 'samomind_orders_terms', array( 'version' => '2026-11', 'user_id' => 1, 'time' => time() ), false );
+	SAMOMIND_Orders_State::maybe_install();
+}
 // The order settings and the accepted terms of the earlier release are kept, and the new terms are not taken for the shop.
 smoke_check( 'order status stays on', '1' === get_option( 'samomind_orders_enabled' ) && SMOKE_ORDERS_SECRET === get_option( 'samomind_orders_secret' ) );
 smoke_check( 'the accepted terms stay 2026-11', '2026-11' === SAMOMIND()->orders->get_terms()['version'] );
 smoke_check( 'order status is still enabled with the earlier terms', SAMOMIND()->orders->is_enabled() );
 smoke_check( 'order history is off until the new terms are accepted', false === SAMOMIND()->orders->capabilities()['history'] );
-smoke_check( 'the orders table of the old release is still there', SAMOMIND_Orders_State::DB_VERSION === (string) get_option( 'samomind_orders_db_version', '' ) );
+smoke_check( 'the orders table is there', SAMOMIND_Orders_State::DB_VERSION === (string) get_option( 'samomind_orders_db_version', '' ) );
 
 // The one-time resend of every product, started by the update itself.
 $state = SAMOMIND()->sync->get_state();
@@ -50,7 +60,7 @@ $table_exists = function () use ( $wpdb, $orders_table ) {
 	return $orders_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_table ) );
 };
 smoke_check( 'the hourly tick is scheduled', false !== wp_next_scheduled( SAMOMIND_Scheduler::HOURLY_HOOK ) );
-smoke_check( 'the orders table of the old release is in place', $table_exists() );
+smoke_check( 'the orders table is in place', $table_exists() );
 
 // The admin pages load, with the new sections.
 $admin_id = wp_insert_user(

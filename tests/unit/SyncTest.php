@@ -412,6 +412,37 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertCount( $before, $this->client->calls );
 	}
 
+	public function test_the_reconcile_after_the_product_resend_lists_every_eligible_item_not_only_products() {
+		// Samomind deletes what is in range and not listed: a product-only list would remove every page and post.
+		$this->content->posts    = array(
+			1 => true,
+			2 => true,
+			3 => true,
+			4 => true,
+			5 => false,
+		);
+		$this->content->types    = array(
+			2 => 'product',
+			3 => 'post',
+			4 => 'product',
+		);
+		$this->client->responses = array(
+			array( 'state' => 'in_progress', 'cursor' => null ),
+			$this->queued( array( 2, 4 ) ),
+			array( 'state' => 'complete', 'cursor' => '4' ),
+			array( 'missing' => array(), 'stale' => array(), 'deleted' => array() ),
+		);
+
+		$this->sync->maybe_resend_products();
+		$this->sync->run();
+
+		$this->assertSame( array( '/sync', '/documents', '/sync', '/reconcile' ), $this->endpoints() );
+		$reconcile = $this->client->calls[3]['payload'];
+		$this->assertSame( array( '1', '2', '3', '4' ), array_column( $reconcile['entries'], 'external_id' ), 'Pages, posts and products, every eligible one.' );
+		$this->assertNull( $reconcile['range_start'] );
+		$this->assertNull( $reconcile['range_end'], 'The whole range, so nothing outside the list is deleted by mistake.' );
+	}
+
 	public function test_the_resend_waits_until_the_site_is_connected() {
 		unset( $this->options['samomind_connection'] );
 		$this->content->posts = array( 2 => true );

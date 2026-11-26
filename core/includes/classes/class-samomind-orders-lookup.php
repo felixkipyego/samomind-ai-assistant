@@ -237,10 +237,10 @@ class SAMOMIND_Orders_Lookup {
 		if ( $history ) {
 			$total           = self::total_text( $order );
 			$fields['total'] = '' === $total ? null : $total;
-			$fields          = $this->fit_size( $fields );
 		}
 
-		return $fields;
+		// Every lookup answer, version 1 or 2, stays under what Samomind accepts.
+		return $this->fit_size( $fields );
 	}
 
 	/**
@@ -260,29 +260,66 @@ class SAMOMIND_Orders_Lookup {
 	}
 
 	/**
-	 * Drop item image addresses from the last item backwards until the
-	 * answer fits MAX_ANSWER_BYTES. Items and text are never cut.
+	 * Bring a lookup answer under MAX_ANSWER_BYTES, measured the way the signed
+	 * body is made (wp_json_encode of the whole answer). First the item image
+	 * addresses go, from the last item back; if it is still too long, item
+	 * names are shortened, longest first, ending with an ellipsis. Items are
+	 * never dropped, and an answer that already fits is returned as it is.
 	 *
 	 * @since   0.4.1
 	 * @param   array $fields  Fields from order_fields().
 	 * @return  array
 	 */
 	public function fit_size( array $fields ) {
-		if ( empty( $fields['items'] ) ) {
+		if ( empty( $fields['items'] ) || self::answer_size( $fields ) <= self::MAX_ANSWER_BYTES ) {
 			return $fields;
 		}
+
+		for ( $i = count( $fields['items'] ) - 1; $i >= 0; $i-- ) {
+			if ( ! empty( $fields['items'][ $i ]['image_url'] ) ) {
+				$fields['items'][ $i ]['image_url'] = null;
+				if ( self::answer_size( $fields ) <= self::MAX_ANSWER_BYTES ) {
+					return $fields;
+				}
+			}
+		}
+
+		// Still too long: the names. Take the longest and cut it by a fifth each time.
+		for ( $guard = 0; $guard < 2000; $guard++ ) {
+			$longest = -1;
+			$length  = 1;
+			foreach ( $fields['items'] as $i => $item ) {
+				$chars = self::length( $item['name'] );
+				if ( $chars > $length ) {
+					$longest = $i;
+					$length  = $chars;
+				}
+			}
+			if ( $longest < 0 ) {
+				break;
+			}
+			$keep                                = max( 1, (int) floor( $length * 0.8 ) - 1 );
+			$fields['items'][ $longest ]['name'] = mb_substr( $fields['items'][ $longest ]['name'], 0, $keep, 'UTF-8' ) . '…';
+			if ( self::answer_size( $fields ) <= self::MAX_ANSWER_BYTES ) {
+				break;
+			}
+		}
+		return $fields;
+	}
+
+	/**
+	 * Bytes of the signed body for a lookup answer.
+	 *
+	 * @since   0.4.1
+	 * @param   array $fields  Order fields.
+	 * @return  int
+	 */
+	private static function answer_size( array $fields ) {
 		$whole = array(
 			'found' => true,
 			'order' => $fields,
 		);
-		$size  = strlen( (string) wp_json_encode( $whole ) );
-		for ( $i = count( $fields['items'] ) - 1; $i >= 0 && $size > self::MAX_ANSWER_BYTES; $i-- ) {
-			if ( null !== $fields['items'][ $i ]['image_url'] ) {
-				$size                              -= strlen( (string) wp_json_encode( $fields['items'][ $i ]['image_url'] ) ) - 4;
-				$fields['items'][ $i ]['image_url'] = null;
-			}
-		}
-		return $fields;
+		return strlen( (string) wp_json_encode( $whole ) );
 	}
 
 	/**

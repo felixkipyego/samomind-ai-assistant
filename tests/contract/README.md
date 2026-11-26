@@ -22,7 +22,7 @@ directions: the email scope on `start` and `verify`, `list`, the total and item
 images on `lookup`, `capabilities.orders.history`, and the product fields
 `image_url`, `price_display` and `regular_price_display` in the sync batch. The
 contract text is SamoMind `docs/design/F-3-order-status.md` section 15; the 0.4.1
-check ran against SamoMind commit c955f9282963.
+check ran against SamoMind commit 22913b9 (the account-scope redeem, `RedeemRequestV2`, included).
 
 ## Run it
 

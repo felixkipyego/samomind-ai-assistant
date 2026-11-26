@@ -141,6 +141,23 @@ class ContractRequestsTest extends SAMOMIND_Integration_TestCase {
 		$this->assertTrue( $response->get_data()['granted'] );
 	}
 
+	public function test_an_account_redeem_from_samomind_is_accepted_without_an_order_number() {
+		$this->accept_history_terms();
+		$fixture = $this->fixtures()['redeem-account'];
+		$body    = json_decode( $fixture['body_raw'], true );
+		$this->assertArrayNotHasKey( 'order_number', $body );
+		$this->assertSame( 'account', $body['scope'] );
+		$user = $this->make_user();
+		$this->make_order( array( 'customer_id' => $user, 'number_meta' => self::ORDER_NUMBER ) );
+
+		$this->log_in( $user );
+		$this->assertTrue( $this->proof( $body['challenge'], wp_create_nonce( 'wp_rest' ) )->get_data()['loggedIn'] );
+		$response = $this->accept( $fixture );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array( 'granted' => true, 'grant_expires_in' => 1800 ), $response->get_data() );
+	}
+
 	public function test_lookups_from_samomind_are_answered() {
 		$order = $this->make_order( array( 'billing_email' => self::EMAIL, 'number_meta' => self::ORDER_NUMBER ) );
 		$store = new SAMOMIND_Orders_Store( self::SECRET );

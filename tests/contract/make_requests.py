@@ -23,6 +23,7 @@ from app.features.woo_order_status.schemas import (
     LookupRequest,
     PingRequest,
     RedeemRequest,
+    RedeemRequestV2,
     ShareChoices,
     ShopLimits,
     StartRequest,
@@ -102,6 +103,16 @@ EXAMPLES = {
     "list": (
         texts.PATH_LIST,
         ListRequest(request_id=uid("list"), session_ref=SESSION, limit=20),
+    ),
+    "redeem-account": (
+        texts.PATH_REDEEM,
+        RedeemRequestV2(
+            request_id=uid("redeem-account"),
+            session_ref=SESSION,
+            challenge=CHALLENGE,
+            scope="account",
+            limits=LIMITS,
+        ),
     ),
     "redeem": (
         texts.PATH_REDEEM,

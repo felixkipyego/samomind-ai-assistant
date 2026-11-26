@@ -2,7 +2,7 @@
 
 > Copy of SamoMind docs/design/F-3-order-status.md, section 13 (SamoMind origin/main at 3f0f137). Do not edit here: change it in SamoMind and copy it again. Sections 2, 4, 5 and 11 of that file explain the rules this contract serves.
 
-> **Version 2 (plugin 0.4.1): order history and product cards.** SamoMind docs/design/F-3-order-status.md section 15 and docs/api/plugin-orders-v2-and-product-cards.md (SamoMind commit c955f9282963) add to this contract: `capabilities.orders.history` (only with the order terms "2026-11-26" accepted), `scope: "email"` on `start` and `verify`, `POST /orders/list`, `total` and item `image_url` on `lookup`, and the product fields `image_url`, `price_display` and `regular_price_display`. Nothing above changes for a shop on version 1; `tests/contract/` checks both against SamoMind's own models.
+> **Version 2 (plugin 0.4.1): order history and product cards.** SamoMind docs/design/F-3-order-status.md section 15 and docs/api/plugin-orders-v2-and-product-cards.md (SamoMind commit 22913b9) add to this contract: `capabilities.orders.history` (only with the order terms "2026-11-26" accepted), `scope: "email"` on `start` and `verify`, `POST /orders/list`, `total` and item `image_url` on `lookup`, and the product fields `image_url`, `price_display` and `regular_price_display`. Nothing above changes for a shop on version 1; `tests/contract/` checks both against SamoMind's own models.
 
 > **Plugin answers of 14 November 2026, pending the same change in SamoMind's design doc.** The text below is the copy of section 13 and has not been edited. These points differ from it or settle what it left open, and the plugin follows them:
 >

@@ -364,4 +364,25 @@ class ShopDataTest extends SAMOMIND_TestCase {
 		$this->assertSame( '', $this->render_notice( false, true ) );
 		$this->assertSame( '', $this->render_notice( true, false ) );
 	}
+
+	private function regular_display( SAMOMIND_Fake_Price_Product $product ) {
+		return ( new SAMOMIND_Content() )->product_regular_price_display( $product );
+	}
+
+	public function test_the_regular_price_is_shown_for_simple_and_external_products_on_sale_only() {
+		$sale = array(
+			'price'    => '89',
+			'regular'  => '110',
+			'on_sale'  => true,
+			'html'     => '<del>$110.00</del> <ins>$89.00</ins>',
+		);
+		$this->assertSame( '$110.00', $this->regular_display( $this->product( $sale + array( 'types' => array( 'simple' ) ) ) ) );
+		$this->assertSame( '$110.00', $this->regular_display( $this->product( $sale + array( 'types' => array( 'external' ) ) ) ), 'An external product shows a crossed-out price too.' );
+		$this->assertSame( '$89.00', ( new SAMOMIND_Content() )->product_price_display( $this->product( $sale + array( 'types' => array( 'external' ) ) ) ), 'The price shown is the sale price alone.' );
+
+		$this->assertSame( '', $this->regular_display( $this->product( $sale + array( 'types' => array( 'variable' ) ) ) ) );
+		$this->assertSame( '', $this->regular_display( $this->product( $sale + array( 'types' => array( 'grouped' ) ) ) ) );
+		$this->assertSame( '', $this->regular_display( $this->product( array( 'types' => array( 'external' ), 'on_sale' => false ) ) ), 'Not on sale.' );
+		$this->assertSame( '', $this->regular_display( $this->product( array( 'types' => array( 'external' ), 'on_sale' => true, 'price' => '100', 'regular' => '100' ) ) ), 'A regular price that does not differ.' );
+	}
 }

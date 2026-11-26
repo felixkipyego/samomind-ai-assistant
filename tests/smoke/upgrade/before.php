@@ -40,13 +40,17 @@ foreach ( array( 'Mug' => '10', 'Kettle' => '25' ) as $name => $price ) {
 	$product->save();
 }
 
-// Order status switched on the way the earlier release does it: its key, its terms (2026-11).
-update_option( 'samomind_orders_secret', SMOKE_ORDERS_SECRET, false );
-update_option( 'samomind_orders_enabled', '1', false );
-update_option( 'samomind_orders_share_items', '1', false );
-SAMOMIND()->orders->accept_terms( 1 );
-SAMOMIND_Orders_State::maybe_install();
-smoke_check( 'the old plugin accepted the terms 2026-11', '2026-11' === SAMOMIND()->orders->get_terms()['version'] );
+// Which release this site starts on; releases before 0.4.0 have no order status.
+update_option( 'smoke_from_version', SAMOMIND_VERSION, false );
+if ( class_exists( 'SAMOMIND_Orders_Settings' ) ) {
+	// Order status switched on the way the 0.4.0 release does it: its key, its terms (2026-11).
+	update_option( 'samomind_orders_secret', SMOKE_ORDERS_SECRET, false );
+	update_option( 'samomind_orders_enabled', '1', false );
+	update_option( 'samomind_orders_share_items', '1', false );
+	SAMOMIND()->orders->accept_terms( 1 );
+	SAMOMIND_Orders_State::maybe_install();
+	smoke_check( 'the old plugin accepted the terms 2026-11', '2026-11' === SAMOMIND()->orders->get_terms()['version'] );
+}
 
 $connected = SAMOMIND()->connection->connect();
 smoke_check( 'old plugin connects', ! is_wp_error( $connected ) && SAMOMIND()->connection->is_connected() );
