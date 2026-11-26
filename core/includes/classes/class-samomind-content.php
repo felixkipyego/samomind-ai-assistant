@@ -232,7 +232,7 @@ class SAMOMIND_Content {
 			'password'  => $post->post_password,
 		);
 		if ( 'product' === $post->post_type ) {
-			$data['product'] = array( 'catalog_visibility' => $this->product_visibility( $post->ID ) );
+			$data['product'] = array( 'catalog_visibility' => $this->product_visibilities( array( $post->ID ) )[ (int) $post->ID ] );
 		}
 		return self::is_eligible_data( $data, $this->get_post_types(), $this->get_excluded_ids() );
 	}
@@ -449,7 +449,21 @@ class SAMOMIND_Content {
 	 * @return  string
 	 */
 	public static function modified_gmt( $post ) {
-		return ( '0000-00-00 00:00:00' === $post->post_modified_gmt ) ? $post->post_date_gmt : $post->post_modified_gmt;
+		return self::modified_from( $post->post_modified_gmt, $post->post_date_gmt );
+	}
+
+	/**
+	 * The modified time from the two columns it is read from: the modified
+	 * time, or the publish time when WordPress left the modified time empty.
+	 * One rule for a post object and for a row read by get_inventory().
+	 *
+	 * @since   0.4.1
+	 * @param   string $modified_gmt  post_modified_gmt.
+	 * @param   string $date_gmt      post_date_gmt.
+	 * @return  string
+	 */
+	public static function modified_from( $modified_gmt, $date_gmt ) {
+		return ( '0000-00-00 00:00:00' === $modified_gmt ) ? $date_gmt : $modified_gmt;
 	}
 
 	/**
@@ -707,18 +721,48 @@ class SAMOMIND_Content {
 	}
 
 	/**
-	 * WooCommerce catalog visibility, empty when not a product.
+	 * WooCommerce catalog visibility (visible, catalog, search or hidden) of
+	 * a batch of products, read from the terms WooCommerce keeps it in. The
+	 * one source for the reconcile list and for a push, so they cannot differ.
 	 *
-	 * @since   0.1.0
-	 * @param   int $post_id  Post id.
-	 * @return  string
+	 * @since   0.4.1
+	 * @param   int[] $ids  Product ids.
+	 * @return  string[]  Product id => visibility.
 	 */
-	private function product_visibility( $post_id ) {
-		if ( ! function_exists( 'wc_get_product' ) ) {
-			return '';
+	public function product_visibilities( array $ids ) {
+		global $wpdb;
+
+		$ids        = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+		$visibility = array_fill_keys( $ids, 'visible' );
+		if ( empty( $ids ) ) {
+			return $visibility;
 		}
-		$product = wc_get_product( $post_id );
-		return $product ? (string) $product->get_catalog_visibility() : '';
+
+		// WooCommerce keeps visibility as two terms of "product_visibility"; both is hidden. Read here as plain columns so no post or product is loaded into the object cache.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one batch of ids; the placeholders are generated here.
+		$rows        = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT tr.object_id AS id, t.name AS name FROM {$wpdb->term_relationships} tr INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id INNER JOIN {$wpdb->terms} t ON t.term_id = tt.term_id WHERE tt.taxonomy = 'product_visibility' AND tr.object_id IN (" . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ')',
+				$ids
+			),
+			ARRAY_A
+		);
+		$hidden_from = array();
+		foreach ( $rows as $row ) {
+			$hidden_from[ (int) $row['id'] ][ (string) $row['name'] ] = true;
+		}
+		foreach ( $hidden_from as $id => $names ) {
+			$search  = isset( $names['exclude-from-search'] );
+			$catalog = isset( $names['exclude-from-catalog'] );
+			if ( $search && $catalog ) {
+				$visibility[ $id ] = 'hidden';
+			} elseif ( $search ) {
+				$visibility[ $id ] = 'catalog';
+			} elseif ( $catalog ) {
+				$visibility[ $id ] = 'search';
+			}
+		}
+		return $visibility;
 	}
 
 	/**
@@ -758,6 +802,36 @@ class SAMOMIND_Content {
 		);
 
 		return array_map( 'intval', $ids );
+	}
+
+	/**
+	 * Published, unprotected posts of the tracked types after an id, in id
+	 * order, as plain rows with only the columns eligibility and the modified
+	 * time need.
+	 *
+	 * @since   0.4.1
+	 * @param   int $after_id  Exclusive lower bound.
+	 * @param   int $limit     Rows.
+	 * @return  array[]
+	 */
+	public function get_candidate_rows( $after_id, $limit ) {
+		global $wpdb;
+
+		$types = $this->get_post_types();
+		if ( empty( $types ) ) {
+			return array();
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- id-range paging over posts, which WP_Query cannot express; a read of columns, not posts.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT ID, post_type, post_status, post_password, post_modified_gmt, post_date_gmt FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_password = '' AND post_type IN (" . implode( ',', array_fill( 0, count( $types ), '%s' ) ) . ') AND ID > %d ORDER BY ID ASC LIMIT %d',
+				array_merge( $types, array( (int) $after_id, (int) $limit ) )
+			),
+			ARRAY_A
+		);
+
+		return (array) $rows;
 	}
 
 	/**
@@ -895,16 +969,36 @@ class SAMOMIND_Content {
 	 * @return  array
 	 */
 	public function get_inventory() {
-		$entries = array();
-		$after   = 0;
+		// Plain rows, 500 at a time, judged by the same is_eligible_data() that judges a push. No post or product is loaded, so nothing builds up in the object cache and memory stays flat however many items the shop has.
+		$entries  = array();
+		$after    = 0;
+		$types    = $this->get_post_types();
+		$excluded = $this->get_excluded_ids();
 		do {
-			$ids   = $this->get_candidate_ids( $after, 500 );
-			$found = count( $ids );
-			_prime_post_caches( $ids, false, false );
-			foreach ( $ids as $id ) {
-				$post = get_post( $id );
-				if ( $this->is_eligible( $post ) ) {
-					$entries[ (string) $id ] = self::rfc3339( self::modified_gmt( $post ) );
+			$rows  = $this->get_candidate_rows( $after, 500 );
+			$found = count( $rows );
+
+			$product_ids = array();
+			foreach ( $rows as $row ) {
+				if ( 'product' === $row['post_type'] ) {
+					$product_ids[] = (int) $row['ID'];
+				}
+			}
+			$visibility = $this->product_visibilities( $product_ids );
+
+			foreach ( $rows as $row ) {
+				$id   = (int) $row['ID'];
+				$data = array(
+					'id'        => $id,
+					'post_type' => $row['post_type'],
+					'status'    => $row['post_status'],
+					'password'  => $row['post_password'],
+				);
+				if ( 'product' === $row['post_type'] ) {
+					$data['product'] = array( 'catalog_visibility' => $visibility[ $id ] );
+				}
+				if ( self::is_eligible_data( $data, $types, $excluded ) ) {
+					$entries[ (string) $id ] = self::rfc3339( self::modified_from( $row['post_modified_gmt'], $row['post_date_gmt'] ) );
 				}
 				$after = $id;
 			}
@@ -933,5 +1027,44 @@ class SAMOMIND_Content {
 			}
 		);
 		return $pairs;
+	}
+
+	/**
+	 * Clear this request's in-memory copy of the object cache, where the cache
+	 * says it can: a persistent cache keeps what it has, and nothing is ever
+	 * flushed or deleted from it. Without that support nothing happens.
+	 *
+	 * @since   0.4.1
+	 * @return  void
+	 */
+	public static function release_runtime_cache() {
+		if ( function_exists( 'wp_cache_flush_runtime' ) && function_exists( 'wp_cache_supports' ) && wp_cache_supports( 'flush_runtime' ) ) {
+			wp_cache_flush_runtime();
+		}
+	}
+
+	/**
+	 * Whether this request has used most of its memory, so a worker run can
+	 * end now and carry on in the next one.
+	 *
+	 * @since   0.4.1
+	 * @param   float $share  Share of the limit that counts as most of it.
+	 * @return  bool
+	 */
+	public static function memory_is_tight( $share = 0.7 ) {
+		$limit = ini_get( 'memory_limit' );
+		if ( false === $limit || '' === $limit || '-1' === (string) $limit ) {
+			return false;
+		}
+		$bytes = (int) $limit;
+		$unit  = strtolower( substr( trim( (string) $limit ), -1 ) );
+		if ( 'g' === $unit ) {
+			$bytes *= 1024 * 1024 * 1024;
+		} elseif ( 'm' === $unit ) {
+			$bytes *= 1024 * 1024;
+		} elseif ( 'k' === $unit ) {
+			$bytes *= 1024;
+		}
+		return $bytes > 0 && memory_get_usage() > $share * $bytes;
 	}
 }

@@ -641,4 +641,49 @@ class ContentTest extends SAMOMIND_TestCase {
 
 		$this->assertSame( 10, strlen( $document['text'] ) );
 	}
+
+	public function test_the_runtime_cache_is_cleared_only_where_the_cache_says_it_can_be_and_never_flushed() {
+		$calls = array();
+		Brain\Monkey\Functions\when( 'wp_cache_flush_runtime' )->alias(
+			function () use ( &$calls ) {
+				$calls[] = 'flush_runtime';
+			}
+		);
+		Brain\Monkey\Functions\when( 'wp_cache_flush' )->alias(
+			function () use ( &$calls ) {
+				$calls[] = 'FLUSH';
+			}
+		);
+
+		Brain\Monkey\Functions\when( 'wp_cache_supports' )->justReturn( true );
+		SAMOMIND_Content::release_runtime_cache();
+		$this->assertSame( array( 'flush_runtime' ), $calls );
+
+		$calls = array();
+		Brain\Monkey\Functions\when( 'wp_cache_supports' )->justReturn( false );
+		SAMOMIND_Content::release_runtime_cache();
+		$this->assertSame( array(), $calls, 'Without support nothing is called, and the full flush never is.' );
+	}
+
+	public function test_the_plugin_never_flushes_or_deletes_from_the_object_cache() {
+		$root = dirname( __DIR__, 2 );
+		$files = array_merge( array( $root . '/samomind-ai-assistant.php', $root . '/uninstall.php' ), glob( $root . '/core/*.php' ), glob( $root . '/core/includes/classes/*.php' ) );
+		$this->assertNotEmpty( $files );
+		foreach ( $files as $file ) {
+			$code = (string) file_get_contents( $file );
+			foreach ( array( 'wp_cache_flush(', 'wp_cache_flush_group(', 'wp_cache_delete(', 'wp_cache_delete_multiple(', 'clean_post_cache(', 'clean_term_cache(', 'wp_cache_replace(' ) as $forbidden ) {
+				$this->assertStringNotContainsString( $forbidden, $code, basename( $file ) . ' calls ' . $forbidden );
+			}
+		}
+	}
+
+	public function test_memory_is_tight_reads_the_limit_and_an_unlimited_one_is_never_tight() {
+		$old = ini_get( 'memory_limit' );
+		ini_set( 'memory_limit', '-1' ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed -- a test of the reader.
+		$this->assertFalse( SAMOMIND_Content::memory_is_tight( 0.0000001 ) );
+		ini_set( 'memory_limit', '2G' ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed
+		$this->assertTrue( SAMOMIND_Content::memory_is_tight( 0.0000000001 ), 'A tiny share of 2G is already used.' );
+		$this->assertFalse( SAMOMIND_Content::memory_is_tight( 0.99 ) );
+		ini_set( 'memory_limit', $old ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed
+	}
 }

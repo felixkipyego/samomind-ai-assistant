@@ -152,6 +152,7 @@ Deactivating only stops the plugin's scheduled work. Nothing is sent, your docum
 * New: order history. After a 6-digit code emailed from your shop, or when signed in, a customer can see all their orders in the chat. It needs the updated order terms (version 2026-11-26): accept them on Samomind > Settings. Until you do, order status keeps working as before, one order at a time.
 * Changed: the order total is now shown to a verified customer, and item names can come with their product photos.
 * Changed: the Samomind dashboard's Install menu is now called Channels, with Website: WordPress. The plugin's texts follow.
+* Fixed: the daily reconcile no longer uses more memory as the shop grows. On shops with thousands of products it used tens of megabytes; it now uses almost none.
 * Changed: new short description and plugin description.
 
 = 0.4.0 =

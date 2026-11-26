@@ -830,6 +830,10 @@ class SAMOMIND_Sync {
 		$outcome = 'idle';
 
 		while ( $sent < self::MAX_REQUESTS_PER_RUN && time() - $started < self::RUN_TIME_BUDGET ) {
+			// A cache that cannot be cleared still must not carry a run past the memory limit: end it, the next run goes on.
+			if ( $sent > 0 && SAMOMIND_Content::memory_is_tight() ) {
+				break;
+			}
 			$request = $this->next_request();
 			if ( null === $request ) {
 				break;
@@ -837,6 +841,8 @@ class SAMOMIND_Sync {
 
 			$result = $client->post( $request['endpoint'], $request['payload'], $request['key'] );
 			++$sent;
+			// The posts of that batch are not needed again: drop this request's copy of the cache.
+			SAMOMIND_Content::release_runtime_cache();
 
 			if ( ! is_wp_error( $result ) ) {
 				$this->apply( $request, $result );
@@ -1083,6 +1089,7 @@ class SAMOMIND_Sync {
 				}
 				$cursor = $id;
 			}
+			SAMOMIND_Content::release_runtime_cache();
 		} while ( ! $full_up && ! empty( $ids ) );
 
 		if ( empty( $documents ) ) {

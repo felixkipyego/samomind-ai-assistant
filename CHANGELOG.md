@@ -31,6 +31,14 @@ of 22913b9.
   `POST /orders/account/redeem` with `scope: "account"` and no order number
   makes a customer grant (needs the 2026-11-26 terms; the login session is
   checked again on every list and lookup).
+- Fixed: the reconcile list no longer grows in memory with the size of the
+  shop. It reads plain rows (id, type, status, password, modified time) and a
+  product's visibility terms in batches of 500 instead of loading every post
+  and product, and judges them with the same function as a push. About 3,000
+  products used 52 MB and now use under 2 MB. A worker run also clears this
+  request's copy of the object cache after each request where the cache
+  supports it (never a flush of a persistent cache) and ends early when it has
+  used 70% of the memory limit.
 - Changed: every lookup answer, version 1 or 2, is held under 60 KB: item
   images go first (last item back), then item names are shortened, longest
   first, ending with an ellipsis. Items are never dropped.
