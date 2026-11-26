@@ -1,0 +1,10 @@
+{
+    "message": "shop-start-email-no-orders",
+    "direction": "shop to Samomind",
+    "model": "StartResponse",
+    "status": 202,
+    "nonce": "VbqFAISPdL-aFAHbtmWUIs",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=b31948b7903855af8fe90a006766ab7bf4d1d608b88fd1bca54c39ba0d0e89e2",
+    "body_raw": "{\"accepted\":true}"
+}

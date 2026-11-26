@@ -1,0 +1,10 @@
+{
+    "message": "shop-list-not-granted",
+    "direction": "shop to Samomind",
+    "model": "ListResponse",
+    "status": 200,
+    "nonce": "-3f7usLJWcv0iWJaP2WpMM",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=40c83361f246ffb71d146e850f16da92e5de7d7b90e84c050135dad184310e6d",
+    "body_raw": "{\"granted\":false}"
+}

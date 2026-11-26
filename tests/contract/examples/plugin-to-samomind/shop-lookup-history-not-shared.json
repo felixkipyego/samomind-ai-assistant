@@ -1,0 +1,10 @@
+{
+    "message": "shop-lookup-history-not-shared",
+    "direction": "shop to Samomind",
+    "model": "LookupResponse",
+    "status": 200,
+    "nonce": "SfTlaAFBzmvmpoXIXVtU0R",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=b584cc798da212401dd69ae2c794399cef7bccf99976c7f44968e0fafdd5d2df",
+    "body_raw": "{\"found\":true,\"order\":{\"order_number\":\"SM-1235\",\"status\":\"completed\",\"status_label\":\"Completed\",\"created\":\"2026-10-02\",\"paid\":\"2026-11-26\",\"shipped\":null,\"completed\":\"2026-11-26\",\"total\":\"$45.00\"}}"
+}

@@ -6,10 +6,10 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795336263",
-        "Idempotency-Key": "wp-beddba02660f23c8fc2e86661324778080d481d9",
-        "X-SamoMind-Signature": "v1=e8276c6ddb6adac2e7a6389c26a39647efcc36f56f67888261f961e08b7b45ab",
+        "X-SamoMind-Timestamp": "1795721180",
+        "Idempotency-Key": "wp-bdb0650493538af5d7e9c785ff9e56de8fcf2b70",
+        "X-SamoMind-Signature": "v1=d561d253ecf1fc7d478f03e901631dcb5f3981a23fceeda69b977249b6bca2fa",
         "Content-Type": "application/json"
     },
-    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"range_start\":null,\"range_end\":null,\"entries\":[{\"external_id\":\"1\",\"modified_at\":\"2026-11-22T08:25:39+00:00\"},{\"external_id\":\"2\",\"modified_at\":\"2026-11-22T08:25:39+00:00\"},{\"external_id\":\"36\",\"modified_at\":\"2026-11-22T08:31:02+00:00\"},{\"external_id\":\"37\",\"modified_at\":\"2026-11-22T08:31:02+00:00\"},{\"external_id\":\"5\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"6\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"7\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"8\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"}]}"
+    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"range_start\":null,\"range_end\":null,\"entries\":[{\"external_id\":\"1\",\"modified_at\":\"2026-11-26T19:19:47+00:00\"},{\"external_id\":\"2\",\"modified_at\":\"2026-11-26T19:19:47+00:00\"},{\"external_id\":\"492\",\"modified_at\":\"2026-11-26T19:26:05+00:00\"},{\"external_id\":\"493\",\"modified_at\":\"2026-11-26T19:26:05+00:00\"},{\"external_id\":\"494\",\"modified_at\":\"2026-11-26T19:26:05+00:00\"},{\"external_id\":\"495\",\"modified_at\":\"2026-11-26T19:26:06+00:00\"},{\"external_id\":\"498\",\"modified_at\":\"2026-11-26T19:26:06+00:00\"},{\"external_id\":\"5\",\"modified_at\":\"2026-11-26T19:19:52+00:00\"},{\"external_id\":\"505\",\"modified_at\":\"2026-11-26T19:26:19+00:00\"},{\"external_id\":\"506\",\"modified_at\":\"2026-11-26T19:26:19+00:00\"},{\"external_id\":\"507\",\"modified_at\":\"2026-11-26T19:26:19+00:00\"},{\"external_id\":\"508\",\"modified_at\":\"2026-11-26T19:26:19+00:00\"},{\"external_id\":\"511\",\"modified_at\":\"2026-11-26T19:26:19+00:00\"},{\"external_id\":\"6\",\"modified_at\":\"2026-11-26T19:19:52+00:00\"},{\"external_id\":\"7\",\"modified_at\":\"2026-11-26T19:19:52+00:00\"},{\"external_id\":\"8\",\"modified_at\":\"2026-11-26T19:19:52+00:00\"}]}"
 }

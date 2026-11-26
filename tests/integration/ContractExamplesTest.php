@@ -39,11 +39,24 @@ class ContractExamplesTest extends SAMOMIND_Integration_TestCase {
 		$this->sent = array();
 		add_filter( 'pre_http_request', array( $this, 'fake_samomind' ), 20, 3 );
 		add_filter( 'woocommerce_order_number', array( $this, 'sequential_number' ), 10, 2 );
+		add_filter( 'image_downsize', array( $this, 'image_for' ), 10, 2 );
+	}
+
+	/**
+	 * Image address by attachment id, for the image_downsize filter.
+	 *
+	 * @var array
+	 */
+	private $images = array();
+
+	public function image_for( $out, $id ) {
+		return isset( $this->images[ $id ] ) ? array( $this->images[ $id ], 300, 300, true ) : $out;
 	}
 
 	protected function tearDown(): void {
 		remove_filter( 'pre_http_request', array( $this, 'fake_samomind' ), 20 );
 		remove_filter( 'woocommerce_order_number', array( $this, 'sequential_number' ), 10 );
+		remove_filter( 'image_downsize', array( $this, 'image_for' ), 10 );
 		WC_Shipment_Tracking_Actions::$items = array();
 		foreach ( array( 'samomind_api_base_url', 'samomind_key_id', 'samomind_api_secret', 'samomind_site_key', 'samomind_connection', 'samomind_log', SAMOMIND_Orders_Settings::REPORTED ) as $name ) {
 			delete_option( $name );
@@ -259,6 +272,77 @@ class ContractExamplesTest extends SAMOMIND_Integration_TestCase {
 		$this->assertSame( '', $raw );
 	}
 
+	public function test_every_order_history_answer_the_shop_gives() {
+		$this->accept_history_terms();
+		$limit = $this->limits();
+		$this->images[ 8201 ] = 'https://acme.example/wp-content/uploads/blue-mug-300x300.jpg';
+		$mug = new WC_Product_Simple();
+		$mug->set_name( 'Blue mug' );
+		$mug->set_regular_price( '10' );
+		$mug->set_image_id( 8201 );
+		$mug->save();
+
+		$newest = $this->make_order( array( 'billing_email' => 'buyer@example.com', 'items' => array( 'Blue mug' => 2 ), 'number_meta' => 'SM-1236', 'total' => 129, 'date' => strtotime( '2026-11-20 10:00:00' ) ) );
+		$item   = new WC_Order_Item_Product();
+		$item->set_product( $mug );
+		$item->set_name( 'Blue mug' );
+		$item->set_quantity( 1 );
+		$item->set_total( 10 );
+		$newest->add_item( $item );
+		$newest->save();
+		$this->make_order( array( 'billing_email' => 'buyer@example.com', 'items' => array( 'Red scarf' => 1 ), 'number_meta' => 'SM-1235', 'status' => 'completed', 'total' => 45, 'date' => strtotime( '2026-10-02 10:00:00' ) ) );
+		$this->make_order( array( 'billing_email' => 'buyer@example.com', 'items' => array( 'Green hat' => 3 ), 'number_meta' => 'SM-1234', 'status' => 'cancelled', 'total' => 1500, 'currency' => 'KES', 'date' => strtotime( '2026-09-01 10:00:00' ) ) );
+
+		// capabilities with history on.
+		list( , $body ) = $this->answer( 'shop-ping-history', 'PingResponse', 'ping', array( 'request_id' => wp_generate_uuid4(), 'limits' => $limit ) );
+		$this->assertTrue( $body['capabilities']['orders']['history'] );
+
+		// start by email: the same answer for an address with orders and one without.
+		list( $status, $body ) = $this->answer( 'shop-start-email', 'StartResponse', 'start', $this->request_body( array( 'scope' => 'email', 'email' => 'buyer@example.com', 'locale' => 'en', 'limits' => $limit ) ) );
+		$this->assertSame( 202, $status );
+		$this->assertSame( array( 'accepted' => true ), $body );
+		$this->run_plugin_shutdown();
+		$code = $this->emailed_code();
+		list( $status, $body ) = $this->answer( 'shop-start-email-no-orders', 'StartResponse', 'start', array_merge( $this->request_body( array( 'scope' => 'email', 'email' => 'nobody@example.com', 'locale' => 'en', 'limits' => $limit ) ), array( 'session_ref' => $this->session_ref( 'nobody' ) ) ) );
+		$this->assertSame( array( 202, array( 'accepted' => true ) ), array( $status, $body ) );
+
+		// verify by email.
+		list( , $body ) = $this->answer( 'shop-verify-email-wrong', 'VerifyResponse', 'verify', $this->request_body( array( 'scope' => 'email', 'email' => 'buyer@example.com', 'code' => '000000' === $code ? '111111' : '000000', 'limits' => $limit ) ) );
+		$this->assertSame( array( 'verified' => false ), $body );
+		list( , $body ) = $this->answer( 'shop-verify-email', 'VerifyResponse', 'verify', $this->request_body( array( 'scope' => 'email', 'email' => 'buyer@example.com', 'code' => $code, 'limits' => $limit ) ) );
+		$this->assertTrue( $body['verified'] );
+
+		// list: with orders, with more, and without a grant.
+		list( , $body ) = $this->answer( 'shop-list', 'ListResponse', 'list', $this->request_body( array( 'limit' => 20 ) ) );
+		$this->assertTrue( $body['granted'] );
+		$this->assertSame( array( 'SM-1236', 'SM-1235', 'SM-1234' ), array_column( $body['orders'], 'order_number' ) );
+		$this->assertFalse( $body['more'] );
+		list( , $body ) = $this->answer( 'shop-list-more', 'ListResponse', 'list', $this->request_body( array( 'limit' => 2 ) ) );
+		$this->assertTrue( $body['more'] );
+		$this->assertCount( 2, $body['orders'] );
+		list( , $body ) = $this->answer( 'shop-list-not-granted', 'ListResponse', 'list', array_merge( $this->request_body( array( 'limit' => 20 ) ), array( 'session_ref' => $this->session_ref( 'nobody' ) ) ) );
+		$this->assertSame( array( 'granted' => false ), $body );
+
+		// lookup of any order of that email: a total, and the item images.
+		$share = array( 'items' => true, 'tracking' => true );
+		list( , $body ) = $this->answer( 'shop-lookup-history', 'LookupResponse', 'lookup', $this->request_body( array( 'order_number' => 'SM-1236', 'share' => $share ) ) );
+		$this->assertTrue( $body['found'] );
+		$this->assertArrayHasKey( 'total', $body['order'] );
+		$this->assertSame( 'https://acme.example/wp-content/uploads/blue-mug-300x300.jpg', $body['order']['items'][1]['image_url'] );
+		list( , $body ) = $this->answer( 'shop-lookup-history-not-shared', 'LookupResponse', 'lookup', $this->request_body( array( 'order_number' => 'SM-1235', 'share' => array( 'items' => false, 'tracking' => false ) ) ) );
+		$this->assertArrayNotHasKey( 'items', $body['order'] );
+		$this->assertSame( '$45.00', $body['order']['total'] );
+
+		// history off again (the earlier terms): the email scope is refused.
+		update_option( SAMOMIND_Orders_Settings::TERMS, array( 'version' => '2026-11', 'user_id' => 1, 'time' => time() ), false );
+		list( $status, $body ) = $this->answer( 'shop-403-history-off', '', 'start', $this->request_body( array( 'scope' => 'email', 'email' => 'buyer@example.com', 'locale' => 'en', 'limits' => $limit ) ) );
+		$this->assertSame( 403, $status );
+		$this->assertSame( array( 'code' => 'not_enabled' ), $body );
+		list( , $body ) = $this->answer( 'shop-ping-history-off', 'PingResponse', 'ping', array( 'request_id' => wp_generate_uuid4(), 'limits' => $limit ) );
+		$this->assertFalse( $body['capabilities']['orders']['history'] );
+		$mug->delete( true );
+	}
+
 	public function test_the_account_path_answers() {
 		$user  = $this->make_user();
 		$order = $this->make_order( array( 'customer_id' => $user, 'number_meta' => 'SM-5678' ) );
@@ -423,7 +507,36 @@ class ContractExamplesTest extends SAMOMIND_Integration_TestCase {
 		$mug->set_regular_price( '9.50' );
 		$mug->set_description( 'A mug.' );
 		$mug->set_status( 'publish' );
+		$this->images[ 8101 ] = 'https://acme.example/wp-content/uploads/blue-mug-300x300.jpg';
+		$mug->set_image_id( 8101 );
 		$mug->save();
+
+		// A sale, a range, and values the plugin must not send: each is checked and sent as null.
+		$sale = new WC_Product_Simple();
+		$sale->set_name( 'Red kettle' );
+		$sale->set_regular_price( '110' );
+		$sale->set_sale_price( '89' );
+		$sale->set_status( 'publish' );
+		$sale->save();
+		$range = new WC_Product_Variable();
+		$range->set_name( 'Shirt' );
+		$range->set_status( 'publish' );
+		$range->save();
+		foreach ( array( '39', '45' ) as $amount ) {
+			$variation = new WC_Product_Variation();
+			$variation->set_parent_id( $range->get_id() );
+			$variation->set_regular_price( $amount );
+			$variation->set_status( 'publish' );
+			$variation->save();
+		}
+		WC_Product_Variable::sync( $range->get_id() );
+		$this->images[ 8102 ] = 'http://acme.example/insecure.jpg';
+		$plain = new WC_Product_Simple();
+		$plain->set_name( 'Insecure picture' );
+		$plain->set_regular_price( '5' );
+		$plain->set_image_id( 8102 );
+		$plain->set_status( 'publish' );
+		$plain->save();
 
 		// Connect with a code, opted out: no capabilities.
 		$result = SAMOMIND()->plugin_connect->connect( self::CODE );
@@ -443,6 +556,25 @@ class ContractExamplesTest extends SAMOMIND_Integration_TestCase {
 		}
 		$this->assertSame( 'complete', $progress['state'] );
 		$this->keep_sent( 'plugin-sync' );
+		$documents = array();
+		foreach ( self::$examples as $name => $example ) {
+			if ( 0 === strpos( $name, 'plugin-sync-ingest-documents' ) ) {
+				foreach ( json_decode( $example['body_raw'], true )['documents'] as $document ) {
+					if ( isset( $document['fields'] ) ) {
+						$documents[ $document['title'] ] = $document['fields'];
+					}
+				}
+			}
+		}
+		$this->assertSame( 'https://acme.example/wp-content/uploads/blue-mug-300x300.jpg', $documents['Blue mug']['image_url'] );
+		$this->assertSame( '$9.50', $documents['Blue mug']['price_display'] );
+		$this->assertNull( $documents['Blue mug']['regular_price_display'] );
+		$this->assertSame( '$89.00', $documents['Red kettle']['price_display'] );
+		$this->assertSame( '$110.00', $documents['Red kettle']['regular_price_display'] );
+		$this->assertNull( $documents['Red kettle']['image_url'], 'No image is null, never the placeholder.' );
+		$this->assertSame( '$39.00 to $45.00', $documents['Shirt']['price_display'] );
+		$this->assertNull( $documents['Shirt']['regular_price_display'] );
+		$this->assertNull( $documents['Insecure picture']['image_url'], 'An http address is sent as null.' );
 
 		// A reconcile.
 		SAMOMIND()->sync->request_reconcile( 'contract' );
@@ -463,6 +595,13 @@ class ContractExamplesTest extends SAMOMIND_Integration_TestCase {
 		$this->assertIsArray( SAMOMIND()->connection->checkin( true ) );
 		$this->keep_sent( 'plugin-opted-in' );
 
+		// A check-in once the shop accepted the terms that cover order history.
+		$this->accept_history_terms();
+		$this->assertIsArray( SAMOMIND()->connection->checkin( true ) );
+		$this->keep_sent( 'plugin-history' );
+		$this->assertTrue( json_decode( self::$examples['plugin-history-ingest-checkin']['body_raw'], true )['capabilities']['orders']['history'] );
+		update_option( SAMOMIND_Orders_Settings::TERMS, array( 'version' => '2026-11', 'user_id' => 1, 'time' => time() ), false );
+
 		// A check-in right after the shop switched it off, with the reason.
 		update_option( SAMOMIND_Orders_Settings::OPT_IN, '0', false );
 		$this->assertIsArray( SAMOMIND()->connection->checkin( true ) );
@@ -481,7 +620,9 @@ class ContractExamplesTest extends SAMOMIND_Integration_TestCase {
 		$this->assertTrue( SAMOMIND()->connection->disconnect( 'admin' ) );
 		$this->keep_sent( 'plugin-disconnect' );
 
-		$mug->delete( true );
+		foreach ( array( $mug, $sale, $range, $plain ) as $product ) {
+			$product->delete( true );
+		}
 		remove_filter( 'SAMOMIND/content/post_types', $with_products );
 		remove_filter( 'SAMOMIND/sync/debounce_seconds', '__return_zero' );
 		$this->assertNotEmpty( self::$examples );

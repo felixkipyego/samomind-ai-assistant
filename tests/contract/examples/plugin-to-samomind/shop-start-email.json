@@ -1,0 +1,10 @@
+{
+    "message": "shop-start-email",
+    "direction": "shop to Samomind",
+    "model": "StartResponse",
+    "status": 202,
+    "nonce": "haIkm4js59jZNlWku5E7O7",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=b6e9bf2ed5a26fce85726ebac443f0df3c456170d3ed21a00945ce6cadae0065",
+    "body_raw": "{\"accepted\":true}"
+}

@@ -1,0 +1,10 @@
+{
+    "message": "shop-list",
+    "direction": "shop to Samomind",
+    "model": "ListResponse",
+    "status": 200,
+    "nonce": "bmRh37V-U5eoFZQPNUD0aE",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=931ea13cbae837f6fbcad3b0d9447d7d3f0002e3a2ba4e70ea79b707487a5b27",
+    "body_raw": "{\"granted\":true,\"orders\":[{\"order_number\":\"SM-1236\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-20\",\"paid\":null,\"shipped\":null,\"completed\":null,\"total\":\"$129.00\",\"item_count\":3},{\"order_number\":\"SM-1235\",\"status\":\"completed\",\"status_label\":\"Completed\",\"created\":\"2026-10-02\",\"paid\":\"2026-11-26\",\"shipped\":null,\"completed\":\"2026-11-26\",\"total\":\"$45.00\",\"item_count\":1},{\"order_number\":\"SM-1234\",\"status\":\"cancelled\",\"status_label\":\"Cancelled\",\"created\":\"2026-09-01\",\"paid\":null,\"shipped\":null,\"completed\":null,\"total\":\"KSh1,500.00\",\"item_count\":3}],\"more\":false}"
+}

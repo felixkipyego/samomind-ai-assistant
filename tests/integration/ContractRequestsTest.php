@@ -161,6 +161,49 @@ class ContractRequestsTest extends SAMOMIND_Integration_TestCase {
 		}
 	}
 
+	public function test_an_email_start_from_samomind_is_accepted() {
+		$this->accept_history_terms();
+		$this->make_order( array( 'billing_email' => self::EMAIL, 'number_meta' => self::ORDER_NUMBER ) );
+
+		$response = $this->accept( $this->fixtures()['start-email'] );
+		$this->run_plugin_shutdown();
+
+		$this->assertSame( 202, $response->get_status() );
+		$this->assertSame( array( 'accepted' => true ), $response->get_data() );
+		$this->assertCount( 1, $this->mails, 'The code email goes out.' );
+	}
+
+	public function test_an_email_verify_from_samomind_is_accepted() {
+		$this->accept_history_terms();
+		$fixture = $this->fixtures()['verify-email'];
+		$body    = json_decode( $fixture['body_raw'], true );
+		$this->make_order( array( 'billing_email' => self::EMAIL, 'number_meta' => self::ORDER_NUMBER ) );
+		$store = new SAMOMIND_Orders_Store( self::SECRET );
+		$store->put_email_code( $body['session_ref'], $body['email'], $store->email_code_hash( $body['session_ref'], $body['email'], $body['code'] ), 600 );
+
+		$response = $this->accept( $fixture );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 1800, $response->get_data()['grant_expires_in'] );
+		$this->assertTrue( $response->get_data()['verified'] );
+	}
+
+	public function test_a_list_from_samomind_is_answered() {
+		$this->accept_history_terms();
+		$fixture = $this->fixtures()['list'];
+		$body    = json_decode( $fixture['body_raw'], true );
+		$this->make_order( array( 'billing_email' => self::EMAIL, 'number_meta' => self::ORDER_NUMBER ) );
+
+		$this->assertSame( array( 'granted' => false ), $this->accept( $fixture )->get_data(), 'No grant yet.' );
+
+		( new SAMOMIND_Orders_Store( self::SECRET ) )->put_email_grant( $body['session_ref'], self::EMAIL, 600 );
+		$response = $this->accept( $fixture, array( 'nonce' => 'ANOTHERNONCE1234567890' ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertTrue( $response->get_data()['granted'] );
+		$this->assertSame( array( self::ORDER_NUMBER ), array_column( $response->get_data()['orders'], 'order_number' ) );
+	}
+
 	public function test_an_end_from_samomind_is_accepted() {
 		$response = $this->accept( $this->fixtures()['end'] );
 

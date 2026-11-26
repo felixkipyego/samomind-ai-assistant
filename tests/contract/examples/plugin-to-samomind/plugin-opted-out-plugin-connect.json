@@ -7,5 +7,5 @@
         "Content-Type": "application/json",
         "Accept": "application/json"
     },
-    "body_raw": "{\"code\":\"smc_ABCDEFGHIJKLMNOPQRSTUVWXYZ234567\",\"home_url\":\"http:\\/\\/localhost:8889\",\"site_url\":\"http:\\/\\/localhost:8889\",\"plugin_version\":\"0.4.0\",\"wp_version\":\"7.1.5\"}"
+    "body_raw": "{\"code\":\"smc_ABCDEFGHIJKLMNOPQRSTUVWXYZ234567\",\"home_url\":\"http:\\/\\/localhost:8889\",\"site_url\":\"http:\\/\\/localhost:8889\",\"plugin_version\":\"0.4.1\",\"wp_version\":\"7.1.5\"}"
 }
