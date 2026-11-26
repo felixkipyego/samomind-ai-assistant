@@ -57,6 +57,7 @@ $samomind_options = array(
 	'samomind_orders_share_items',
 	'samomind_orders_reported',
 	'samomind_orders_proof_seconds',
+	'samomind_cards_sent',
 );
 
 foreach ( $samomind_options as $samomind_option ) {

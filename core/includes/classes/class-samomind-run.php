@@ -96,6 +96,7 @@ class SAMOMIND_Run {
 		// Background work (docs/ARCHITECTURE.md A1).
 		add_action( SAMOMIND_Scheduler::WORKER_HOOK, array( $sync, 'run' ) );
 		add_action( SAMOMIND_Scheduler::HOURLY_HOOK, array( $sync, 'on_hourly' ) );
+		add_action( 'init', array( $sync, 'maybe_resend_products' ), 20 );
 		add_action( 'admin_init', array( SAMOMIND()->scheduler, 'ensure_hourly' ) );
 
 		// WP-CLI commands (docs/ARCHITECTURE.md A7).

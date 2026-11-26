@@ -124,6 +124,7 @@ class UninstallTest extends SAMOMIND_TestCase {
 				'samomind_orders_share_items',
 				'samomind_orders_reported',
 				'samomind_orders_proof_seconds',
+				'samomind_cards_sent',
 				'samomind_orders_db_version',
 			),
 			$this->deleted
