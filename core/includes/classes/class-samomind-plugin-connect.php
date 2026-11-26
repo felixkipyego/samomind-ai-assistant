@@ -200,7 +200,7 @@ class SAMOMIND_Plugin_Connect {
 			return __( 'Something went wrong sending the code. Update the plugin and try again.', 'samomind-ai-assistant' );
 		}
 		if ( 409 === $status || 410 === $status ) {
-			return __( 'That code has expired or was already used. Create a new one in your Samomind dashboard (Install > WordPress).', 'samomind-ai-assistant' );
+			return __( 'That code has expired or was already used. Create a new one in your Samomind dashboard (Channels > Website: WordPress).', 'samomind-ai-assistant' );
 		}
 		if ( 429 === $status ) {
 			$seconds = ctype_digit( $retry_after ) ? min( 3600, max( 1, (int) $retry_after ) ) : 60;

@@ -40,6 +40,41 @@ class SAMOMIND_Orders_Lookup {
 	const MAX_TEXT = 200;
 
 	/**
+	 * Largest JSON answer the shop sends for one lookup or list. Samomind
+	 * refuses anything over 64 KB; this leaves room for the wrapper and the
+	 * signature header.
+	 *
+	 * @since 0.4.1
+	 * @var   int
+	 */
+	const MAX_ANSWER_BYTES = 60000;
+
+	/**
+	 * Longest total text sent; the API takes 32 characters.
+	 *
+	 * @since 0.4.1
+	 * @var   int
+	 */
+	const MAX_TOTAL = 32;
+
+	/**
+	 * Most orders in one list.
+	 *
+	 * @since 0.4.1
+	 * @var   int
+	 */
+	const MAX_LIST = 50;
+
+	/**
+	 * Statuses that are never somebody's order: a cart in progress and a
+	 * deleted order. WooCommerce names them with a "wc-" prefix in queries.
+	 *
+	 * @since 0.4.1
+	 * @var   string[]
+	 */
+	const EXCLUDED_STATUSES = array( 'checkout-draft', 'auto-draft', 'trash' );
+
+	/**
 	 * Fixed status vocabulary: WooCommerce status => label. Anything else is
 	 * "other" with a cleaned label.
 	 *
@@ -148,17 +183,14 @@ class SAMOMIND_Orders_Lookup {
 	}
 
 	/**
-	 * The fields Samomind may show for an order, filtered by what the shop
-	 * shares. Nothing else leaves the shop: no address, phone, email,
-	 * payment, totals, notes or customer name.
+	 * Status, label and dates of an order: the part every answer shares.
 	 *
-	 * @since   0.4.0
-	 * @param   WC_Order $order           The order.
-	 * @param   bool     $share_items     Whether item names may be sent.
-	 * @param   bool     $share_tracking  Whether tracking may be sent.
+	 * @since   0.4.1
+	 * @param   WC_Order   $order     The order.
+	 * @param   array|null $tracking  Result of first_tracking(), or null.
 	 * @return  array
 	 */
-	public function order_fields( $order, $share_items, $share_tracking ) {
+	private function base_fields( $order, $tracking ) {
 		$status = (string) $order->get_status();
 		if ( isset( self::STATUS_LABELS[ $status ] ) ) {
 			$label = self::STATUS_LABELS[ $status ];
@@ -168,9 +200,7 @@ class SAMOMIND_Orders_Lookup {
 			$label  = '' === $label ? 'Other' : $label;
 		}
 
-		$tracking = $share_tracking ? $this->first_tracking( $order ) : null;
-
-		$fields = array(
+		return array(
 			'order_number' => self::clean_text( (string) $order->get_order_number(), 20 ),
 			'status'       => $status,
 			'status_label' => $label,
@@ -179,25 +209,277 @@ class SAMOMIND_Orders_Lookup {
 			'shipped'      => $tracking ? $tracking['shipped'] : null,
 			'completed'    => self::date_text( $order->get_date_completed() ),
 		);
+	}
+
+	/**
+	 * The fields Samomind may show for an order, filtered by what the shop
+	 * shares. Nothing else leaves the shop: no address, phone, email,
+	 * payment, notes or customer name. With $history (order history is on)
+	 * the order total is added, and each item gets its image address.
+	 *
+	 * @since   0.4.0
+	 * @param   WC_Order $order           The order.
+	 * @param   bool     $share_items     Whether item names may be sent.
+	 * @param   bool     $share_tracking  Whether tracking may be sent.
+	 * @param   bool     $history         Whether the answer is a v2 one.
+	 * @return  array
+	 */
+	public function order_fields( $order, $share_items, $share_tracking, $history = false ) {
+		$tracking = $share_tracking ? $this->first_tracking( $order ) : null;
+		$fields   = $this->base_fields( $order, $tracking );
 
 		if ( $share_items ) {
-			$fields['items'] = $this->item_list( $order );
+			$fields['items'] = $this->item_list( $order, $history );
 		}
 		if ( $share_tracking ) {
 			$fields['tracking'] = $tracking ? $tracking['tracking'] : null;
+		}
+		if ( $history ) {
+			$total           = self::total_text( $order );
+			$fields['total'] = '' === $total ? null : $total;
+			$fields          = $this->fit_size( $fields );
 		}
 
 		return $fields;
 	}
 
 	/**
-	 * Line items as name and quantity.
+	 * One row of an order list: status, dates, total and the number of items.
+	 * No items, tracking, address, phone, email, payment method, note or IP.
 	 *
-	 * @since   0.4.0
-	 * @param   WC_Order $order  The order.
+	 * @since   0.4.1
+	 * @param   WC_Order $order           The order.
+	 * @param   bool     $share_tracking  Whether the shipped date may be sent.
 	 * @return  array
 	 */
-	private function item_list( $order ) {
+	public function list_row( $order, $share_tracking ) {
+		$row               = $this->base_fields( $order, $share_tracking ? $this->first_tracking( $order ) : null );
+		$row['total']      = self::total_text( $order );
+		$row['item_count'] = self::item_count( $order );
+		return $row;
+	}
+
+	/**
+	 * Drop item image addresses from the last item backwards until the
+	 * answer fits MAX_ANSWER_BYTES. Items and text are never cut.
+	 *
+	 * @since   0.4.1
+	 * @param   array $fields  Fields from order_fields().
+	 * @return  array
+	 */
+	public function fit_size( array $fields ) {
+		if ( empty( $fields['items'] ) ) {
+			return $fields;
+		}
+		$whole = array(
+			'found' => true,
+			'order' => $fields,
+		);
+		$size  = strlen( (string) wp_json_encode( $whole ) );
+		for ( $i = count( $fields['items'] ) - 1; $i >= 0 && $size > self::MAX_ANSWER_BYTES; $i-- ) {
+			if ( null !== $fields['items'][ $i ]['image_url'] ) {
+				$size                              -= strlen( (string) wp_json_encode( $fields['items'][ $i ]['image_url'] ) ) - 4;
+				$fields['items'][ $i ]['image_url'] = null;
+			}
+		}
+		return $fields;
+	}
+
+	/**
+	 * The order total as plain text in the order's own currency, at most
+	 * MAX_TOTAL characters. When the shop's formatting is longer, the plain
+	 * amount and the currency code are used; never a cut-off price.
+	 *
+	 * @since   0.4.1
+	 * @param   WC_Order $order  The order.
+	 * @return  string  Empty when nothing fits.
+	 */
+	public static function total_text( $order ) {
+		$text = self::clean_text( SAMOMIND_Content::money( $order->get_total(), (string) $order->get_currency() ), 200 );
+		if ( self::length( $text ) <= self::MAX_TOTAL ) {
+			return $text;
+		}
+		$text = self::clean_text( (string) $order->get_total() . ' ' . (string) $order->get_currency(), 200 );
+		return self::length( $text ) <= self::MAX_TOTAL ? $text : '';
+	}
+
+	/**
+	 * The sum of the quantities of the order's line items.
+	 *
+	 * @since   0.4.1
+	 * @param   WC_Order $order  The order.
+	 * @return  int
+	 */
+	public static function item_count( $order ) {
+		$count = 0;
+		foreach ( $order->get_items() as $item ) {
+			$count += max( 0, (int) $item->get_quantity() );
+		}
+		return min( 1000000, $count );
+	}
+
+	/**
+	 * Characters in a text.
+	 *
+	 * @since   0.4.1
+	 * @param   string $text  Text.
+	 * @return  int
+	 */
+	private static function length( $text ) {
+		return function_exists( 'mb_strlen' ) ? mb_strlen( $text, 'UTF-8' ) : strlen( $text );
+	}
+
+	/**
+	 * Statuses an email or customer search covers: every status the shop
+	 * has except the excluded ones, in the form wc_get_orders() takes.
+	 *
+	 * @since   0.4.1
+	 * @return  string[]
+	 */
+	private static function visible_statuses() {
+		$excluded = array_map(
+			static function ( $status ) {
+				return 'wc-' . $status;
+			},
+			self::EXCLUDED_STATUSES
+		);
+		return array_values( array_diff( array_keys( wc_get_order_statuses() ), $excluded ) );
+	}
+
+	/**
+	 * Whether an order is one a search may return: a shop order that is not
+	 * a draft or deleted.
+	 *
+	 * @since   0.4.1
+	 * @param   mixed $order  Whatever a query returned.
+	 * @return  bool
+	 */
+	private static function is_listable( $order ) {
+		return self::is_shop_order( $order ) && ! in_array( (string) $order->get_status(), self::EXCLUDED_STATUSES, true );
+	}
+
+	/**
+	 * Whether any order has this billing email. Asks for one id only.
+	 *
+	 * @since   0.4.1
+	 * @param   string $email  Normalised address.
+	 * @return  bool
+	 */
+	public function email_has_orders( $email ) {
+		$found = wc_get_orders(
+			array(
+				'type'          => 'shop_order',
+				'status'        => self::visible_statuses(),
+				'billing_email' => $email,
+				'limit'         => 1,
+				'return'        => 'ids',
+			)
+		);
+		return is_array( $found ) && ! empty( $found );
+	}
+
+	/**
+	 * The newest orders of an address, newest first. Each one's billing email
+	 * is compared again, so an order of another address is never returned.
+	 *
+	 * @since   0.4.1
+	 * @param   string $email  Normalised address.
+	 * @param   int    $limit  Most orders to fetch.
+	 * @return  WC_Order[]
+	 */
+	public function orders_for_email( $email, $limit ) {
+		$found  = wc_get_orders(
+			array(
+				'type'          => 'shop_order',
+				'status'        => self::visible_statuses(),
+				'billing_email' => $email,
+				'limit'         => max( 1, (int) $limit ),
+				'orderby'       => 'date',
+				'order'         => 'DESC',
+				'return'        => 'objects',
+			)
+		);
+		$orders = array();
+		foreach ( is_array( $found ) ? $found : array() as $order ) {
+			if ( self::is_listable( $order ) && self::normalise_email( $order->get_billing_email() ) === $email ) {
+				$orders[] = $order;
+			}
+		}
+		return $orders;
+	}
+
+	/**
+	 * The newest orders of a customer, newest first.
+	 *
+	 * @since   0.4.1
+	 * @param   int $user_id  Customer id.
+	 * @param   int $limit    Most orders to fetch.
+	 * @return  WC_Order[]
+	 */
+	public function orders_for_customer( $user_id, $limit ) {
+		if ( (int) $user_id < 1 ) {
+			return array();
+		}
+		$found  = wc_get_orders(
+			array(
+				'type'        => 'shop_order',
+				'status'      => self::visible_statuses(),
+				'customer_id' => (int) $user_id,
+				'limit'       => max( 1, (int) $limit ),
+				'orderby'     => 'date',
+				'order'       => 'DESC',
+				'return'      => 'objects',
+			)
+		);
+		$orders = array();
+		foreach ( is_array( $found ) ? $found : array() as $order ) {
+			if ( self::is_listable( $order ) && (int) $order->get_customer_id() === (int) $user_id ) {
+				$orders[] = $order;
+			}
+		}
+		return $orders;
+	}
+
+	/**
+	 * Whether an email or customer grant covers an order.
+	 *
+	 * @since   0.4.1
+	 * @param   WC_Order $order    The order.
+	 * @param   string   $email    Address of the session's email grant, or an empty string.
+	 * @param   int      $user_id  Customer of the session's customer grant, or 0.
+	 * @return  bool
+	 */
+	public function grant_covers( $order, $email, $user_id ) {
+		if ( ! self::is_listable( $order ) ) {
+			return false;
+		}
+		if ( '' !== $email && self::normalise_email( $order->get_billing_email() ) === $email ) {
+			return true;
+		}
+		return (int) $user_id > 0 && (int) $order->get_customer_id() === (int) $user_id;
+	}
+
+	/**
+	 * Trimmed, lower-cased email.
+	 *
+	 * @since   0.4.1
+	 * @param   mixed $email  Address.
+	 * @return  string
+	 */
+	public static function normalise_email( $email ) {
+		return SAMOMIND_Orders_Store::normalise_email( $email );
+	}
+
+	/**
+	 * Line items as name and quantity, and with $history the image address
+	 * of the variation, else the product, else null.
+	 *
+	 * @since   0.4.0
+	 * @param   WC_Order $order    The order.
+	 * @param   bool     $history  Whether to add image_url.
+	 * @return  array
+	 */
+	private function item_list( $order, $history = false ) {
 		$items = array();
 		foreach ( $order->get_items() as $item ) {
 			if ( count( $items ) >= self::MAX_ITEMS ) {
@@ -207,10 +489,15 @@ class SAMOMIND_Orders_Lookup {
 			if ( '' === $name ) {
 				continue;
 			}
-			$items[] = array(
+			$entry = array(
 				'name' => $name,
 				'qty'  => max( 0, (int) $item->get_quantity() ),
 			);
+			if ( $history ) {
+				$product            = is_callable( array( $item, 'get_product' ) ) ? $item->get_product() : null;
+				$entry['image_url'] = $product ? SAMOMIND_Content::product_image_url( $product ) : null;
+			}
+			$items[] = $entry;
 		}
 		return $items;
 	}

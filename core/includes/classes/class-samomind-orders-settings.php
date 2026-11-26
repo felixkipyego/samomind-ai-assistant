@@ -20,12 +20,22 @@ if ( ! defined( 'ABSPATH' ) ) {
 class SAMOMIND_Orders_Settings {
 
 	/**
-	 * Version of the order-data terms an administrator accepts. Bump it when
-	 * the wording changes; the feature stays off until the new one is accepted.
+	 * Version of the order-data terms an administrator accepts. Order status
+	 * itself keeps working for a shop that accepted PREVIOUS_TERMS_VERSION;
+	 * only order history needs this one.
 	 *
 	 * @var string
 	 */
-	const TERMS_VERSION = '2026-11';
+	const TERMS_VERSION = '2026-11-26';
+
+	/**
+	 * The earlier terms, which still switch order status on (one order, one
+	 * code) but not order history.
+	 *
+	 * @since 0.4.1
+	 * @var   string
+	 */
+	const PREVIOUS_TERMS_VERSION = '2026-11';
 
 	/**
 	 * Order API version this plugin speaks.
@@ -113,14 +123,51 @@ class SAMOMIND_Orders_Settings {
 	}
 
 	/**
-	 * Whether the current version of the terms was accepted.
+	 * Whether a version of the terms that switches order status on was
+	 * accepted: the current one or the one before it. A bump of the terms
+	 * never switches order status off for a shop that accepted the earlier one.
 	 *
 	 * @since   0.4.0
 	 * @return  bool
 	 */
 	public function terms_are_accepted() {
 		$terms = $this->get_terms();
+		return ! empty( $terms ) && in_array( $terms['version'], array( self::TERMS_VERSION, self::PREVIOUS_TERMS_VERSION ), true );
+	}
+
+	/**
+	 * Whether the current terms, the ones that cover order history, were
+	 * accepted.
+	 *
+	 * @since   0.4.1
+	 * @return  bool
+	 */
+	public function history_terms_are_accepted() {
+		$terms = $this->get_terms();
 		return ! empty( $terms ) && self::TERMS_VERSION === $terms['version'];
+	}
+
+	/**
+	 * Whether the shop accepted the earlier terms and has not yet accepted the
+	 * current ones.
+	 *
+	 * @since   0.4.1
+	 * @return  bool
+	 */
+	public function needs_updated_terms() {
+		$terms = $this->get_terms();
+		return ! empty( $terms ) && self::PREVIOUS_TERMS_VERSION === $terms['version'];
+	}
+
+	/**
+	 * Whether customers may see all their orders: order status is on and the
+	 * current terms are accepted.
+	 *
+	 * @since   0.4.1
+	 * @return  bool
+	 */
+	public function history_enabled() {
+		return $this->is_enabled() && $this->history_terms_are_accepted();
 	}
 
 	/**
@@ -283,6 +330,7 @@ class SAMOMIND_Orders_Settings {
 			'woocommerce'            => '' !== $this->woocommerce_version() ? $this->woocommerce_version() : null,
 			'mail_dispatch'          => SAMOMIND_Orders_Mail::dispatch_mode(),
 			'reason'                 => $this->disabled_reason(),
+			'history'                => $this->history_enabled(),
 		);
 	}
 

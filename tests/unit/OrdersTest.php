@@ -50,7 +50,7 @@ class OrdersTest extends SAMOMIND_TestCase {
 		$this->options[ SAMOMIND_Orders_Settings::OPT_IN ] = '1';
 		$payload = $settings->payload_addition();
 		$this->assertSame(
-			array( 'api', 'enabled', 'terms_accepted_version', 'share_items', 'share_tracking', 'tracking', 'hpos', 'woocommerce', 'mail_dispatch', 'reason' ),
+			array( 'api', 'enabled', 'terms_accepted_version', 'share_items', 'share_tracking', 'tracking', 'hpos', 'woocommerce', 'mail_dispatch', 'reason', 'history' ),
 			array_keys( $payload['capabilities']['orders'] )
 		);
 		$this->assertSame( 1, $payload['capabilities']['orders']['api'] );
@@ -87,9 +87,66 @@ class OrdersTest extends SAMOMIND_TestCase {
 		$this->assertEqualsWithDelta( time(), $terms['time'], 5 );
 		$this->assertTrue( $settings->terms_are_accepted() );
 
-		// A newer terms version is not accepted until it is accepted again.
+		// A version this plugin does not know is not accepted.
 		$this->options[ SAMOMIND_Orders_Settings::TERMS ]['version'] = '2025-01';
 		$this->assertFalse( $settings->terms_are_accepted() );
+		$this->assertFalse( $settings->history_terms_are_accepted() );
+	}
+
+	public function test_the_terms_are_version_2026_11_26_and_the_earlier_one_still_switches_order_status_on() {
+		$settings = $this->settings();
+		$this->assertSame( '2026-11-26', SAMOMIND_Orders_Settings::TERMS_VERSION );
+		$this->assertSame( '2026-11', SAMOMIND_Orders_Settings::PREVIOUS_TERMS_VERSION );
+
+		$this->options[ SAMOMIND_Orders_Settings::TERMS ] = array(
+			'version' => '2026-11',
+			'user_id' => 3,
+			'time'    => 1,
+		);
+		$this->assertTrue( $settings->terms_are_accepted(), 'The bump never switches order status off.' );
+		$this->assertFalse( $settings->history_terms_are_accepted(), 'History needs the new terms.' );
+		$this->assertTrue( $settings->needs_updated_terms() );
+
+		$this->options[ SAMOMIND_Orders_Settings::TERMS ]['version'] = '2026-11-26';
+		$this->assertTrue( $settings->terms_are_accepted() );
+		$this->assertTrue( $settings->history_terms_are_accepted() );
+		$this->assertFalse( $settings->needs_updated_terms() );
+	}
+
+	public function test_accepting_records_the_new_version() {
+		$settings = $this->settings();
+		$settings->accept_terms( 9 );
+		$this->assertSame( '2026-11-26', $settings->get_terms()['version'] );
+		$this->assertTrue( $settings->history_terms_are_accepted() );
+	}
+
+	public function test_history_is_reported_false_until_the_new_terms_are_accepted() {
+		$settings = $this->settings();
+		$this->assertFalse( $settings->capabilities()['history'] );
+
+		// Even with the new terms the feature stays off here: this test has no WooCommerce.
+		$settings->accept_terms( 1 );
+		$this->assertFalse( $settings->capabilities()['history'] );
+		$this->assertFalse( $settings->history_enabled() );
+	}
+
+	public function test_email_addresses_normalise_to_one_form_and_a_plus_address_is_another() {
+		$this->assertSame( 'buyer@example.com', SAMOMIND_Orders_Store::normalise_email( "  Buyer@Example.COM \n" ) );
+		$this->assertNotSame( SAMOMIND_Orders_Store::normalise_email( 'buyer+a@example.com' ), SAMOMIND_Orders_Store::normalise_email( 'buyer@example.com' ) );
+		$this->assertSame( '', SAMOMIND_Orders_Store::normalise_email( null ) );
+		$this->assertSame( '', SAMOMIND_Orders_Store::normalise_email( array( 'a@b.c' ) ) );
+	}
+
+	public function test_an_email_code_hash_ties_a_code_to_its_session_and_address() {
+		$store = new SAMOMIND_Orders_Store( 'secret' );
+		$base  = $store->email_code_hash( 'sessionA', 'buyer@example.com', '123456' );
+		$this->assertNotSame( $base, $store->email_code_hash( 'sessionB', 'buyer@example.com', '123456' ) );
+		$this->assertNotSame( $base, $store->email_code_hash( 'sessionA', 'buyer+a@example.com', '123456' ) );
+		$this->assertNotSame( $base, $store->email_code_hash( 'sessionA', 'buyer@example.com', '123457' ) );
+		$this->assertNotSame( $base, ( new SAMOMIND_Orders_Store( 'other' ) )->email_code_hash( 'sessionA', 'buyer@example.com', '123456' ) );
+		$this->assertNotSame( $base, $store->code_hash( 'sessionA', 0, '123456' ), 'Never the same as a one-order code.' );
+		$this->assertStringNotContainsString( '123456', $base );
+		$this->assertStringNotContainsString( 'buyer', $base );
 	}
 
 	public function test_sharing_defaults() {

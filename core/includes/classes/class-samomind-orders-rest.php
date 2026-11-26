@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
  * The REST endpoints for order status (docs/ORDERS_CONTRACT.md):
  *
  * - Samomind to the shop, signed with the orders key: start, verify,
- *   account/redeem, lookup, end and ping.
+ *   account/redeem, list, lookup, end and ping.
  * - The shopper's browser to the shop, same origin: the account-proof
  *   endpoint and the admin-ajax nonce.
  *
@@ -113,7 +113,7 @@ class SAMOMIND_Orders_Rest {
 	 * @return  void
 	 */
 	public function register_routes() {
-		foreach ( array( 'start', 'verify', 'account/redeem', 'lookup', 'end', 'ping' ) as $action ) {
+		foreach ( array( 'start', 'verify', 'account/redeem', 'list', 'lookup', 'end', 'ping' ) as $action ) {
 			register_rest_route(
 				self::REST_NAMESPACE,
 				'/orders/' . $action,
@@ -240,7 +240,7 @@ class SAMOMIND_Orders_Rest {
 	 * Common entry for the signed endpoints.
 	 *
 	 * @since   0.4.0
-	 * @param   string          $action   start, verify, account/redeem, lookup, end or ping.
+	 * @param   string          $action   start, verify, account/redeem, list, lookup, end or ping.
 	 * @param   WP_REST_Request $request  Request.
 	 * @return  WP_REST_Response
 	 */
@@ -297,6 +297,8 @@ class SAMOMIND_Orders_Rest {
 				$response = $this->redeem( $data, $session_ref, $limit, $store );
 				$this->wait_for_floor( $started );
 				return $response;
+			case 'list':
+				return $this->orders_list( $data, $session_ref, $store );
 			case 'lookup':
 				return $this->lookup( $data, $session_ref, $store );
 			default:
@@ -335,6 +337,9 @@ class SAMOMIND_Orders_Rest {
 	 * @return  WP_REST_Response
 	 */
 	private function start( array $data, $session_ref, array $limit, SAMOMIND_Orders_Store $store ) {
+		if ( isset( $data['scope'] ) ) {
+			return $this->scoped( 'start_email', $data, $session_ref, $limit, $store );
+		}
 		$order = $this->lookup->find_order( isset( $data['order_number'] ) ? $data['order_number'] : null );
 		$typed = isset( $data['email'] ) && is_string( $data['email'] ) ? strtolower( trim( $data['email'] ) ) : '';
 
@@ -389,6 +394,9 @@ class SAMOMIND_Orders_Rest {
 	 * @return  WP_REST_Response
 	 */
 	private function verify( array $data, $session_ref, array $limit, SAMOMIND_Orders_Store $store ) {
+		if ( isset( $data['scope'] ) ) {
+			return $this->scoped( 'verify_email', $data, $session_ref, $limit, $store );
+		}
 		$order    = $this->lookup->find_order( isset( $data['order_number'] ) ? $data['order_number'] : null );
 		$order_id = $order ? (int) $order->get_id() : 0;
 		$typed    = isset( $data['code'] ) && is_string( $data['code'] ) ? substr( $data['code'], 0, 16 ) : '';
@@ -444,6 +452,10 @@ class SAMOMIND_Orders_Rest {
 				'verifier' => (string) $record['verifier'],
 			)
 		);
+		if ( $this->settings->history_enabled() ) {
+			// The same proof also lets list and lookup read every order of this customer.
+			$store->put_customer_grant( $session_ref, (int) $record['user_id'], (string) $record['verifier'], $ttl );
+		}
 		return new WP_REST_Response(
 			array(
 				'granted'          => true,
@@ -466,8 +478,15 @@ class SAMOMIND_Orders_Rest {
 	 */
 	private function lookup( array $data, $session_ref, SAMOMIND_Orders_Store $store ) {
 		$order = $this->lookup->find_order( isset( $data['order_number'] ) ? $data['order_number'] : null );
-		$grant = $order ? $store->get_grant( $session_ref, (int) $order->get_id() ) : null;
-		if ( ! $order || ! $grant ) {
+		if ( ! $order ) {
+			return new WP_REST_Response( array( 'found' => false ), 200 );
+		}
+
+		// A grant for this one order, or, with order history on, the session's email or customer grant.
+		$history = $this->settings->history_enabled();
+		$covered = null !== $store->get_grant( $session_ref, (int) $order->get_id() )
+			|| ( $history && $this->lookup->grant_covers( $order, $store->get_email_grant( $session_ref ), $store->get_customer_grant( $session_ref ) ) );
+		if ( ! $covered ) {
 			return new WP_REST_Response( array( 'found' => false ), 200 );
 		}
 
@@ -479,7 +498,167 @@ class SAMOMIND_Orders_Rest {
 		return new WP_REST_Response(
 			array(
 				'found' => true,
-				'order' => $this->lookup->order_fields( $order, $items, $track ),
+				'order' => $this->lookup->order_fields( $order, $items, $track, $history ),
+			),
+			200
+		);
+	}
+
+	/**
+	 * List: the orders of the address or customer this chat session proved,
+	 * newest first. No grant, an expired one and order history switched off
+	 * all answer the same.
+	 *
+	 * @since   0.4.1
+	 * @param   array                 $data         Decoded body.
+	 * @param   string                $session_ref  Session reference.
+	 * @param   SAMOMIND_Orders_Store $store        Store.
+	 * @return  WP_REST_Response
+	 */
+	private function orders_list( array $data, $session_ref, SAMOMIND_Orders_Store $store ) {
+		$none = new WP_REST_Response( array( 'granted' => false ), 200 );
+		if ( ! $this->settings->history_enabled() ) {
+			return $none;
+		}
+		$email   = $store->get_email_grant( $session_ref );
+		$user_id = $store->get_customer_grant( $session_ref );
+		if ( '' === $email && $user_id < 1 ) {
+			return $none;
+		}
+
+		$asked = isset( $data['limit'] ) && ( is_int( $data['limit'] ) || ( is_string( $data['limit'] ) && ctype_digit( $data['limit'] ) ) ) ? (int) $data['limit'] : 20;
+		$limit = max( 1, min( SAMOMIND_Orders_Lookup::MAX_LIST, $asked ) );
+
+		// One more than asked for, from each source, tells whether there are more.
+		$found = array();
+		$all   = array_merge(
+			'' !== $email ? $this->lookup->orders_for_email( $email, $limit + 1 ) : array(),
+			$user_id > 0 ? $this->lookup->orders_for_customer( $user_id, $limit + 1 ) : array()
+		);
+		foreach ( $all as $order ) {
+			$found[ (int) $order->get_id() ] = $order;
+		}
+		usort(
+			$found,
+			static function ( $a, $b ) {
+				$left  = $a->get_date_created() ? $a->get_date_created()->getTimestamp() : 0;
+				$right = $b->get_date_created() ? $b->get_date_created()->getTimestamp() : 0;
+				return $right !== $left ? $right <=> $left : (int) $b->get_id() <=> (int) $a->get_id();
+			}
+		);
+
+		$more  = count( $found ) > $limit;
+		$track = $this->settings->shares_tracking();
+		$rows  = array();
+		foreach ( array_slice( $found, 0, $limit ) as $order ) {
+			$rows[] = $this->lookup->list_row( $order, $track );
+		}
+
+		return new WP_REST_Response(
+			array(
+				'granted' => true,
+				'orders'  => $rows,
+				'more'    => $more,
+			),
+			200
+		);
+	}
+
+	/**
+	 * Start and verify for an email address (order history). Only scope
+	 * "email" exists, and only while the current order terms are accepted.
+	 *
+	 * @since   0.4.1
+	 * @param   string                $method       start_email or verify_email.
+	 * @param   array                 $data         Decoded body.
+	 * @param   string                $session_ref  Session reference.
+	 * @param   array                 $limit        Clamped limits.
+	 * @param   SAMOMIND_Orders_Store $store        Store.
+	 * @return  WP_REST_Response
+	 */
+	private function scoped( $method, array $data, $session_ref, array $limit, SAMOMIND_Orders_Store $store ) {
+		if ( 'email' !== $data['scope'] ) {
+			return new WP_REST_Response( array( 'code' => 'bad_request' ), 400 );
+		}
+		if ( ! $this->settings->history_enabled() ) {
+			$this->log_once( 'orders/start', 403, 'history_off' );
+			return new WP_REST_Response( array( 'code' => 'not_enabled' ), 403 );
+		}
+		return $this->$method( $data, $session_ref, $limit, $store );
+	}
+
+	/**
+	 * Start for an address: when at least one order has it, email a code, as
+	 * for one order. The answer is the same whether or not it has orders,
+	 * and the same when the address is over its own hourly cap. Only the
+	 * shop-wide cap shows, as it does for one order.
+	 *
+	 * @since   0.4.1
+	 * @param   array                 $data         Decoded body.
+	 * @param   string                $session_ref  Session reference.
+	 * @param   array                 $limit        Clamped limits.
+	 * @param   SAMOMIND_Orders_Store $store        Store.
+	 * @return  WP_REST_Response
+	 */
+	private function start_email( array $data, $session_ref, array $limit, SAMOMIND_Orders_Store $store ) {
+		$typed = SAMOMIND_Orders_Store::normalise_email( isset( $data['email'] ) ? $data['email'] : null );
+		$valid = '' !== $typed && false !== is_email( $typed );
+
+		// The same work on every path: one search and one code, with a dummy address when the typed one is no address.
+		$email   = $valid ? $typed : 'nobody@invalid.example';
+		$matches = $this->lookup->email_has_orders( $email ) && $valid;
+		$code    = str_pad( (string) random_int( 0, 999999 ), 6, '0', STR_PAD_LEFT );
+		$hash    = $store->email_code_hash( $session_ref, $email, $code );
+
+		$capped = $store->shop_cap_reached( $limit['shop_emails_per_hour'] );
+
+		// An address's own cap and a refused resend stay silent: the answer must not tell which addresses have orders.
+		if ( $matches && ! $capped && ! $store->email_cap_reached( $email ) && $store->allow_send( $session_ref, $limit['resend_gap_seconds'], $limit['sends_per_session_hour'] ) ) {
+			if ( $store->allow_email_mail( $email ) && $store->allow_shop_email( $limit['shop_emails_per_hour'] ) ) {
+				$store->put_email_code( $session_ref, $email, $hash, $limit['code_ttl_minutes'] * MINUTE_IN_SECONDS );
+				( new SAMOMIND_Orders_Mail( $store ) )->dispatch( $email, $code );
+			}
+		}
+		if ( $capped ) {
+			$this->log_once( 'orders/start', 202, 'mail_capped' );
+			return new WP_REST_Response(
+				array(
+					'accepted'    => true,
+					'mail_capped' => true,
+				),
+				202
+			);
+		}
+
+		return new WP_REST_Response( array( 'accepted' => true ), 202 );
+	}
+
+	/**
+	 * Verify for an address: check the code and, if right, grant list and
+	 * lookup of that address's orders for this chat session.
+	 *
+	 * @since   0.4.1
+	 * @param   array                 $data         Decoded body.
+	 * @param   string                $session_ref  Session reference.
+	 * @param   array                 $limit        Clamped limits.
+	 * @param   SAMOMIND_Orders_Store $store        Store.
+	 * @return  WP_REST_Response
+	 */
+	private function verify_email( array $data, $session_ref, array $limit, SAMOMIND_Orders_Store $store ) {
+		$email = SAMOMIND_Orders_Store::normalise_email( isset( $data['email'] ) ? $data['email'] : null );
+		$typed = isset( $data['code'] ) && is_string( $data['code'] ) ? substr( $data['code'], 0, 16 ) : '';
+
+		$right = $store->check_email_code( $session_ref, $email, $store->email_code_hash( $session_ref, $email, $typed ), $limit['code_tries'] );
+		if ( ! $right ) {
+			return new WP_REST_Response( array( 'verified' => false ), 200 );
+		}
+
+		$ttl = $limit['grant_minutes'] * MINUTE_IN_SECONDS;
+		$store->put_email_grant( $session_ref, $email, $ttl );
+		return new WP_REST_Response(
+			array(
+				'verified'         => true,
+				'grant_expires_in' => $ttl,
 			),
 			200
 		);
