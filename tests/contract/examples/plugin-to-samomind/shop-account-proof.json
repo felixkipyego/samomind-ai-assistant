@@ -3,5 +3,5 @@
     "direction": "shop to the widget, then Samomind",
     "model": "AccountProof",
     "secret": "smok_test_secret_for_the_integration_suite",
-    "body_raw": "{\"v\":1,\"challenge\":\"CAIoBFEExTiCZYxqg69XVg\",\"exp\":1795721239,\"sig\":\"6a193b77a35590dbdace7e7fcecec9b28a4499857f7f949cea37326df52ba791\"}"
+    "body_raw": "{\"v\":1,\"challenge\":\"foMqN0Gv9xx8hYfS7DgV0Q\",\"exp\":1795724496,\"sig\":\"b7f9bdeaa3033df37aa65f0e64d2b40d3d574445782fc439ad58bea2c14aa4b8\"}"
 }

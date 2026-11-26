@@ -27,6 +27,10 @@ of c955f9282963.
   `total` and each item's `image_url`; `end` removes the new grants. A
   lookup answer is held under 60 KB by dropping item image addresses from
   the last item back.
+- New: a signed-in customer sees the orders of their account at once:
+  `POST /orders/account/redeem` with `scope: "account"` and no order number
+  makes a customer grant (needs the 2026-11-26 terms; the login session is
+  checked again on every list and lookup).
 - Changed: the order terms are version 2026-11-26 (items 1 to 3 reworded for
   order history). Shops that accepted 2026-11 keep order status exactly as
   before; the order status card shows the updated terms with an Accept

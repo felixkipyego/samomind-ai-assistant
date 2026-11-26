@@ -130,7 +130,7 @@ The setting is on and a site key is saved; your site address (shown under the se
 
 = Can customers see all their orders in the chat? =
 
-Yes, once you have accepted the updated order terms (version 2026-11-26) on Samomind > Settings. A customer types their email address, enters the 6-digit code your shop emails to them, and can then see the orders placed with that email address; a signed-in customer sees the orders of their account. Nobody can see another email address's orders, and shops that have not accepted the updated terms keep the earlier one-order check.
+Yes, once you have accepted the updated order terms (version 2026-11-26) on Samomind > Settings. A customer types their email address, enters the 6-digit code your shop emails to them, and can then see the orders placed with that email address; a signed-in customer sees the orders of their account. A signed-in customer sees the orders of their account right away, without typing an order number. Nobody can see another email address's orders, and shops that have not accepted the updated terms keep the earlier one-order check.
 
 = What happens when I deactivate, delete or disconnect? =
 

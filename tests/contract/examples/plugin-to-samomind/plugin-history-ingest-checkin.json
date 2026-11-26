@@ -6,9 +6,9 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795721180",
-        "Idempotency-Key": "checkin-54a5f385-ec05-4ebb-87ad-81cfbe098c0f",
-        "X-SamoMind-Signature": "v1=f83a0bd4916e8c2a6e71c8f6cde17e7f036ad1a02c8e4816658da7afc91f3518",
+        "X-SamoMind-Timestamp": "1795724438",
+        "Idempotency-Key": "checkin-15a878e8-1f98-4c18-85e2-f5268859a163",
+        "X-SamoMind-Signature": "v1=127075b660dde60c9ed30eb93932b435155eabddf7697bfb8f4fabc926913e9f",
         "Content-Type": "application/json"
     },
     "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"connector_version\":\"0.4.1\",\"platform_version\":\"7.1.5\",\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":true,\"terms_accepted_version\":\"2026-11-26\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":null,\"history\":true}}}"

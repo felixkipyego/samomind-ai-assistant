@@ -626,6 +626,101 @@ class OrdersHistoryTest extends SAMOMIND_Integration_TestCase {
 		$this->assertSame( array( (string) $guest->get_order_number(), (string) $both->get_order_number(), (string) $signed->get_order_number() ), $numbers );
 	}
 
+	// ---- Redeem for the whole account ------------------------------------------
+
+	private function redeem_account( $session, $challenge, array $extra = array() ) {
+		return $this->call(
+			'account/redeem',
+			array_merge(
+				array(
+					'request_id'  => wp_generate_uuid4(),
+					'session_ref' => $this->session_ref( $session ),
+					'scope'       => 'account',
+					'challenge'   => $challenge,
+				),
+				$extra
+			)
+		);
+	}
+
+	private function fresh_proof( $user ) {
+		$this->log_in( $user );
+		$challenge = $this->challenge();
+		$this->assertTrue( $this->proof( $challenge, wp_create_nonce( 'wp_rest' ) )->get_data()['loggedIn'] );
+		return $challenge;
+	}
+
+	public function test_an_account_redeem_without_an_order_number_lists_that_users_orders_only() {
+		$user  = $this->make_user();
+		$other = $this->make_user();
+		$mine  = $this->make_order( array( 'customer_id' => $user, 'billing_email' => 'a@example.com' ) );
+		$this->make_order( array( 'customer_id' => $other, 'billing_email' => 'a@example.com' ) );
+		$theirs = $this->make_order( array( 'customer_id' => $other ) );
+
+		$response = $this->redeem_account( 'a', $this->fresh_proof( $user ) );
+		wp_set_current_user( 0 );
+
+		$this->assertSame( array( 'granted' => true, 'grant_expires_in' => 1800 ), $response->get_data() );
+		$this->assertSame( array( (string) $mine->get_order_number() ), $this->numbers( $this->list_orders()->get_data() ) );
+		$this->assertTrue( $this->lookup( $mine )->get_data()['found'] );
+		$this->assertSame( array( 'found' => false ), $this->lookup( $theirs )->get_data() );
+		$this->assertCount( 0, $this->state_rows( 'grant' ), 'No grant for one order is made.' );
+	}
+
+	public function test_an_account_redeem_is_refused_for_a_logged_out_session_a_used_or_bad_challenge_and_old_terms() {
+		$user = $this->make_user();
+		$this->make_order( array( 'customer_id' => $user ) );
+
+		$challenge = $this->fresh_proof( $user );
+		WP_Session_Tokens::get_instance( $user )->destroy_all();
+		$this->assertSame( array( 'granted' => false ), $this->redeem_account( 'a', $challenge )->get_data(), 'Logged out.' );
+
+		$challenge = $this->fresh_proof( $user );
+		$this->assertTrue( $this->redeem_account( 'b', $challenge )->get_data()['granted'] );
+		$this->assertSame( array( 'granted' => false ), $this->redeem_account( 'c', $challenge )->get_data(), 'A record is used once.' );
+
+		foreach ( array( 'short', str_repeat( '!', 22 ), '', null, 5 ) as $bad ) {
+			$this->assertSame( array( 'granted' => false ), $this->redeem_account( 'd', $bad )->get_data(), 'Challenge ' . wp_json_encode( $bad ) );
+		}
+		$this->assertSame( array( 'granted' => false ), $this->redeem_account( 'd', $this->challenge() )->get_data(), 'No record.' );
+
+		$challenge = $this->fresh_proof( $user );
+		update_option( SAMOMIND_Orders_Settings::TERMS, array( 'version' => '2026-11', 'user_id' => 1, 'time' => time() ), false );
+		$this->assertSame( array( 'granted' => false ), $this->redeem_account( 'e', $challenge )->get_data(), 'Earlier terms.' );
+		$this->assertCount( 1, $this->state_rows( 'cgrant' ), 'Only the one good redeem made a grant.' );
+	}
+
+	public function test_a_logout_ends_an_account_grant_at_once_for_list_and_lookup() {
+		$user  = $this->make_user();
+		$order = $this->make_order( array( 'customer_id' => $user ) );
+		$this->assertTrue( $this->redeem_account( 'a', $this->fresh_proof( $user ) )->get_data()['granted'] );
+		wp_set_current_user( 0 );
+		$this->assertTrue( $this->list_orders()->get_data()['granted'] );
+
+		WP_Session_Tokens::get_instance( $user )->destroy_all();
+
+		$this->assertSame( array( 'granted' => false ), $this->list_orders()->get_data() );
+		$this->assertSame( array( 'found' => false ), $this->lookup( $order )->get_data() );
+	}
+
+	public function test_a_redeem_with_an_unknown_scope_is_a_bad_request_and_version_1_is_unchanged() {
+		$user  = $this->make_user();
+		$order = $this->make_order( array( 'customer_id' => $user ) );
+		$this->assertSame( 400, $this->redeem_account( 'a', $this->challenge(), array( 'scope' => 'everything' ) )->get_status() );
+
+		$response = $this->call(
+			'account/redeem',
+			array(
+				'request_id'   => wp_generate_uuid4(),
+				'session_ref'  => $this->session_ref( 'v1' ),
+				'challenge'    => $this->fresh_proof( $user ),
+				'order_number' => (string) $order->get_order_number(),
+			)
+		);
+		$this->assertTrue( $response->get_data()['granted'] );
+		$this->assertCount( 1, $this->state_rows( 'grant' ), 'The grant for the one order.' );
+	}
+
 	// ---- End ------------------------------------------------------------------
 
 	public function test_end_removes_the_email_and_customer_grants_of_the_session_only() {

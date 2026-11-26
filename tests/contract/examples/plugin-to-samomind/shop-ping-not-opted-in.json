@@ -5,6 +5,6 @@
     "status": 200,
     "nonce": "R1zsS0zo7Uj5Vxm-ZMm4-d",
     "secret": "smok_test_secret_for_the_integration_suite",
-    "signature": "v1=6aa494f72a1e78f57be206d973961762b16ef86b65ab9965452ab3d1431b1f20",
-    "body_raw": "{\"plugin_version\":\"0.4.1\",\"api\":1,\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":false,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":\"not_opted_in\",\"history\":false}},\"server_time\":1795721177}"
+    "signature": "v1=641bded714d9fdc20cfd8195355c74752583e75e24fb7066d834ad07d03e4c33",
+    "body_raw": "{\"plugin_version\":\"0.4.1\",\"api\":1,\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":false,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":\"not_opted_in\",\"history\":false}},\"server_time\":1795724431}"
 }

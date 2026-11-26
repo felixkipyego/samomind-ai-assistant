@@ -429,6 +429,9 @@ class SAMOMIND_Orders_Rest {
 	 * @return  WP_REST_Response
 	 */
 	private function redeem( array $data, $session_ref, array $limit, SAMOMIND_Orders_Store $store ) {
+		if ( isset( $data['scope'] ) ) {
+			return $this->redeem_account( $data, $session_ref, $limit, $store );
+		}
 		$challenge = isset( $data['challenge'] ) && is_string( $data['challenge'] ) && 1 === preg_match( '/^[A-Za-z0-9_-]{22}$/', $data['challenge'] ) ? $data['challenge'] : '';
 		$record    = '' !== $challenge ? $store->take_record( $challenge ) : null;
 		$order     = $this->lookup->find_order( isset( $data['order_number'] ) ? $data['order_number'] : null );
@@ -456,6 +459,46 @@ class SAMOMIND_Orders_Rest {
 			// The same proof also lets list and lookup read every order of this customer.
 			$store->put_customer_grant( $session_ref, (int) $record['user_id'], (string) $record['verifier'], $ttl );
 		}
+		return new WP_REST_Response(
+			array(
+				'granted'          => true,
+				'grant_expires_in' => $ttl,
+			),
+			200
+		);
+	}
+
+	/**
+	 * Redeem for the whole account (scope "account", no order number): the
+	 * same one-time record and login check as for one order, then a customer
+	 * grant that lets list and lookup read that customer's orders. Anything
+	 * else, including a shop that has not accepted the current terms, is
+	 * granted false.
+	 *
+	 * @since   0.4.1
+	 * @param   array                 $data         Decoded body.
+	 * @param   string                $session_ref  Session reference.
+	 * @param   array                 $limit        Clamped limits.
+	 * @param   SAMOMIND_Orders_Store $store        Store.
+	 * @return  WP_REST_Response
+	 */
+	private function redeem_account( array $data, $session_ref, array $limit, SAMOMIND_Orders_Store $store ) {
+		if ( 'account' !== $data['scope'] ) {
+			return new WP_REST_Response( array( 'code' => 'bad_request' ), 400 );
+		}
+		$refused = new WP_REST_Response( array( 'granted' => false ), 200 );
+		if ( ! $this->settings->history_enabled() ) {
+			return $refused;
+		}
+
+		$challenge = isset( $data['challenge'] ) && is_string( $data['challenge'] ) && 1 === preg_match( '/^[A-Za-z0-9_-]{22}$/', $data['challenge'] ) ? $data['challenge'] : '';
+		$record    = '' !== $challenge ? $store->take_record( $challenge ) : null;
+		if ( ! $record || ! SAMOMIND_Orders_Store::login_session_exists( (int) $record['user_id'], (string) $record['verifier'] ) ) {
+			return $refused;
+		}
+
+		$ttl = $limit['grant_minutes'] * MINUTE_IN_SECONDS;
+		$store->put_customer_grant( $session_ref, (int) $record['user_id'], (string) $record['verifier'], $ttl );
 		return new WP_REST_Response(
 			array(
 				'granted'          => true,

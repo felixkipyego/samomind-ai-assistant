@@ -333,6 +333,18 @@ class ContractExamplesTest extends SAMOMIND_Integration_TestCase {
 		$this->assertArrayNotHasKey( 'items', $body['order'] );
 		$this->assertSame( '$45.00', $body['order']['total'] );
 
+		// redeem for the whole account: no order number, scope "account".
+		$user = $this->make_user();
+		$this->make_order( array( 'customer_id' => $user, 'billing_email' => 'account@example.com', 'number_meta' => 'SM-2000' ) );
+		$this->log_in( $user );
+		$challenge = $this->challenge();
+		$this->assertTrue( $this->proof( $challenge, wp_create_nonce( 'wp_rest' ) )->get_data()['loggedIn'] );
+		list( , $body ) = $this->answer( 'shop-redeem-account', 'RedeemResponse', 'account/redeem', $this->request_body( array( 'scope' => 'account', 'challenge' => $challenge, 'limits' => $limit ) ) );
+		$this->assertSame( array( 'granted' => true, 'grant_expires_in' => 1800 ), $body );
+		list( , $body ) = $this->answer( 'shop-redeem-account-refused', 'RedeemResponse', 'account/redeem', $this->request_body( array( 'scope' => 'account', 'challenge' => $this->challenge(), 'limits' => $limit ) ) );
+		$this->assertSame( array( 'granted' => false ), $body );
+		wp_set_current_user( 0 );
+
 		// history off again (the earlier terms): the email scope is refused.
 		update_option( SAMOMIND_Orders_Settings::TERMS, array( 'version' => '2026-11', 'user_id' => 1, 'time' => time() ), false );
 		list( $status, $body ) = $this->answer( 'shop-403-history-off', '', 'start', $this->request_body( array( 'scope' => 'email', 'email' => 'buyer@example.com', 'locale' => 'en', 'limits' => $limit ) ) );
