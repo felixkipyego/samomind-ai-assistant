@@ -93,6 +93,7 @@ abstract class SAMOMIND_Integration_TestCase extends TestCase {
 		$this->reset_state();
 		wp_set_current_user( 0 );
 		unset( $_COOKIE[ LOGGED_IN_COOKIE ], $_SERVER['HTTP_X_WP_NONCE'], $GLOBALS['wp_rest_auth_cookie'] );
+		gc_collect_cycles();
 		parent::tearDown();
 	}
 

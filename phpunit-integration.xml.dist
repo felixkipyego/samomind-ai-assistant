@@ -11,4 +11,8 @@
 			<directory suffix="Test.php">tests/integration</directory>
 		</testsuite>
 	</testsuites>
+	<php>
+		<!-- WordPress and WooCommerce stay loaded for the whole run, and about 200 tests keep growing it past the 128 MB default. -->
+		<ini name="memory_limit" value="512M"/>
+	</php>
 </phpunit>
