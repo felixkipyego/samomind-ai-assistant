@@ -18,12 +18,14 @@ $GLOBALS['smoke_requests']  = array();
 // The documents the plugin sent: external id => fields, in the order sent.
 $GLOBALS['smoke_documents'] = array();
 
-// Code emails are counted, never sent.
+// Code emails are counted, never sent. WooCommerce's own mails about a new order are not ours and are not counted.
 $GLOBALS['smoke_mails'] = array();
 add_filter(
 	'pre_wp_mail',
 	function ( $pre, $atts ) {
-		$GLOBALS['smoke_mails'][] = isset( $atts['message'] ) ? (string) $atts['message'] : '';
+		if ( isset( $atts['message'] ) && false !== strpos( (string) $atts['message'], 'Your code is ' ) ) {
+			$GLOBALS['smoke_mails'][] = (string) $atts['message'];
+		}
 		return true;
 	},
 	1,

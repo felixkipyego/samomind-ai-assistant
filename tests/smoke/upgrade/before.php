@@ -28,6 +28,9 @@ foreach ( array( 'One', 'Two', 'Three' ) as $title ) {
 	);
 }
 
+// Products are ticked under What is synced, as on a shop that has them synced (the plugin was activated before WooCommerce here, so the default left them out).
+update_option( 'samomind_post_types', array( 'post', 'page', 'product' ) );
+
 // Two products, so the update has products to send again.
 foreach ( array( 'Mug' => '10', 'Kettle' => '25' ) as $name => $price ) {
 	$product = new WC_Product_Simple();
