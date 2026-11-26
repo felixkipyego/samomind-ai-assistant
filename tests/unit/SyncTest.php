@@ -279,6 +279,8 @@ class SyncTest extends SAMOMIND_TestCase {
 			}
 		);
 		Functions\when( 'wp_generate_uuid4' )->justReturn( 'run-0001' );
+		// Another test may have defined the cache functions; this one has no cache to clear.
+		Functions\when( 'wp_cache_supports' )->justReturn( false );
 		Functions\when( 'sanitize_text_field' )->returnArg( 1 );
 		Functions\when( 'wp_is_post_revision' )->justReturn( false );
 		Functions\when( 'wp_is_post_autosave' )->justReturn( false );
