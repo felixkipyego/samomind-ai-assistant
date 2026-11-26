@@ -13,7 +13,22 @@ define( 'SMOKE_ORDERS_SECRET', 'smok_UpdateTestFakeOrdersKey000000000000000' );
 define( 'SMOKE_SITE_KEY', 'pk_live_Jc3x9Qw2Lm8Vb5Nt0Zr7Yh4Kd1Sf6Ua-_Gp8eTqWcA' );
 define( 'SMOKE_API_BASE', 'https://api.samomind.com' );
 
-$GLOBALS['smoke_requests'] = array();
+$GLOBALS['smoke_requests']  = array();
+
+// The documents the plugin sent: external id => fields, in the order sent.
+$GLOBALS['smoke_documents'] = array();
+
+// Code emails are counted, never sent.
+$GLOBALS['smoke_mails'] = array();
+add_filter(
+	'pre_wp_mail',
+	function ( $pre, $atts ) {
+		$GLOBALS['smoke_mails'][] = isset( $atts['message'] ) ? (string) $atts['message'] : '';
+		return true;
+	},
+	1,
+	2
+);
 
 add_filter(
 	'pre_http_request',
@@ -43,6 +58,10 @@ add_filter(
 				$results = array();
 				foreach ( isset( $body['documents'] ) ? (array) $body['documents'] : array() as $document ) {
 					$results[] = array( 'status' => 'queued' );
+					$GLOBALS['smoke_documents'][ (string) $document['external_id'] ] = array(
+						'kind'   => $document['kind'],
+						'fields' => isset( $document['fields'] ) ? $document['fields'] : null,
+					);
 				}
 				$answer = array( 'results' => $results );
 				break;
@@ -67,6 +86,28 @@ add_filter(
 	1,
 	3
 );
+
+// Code emails go out from a shutdown callback in production; the update test runs those itself.
+add_filter(
+	'SAMOMIND/orders/finish_function',
+	function () {
+		return function () {};
+	}
+);
+
+/**
+ * Run the shutdown callbacks this plugin registered, as PHP would after the response.
+ */
+function smoke_run_plugin_shutdown() {
+	if ( ! isset( $GLOBALS['wp_filter']['shutdown']->callbacks[50] ) ) {
+		return;
+	}
+	$callbacks = $GLOBALS['wp_filter']['shutdown']->callbacks[50];
+	remove_all_actions( 'shutdown', 50 );
+	foreach ( $callbacks as $callback ) {
+		call_user_func( $callback['function'] );
+	}
+}
 
 /**
  * Run the sync worker until the full sync is over, as the scheduler would.
@@ -95,8 +136,15 @@ function smoke_check( $label, $condition ) {
  * A signed order status ping, as Samomind sends it. Returns the HTTP status.
  */
 function smoke_signed_ping( $secret = SMOKE_ORDERS_SECRET ) {
-	$route     = '/samomind/v1/orders/ping';
-	$raw       = '{}';
+	return smoke_signed( 'ping', array(), $secret )->get_status();
+}
+
+/**
+ * Any signed order request, as Samomind sends it. Returns the response.
+ */
+function smoke_signed( $action, array $body = array(), $secret = SMOKE_ORDERS_SECRET ) {
+	$route     = '/samomind/v1/orders/' . $action;
+	$raw       = empty( $body ) ? '{}' : wp_json_encode( $body );
 	$timestamp = (string) time();
 	$nonce     = substr( strtr( base64_encode( random_bytes( 16 ) ), '+/', '-_' ), 0, 22 );
 	$path      = SAMOMIND_Orders_Auth::request_path( $route );
@@ -111,7 +159,7 @@ function smoke_signed_ping( $secret = SMOKE_ORDERS_SECRET ) {
 	$request->set_body( $raw );
 
 	$GLOBALS['wp_rest_server'] = null;
-	return rest_get_server()->dispatch( $request )->get_status();
+	return rest_get_server()->dispatch( $request );
 }
 
 /**

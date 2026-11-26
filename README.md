@@ -17,21 +17,21 @@ with the site's public content, and adds the Samomind chat widget.
 
 ## Connect with a code
 
-1. In the Samomind dashboard (app.samomind.com), open **Install >
-   WordPress** and click **Create connection code**. The code works once
+1. In the Samomind dashboard (app.samomind.com), open **Channels >
+   Website: WordPress** and click **Create connection code**. The code works once
    and expires.
 2. In WordPress, open **Samomind > Settings**, paste the code under
    **Connect to Samomind** and click **Connect**. The plugin saves its keys
    itself and the first full sync starts in the background. If it asks you
    to finish in your dashboard, click **Allow** next to your website
-   address under **Install > WordPress**.
+   address under **Channels > Website: WordPress**.
 
 **Disconnect** in the same box clears the keys on this site only. To stop
 the old keys working everywhere, create a new code and connect again.
 
 ## Manual setup
 
-1. In the Samomind dashboard, open **Install > WordPress > Advanced: show
+1. In the Samomind dashboard, open **Channels > Website: WordPress > Advanced: show
    keys for manual setup** and click **Create an ingest key**. The
    dashboard shows a key id (a UUID) and a secret (`smik_...`). The secret
    is shown only once. Creating a new key revokes the old one at once, so
@@ -69,7 +69,13 @@ Per item: the post id, permalink, title, text (the rendered content with
 shortcodes and blocks applied, reduced to plain text, plus the excerpt and,
 for products, the short description), kind (page, post, product or
 custom), modified time, and the names of its public taxonomy terms. Products
-add price and stock status.
+add price and stock status and, for the product cards in the chat, three card
+fields: `image_url` (the main image at WooCommerce's thumbnail size, https
+only, at most 2048 characters, else null), `price_display` (the price as the
+shop shows it to a guest, without "(was ...)", "(some on sale)" or the suffix)
+and `regular_price_display` (a simple product on sale). The API refuses a whole
+body for one value that breaks a rule, so each is checked and sent as null
+when it does. After the update to 0.4.1 every product is sent once more.
 
 **Samomind > Settings > What is synced** lists these post types. Posts,
 pages and (with WooCommerce) products are ticked on a new install; the rest
@@ -150,13 +156,13 @@ Another builder's storage meta key can be added with
 
 Under **Samomind > Settings > Chat widget**, tick "Show the Samomind chat
 widget on this site". Connecting with a code fills in the site key; for a
-manual setup, enter it from **Install > WordPress > Advanced: show keys for
+manual setup, enter it from **Channels > Website: WordPress > Advanced: show keys for
 manual setup**. The plugin enqueues `https://widget.samomind.com/widget.js` in the
 footer with the `defer` strategy and adds the key as `data-site-key` through
 the `wp_script_attributes` filter, so there is no inline script and nothing
 to paste. It is off by default, and never loads in the admin, on the login
 page, in feeds, REST responses or previews. Allow the site address shown under
-the setting in the Samomind dashboard (**Install > WordPress**) first.
+the setting in the Samomind dashboard (**Channels > Website: WordPress**) first.
 
 The script is excluded from combine, minify and delay in WP Rocket
 (`rocket_exclude_js`, `rocket_exclude_defer_js`, `rocket_delay_js_exclusions`),

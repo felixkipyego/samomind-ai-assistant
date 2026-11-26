@@ -6,7 +6,7 @@
 # Samomind API is mocked.
 #
 # Run from the plugin root, after `composer build`:
-#   sh tests/smoke/upgrade-from-zip.sh ../New/samomind-ai-assistant-0.3.5.zip build/samomind-ai-assistant-0.4.0.zip
+#   sh tests/smoke/upgrade-from-zip.sh ~/Desktop/samomind-ai-assistant-0.4.0.zip build/samomind-ai-assistant-0.4.1.zip
 #
 # It makes its own wp-env project in a temporary folder (not this repo) and
 # destroys it when it ends. Stop the repo's own wp-env first: both want the
@@ -62,7 +62,7 @@ $WP_ENV start >"$WORK/start.log" 2>&1 || { tail -5 "$WORK/start.log"; exit 1; }
 
 OLD_VERSION=$(wp plugin get "$SLUG" --field=version)
 echo "old version: $OLD_VERSION"
-case "$OLD_VERSION" in 0.4.*) echo "FAIL  the starting zip is not an older release" >&2; exit 1 ;; esac
+case "$OLD_VERSION" in 0.4.1*) echo "FAIL  the starting zip is not an older release" >&2; exit 1 ;; esac
 echo "old status: $(wp plugin get "$SLUG" --field=status)"
 
 echo "== Step 1: a connected site on the old release"

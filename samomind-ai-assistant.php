@@ -5,13 +5,13 @@
  * @package       SAMOMIND
  * @author        SoftwaresKe Ltd
  * @license       GPL-2.0-or-later
- * @version       0.4.0
+ * @version       0.4.1
  *
  * @wordpress-plugin
  * Plugin Name:       Samomind – AI Chatbot That Answers From Your Content
  * Plugin URI:        https://samomind.com/help/wordpress-plugin/
- * Description:       Keeps your Samomind AI chatbot's knowledge base in sync with this site's public pages, posts and products, adds the Samomind chat widget, and lets shoppers check their WooCommerce order status.
- * Version:           0.4.0
+ * Description:       Keeps your Samomind AI chatbot's knowledge base in sync with this site's public pages, posts and products, adds the Samomind chat widget with product cards, and lets shoppers check their WooCommerce orders.
+ * Version:           0.4.1
  * Requires at least: 6.4
  * Requires PHP:      7.4
  * Author:            SoftwaresKe Ltd
@@ -34,7 +34,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 define( 'SAMOMIND_NAME', 'Samomind – AI Chatbot That Answers From Your Content' );
 
 // Plugin version.
-define( 'SAMOMIND_VERSION', '0.4.0' );
+define( 'SAMOMIND_VERSION', '0.4.1' );
 
 // Plugin Root File.
 define( 'SAMOMIND_PLUGIN_FILE', __FILE__ );
