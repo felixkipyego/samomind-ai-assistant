@@ -5,6 +5,6 @@
     "status": 200,
     "nonce": "ISQ4OgHn0YHPKwhn0AZOrY",
     "secret": "smok_test_secret_for_the_integration_suite",
-    "signature": "v1=7eccb76ae36e790e32a3f5e1a2be1e9c4f03f04ab462d5d7fbaf8f74fd9fa82b",
-    "body_raw": "{\"found\":true,\"order\":{\"order_number\":\"SM-1234\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-22\",\"paid\":null,\"shipped\":null,\"completed\":null}}"
+    "signature": "v1=e4de4c9c58b9556430d2846cbadf0c4598b8ee11f44b5352d38e4d27bba4b71a",
+    "body_raw": "{\"found\":true,\"order\":{\"order_number\":\"SM-1234\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-26\",\"paid\":null,\"shipped\":null,\"completed\":null}}"
 }

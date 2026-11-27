@@ -6,10 +6,10 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795336263",
-        "Idempotency-Key": "connect-51ade185-dfde-4c58-a154-c6782ded245b",
-        "X-SamoMind-Signature": "v1=cc6c6c1b9b75395a3ba61275f5fae476739cac57109b293c74fa2687c9a629d6",
+        "X-SamoMind-Timestamp": "1795725996",
+        "Idempotency-Key": "connect-f0b6b3a2-25d2-4939-8d26-a950d0822de0",
+        "X-SamoMind-Signature": "v1=2395eecec7de525b760b6a391676f2e695eb80c401585dc9f9be67c3a44a0e64",
         "Content-Type": "application/json"
     },
-    "body_raw": "{\"site_url\":\"http://localhost:8889\",\"connector\":\"wordpress\",\"connector_version\":\"0.4.0\",\"platform_version\":\"7.1.5\",\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":true,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":null}}}"
+    "body_raw": "{\"site_url\":\"http://localhost:8889\",\"connector\":\"wordpress\",\"connector_version\":\"0.4.1\",\"platform_version\":\"7.1.5\",\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":true,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":null,\"history\":false}}}"
 }

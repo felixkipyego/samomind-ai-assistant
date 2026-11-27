@@ -49,7 +49,16 @@ abstract class SAMOMIND_Integration_TestCase extends TestCase {
 		update_option( SAMOMIND_Orders_Settings::SECRET, self::SECRET, false );
 		update_option( SAMOMIND_Orders_Settings::SHARE_TRACKING, '1', false );
 		update_option( SAMOMIND_Orders_Settings::SHARE_ITEMS, '1', false );
-		SAMOMIND()->orders->accept_terms( 1 );
+		// The suite starts on the earlier terms (2026-11): order status as in 0.4.0, no order history. Tests of history call accept_history_terms().
+		update_option(
+			SAMOMIND_Orders_Settings::TERMS,
+			array(
+				'version' => SAMOMIND_Orders_Settings::PREVIOUS_TERMS_VERSION,
+				'user_id' => 1,
+				'time'    => time(),
+			),
+			false
+		);
 		SAMOMIND_Orders_Rest::$floor_ms = 0;
 
 		$this->mails = array();
@@ -84,7 +93,15 @@ abstract class SAMOMIND_Integration_TestCase extends TestCase {
 		$this->reset_state();
 		wp_set_current_user( 0 );
 		unset( $_COOKIE[ LOGGED_IN_COOKIE ], $_SERVER['HTTP_X_WP_NONCE'], $GLOBALS['wp_rest_auth_cookie'] );
+		gc_collect_cycles();
 		parent::tearDown();
+	}
+
+	/**
+	 * Accept the current terms, the ones that switch order history on.
+	 */
+	protected function accept_history_terms() {
+		SAMOMIND()->orders->accept_terms( 1 );
 	}
 
 	/**
@@ -177,7 +194,7 @@ abstract class SAMOMIND_Integration_TestCase extends TestCase {
 	/**
 	 * A shop order.
 	 *
-	 * @param array $args billing_email, status, customer_id, items (name => qty), number_meta.
+	 * @param array $args billing_email, status, customer_id, items (name => qty), number_meta, total, currency, date.
 	 * @return WC_Order
 	 */
 	protected function make_order( array $args = array() ) {
@@ -206,7 +223,16 @@ abstract class SAMOMIND_Integration_TestCase extends TestCase {
 			$item->set_total( 10 * $qty );
 			$order->add_item( $item );
 		}
-		$order->set_total( 99 );
+		$order->set_total( isset( $args['total'] ) ? $args['total'] : 99 );
+		if ( isset( $args['currency'] ) ) {
+			$order->set_currency( $args['currency'] );
+		}
+		if ( isset( $args['date'] ) ) {
+			$order->set_date_created( $args['date'] );
+		}
+		$order->set_shipping_address_1( '2 Hidden Road' );
+		$order->set_shipping_city( 'Shipville' );
+		$order->set_customer_ip_address( '203.0.113.9' );
 		$order->set_status( $args['status'] );
 		if ( isset( $args['number_meta'] ) ) {
 			$order->update_meta_data( '_order_number', $args['number_meta'] );

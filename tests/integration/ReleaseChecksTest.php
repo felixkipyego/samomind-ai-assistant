@@ -66,19 +66,20 @@ class ReleaseChecksTest extends SAMOMIND_Integration_TestCase {
 		return trim( preg_replace( '/\s+/', ' ', html_entity_decode( wp_strip_all_tags( $html ), ENT_QUOTES, 'UTF-8' ) ) );
 	}
 
-	// ---- The order terms, version 2026-11 -----------------------------------
+	// ---- The order terms, version 2026-11-26 --------------------------------
 
 	public function test_the_card_shows_the_final_terms_word_for_word() {
+		delete_option( 'samomind_orders_terms' );
 		wp_set_current_user( $this->make_user( 'administrator' ) );
 		$text = $this->plain_text( $this->private_html( 'render_orders_card' ) );
 
-		$this->assertSame( '2026-11', SAMOMIND_Orders_Settings::TERMS_VERSION );
+		$this->assertSame( '2026-11-26', SAMOMIND_Orders_Settings::TERMS_VERSION );
 		$parts = array(
-			'Order status: order data terms (version 2026-11)',
+			'Order status: order data terms (version 2026-11-26)',
 			'Before you switch on order status, please confirm that you accept these terms.',
-			'Your customers can check only their own orders. Each check needs either a 6-digit code that your shop emails to the order\'s billing address, or the customer being signed in to your shop. The assistant never decides who someone is.',
-			'Samomind looks each order up live from your shop and keeps no copy of your orders. It never receives addresses, phone numbers or payment details. The billing email and the code pass through Samomind only while the check runs and are not stored.',
-			'The order number, status and dates are always shown to a verified customer. You choose whether item names and tracking details are also shown.',
+			'Your customers can check only their own orders. A customer proves who they are with a 6-digit code that your shop emails to them, or by being signed in to your shop. After the code, they can see the orders placed with that email address; signed-in customers see the orders of their account. The assistant never decides who someone is.',
+			'Samomind looks orders up live from your shop and keeps no copy of your orders. It never receives addresses, phone numbers or payment details. The email address and the code pass through Samomind only while the check runs and are not stored.',
+			'The order number, status, dates and order total are always shown to a verified customer. You choose whether item names (with their product photos) and tracking details are also shown.',
 			'You are the controller of your shop\'s order data, and Samomind processes it for you under Schedule 1 of the Samomind Terms of Service. You confirm that you have a lawful basis to let customers check their orders this way and that your shop\'s privacy notice tells them.',
 			'Keep your orders key secret. If you think it has been exposed, replace it in the Samomind dashboard.',
 			'The code emails are sent by your own shop, from its own email address.',
@@ -96,13 +97,14 @@ class ReleaseChecksTest extends SAMOMIND_Integration_TestCase {
 	}
 
 	public function test_the_terms_are_a_numbered_list_of_six_and_no_draft_wording_is_left() {
+		delete_option( 'samomind_orders_terms' );
 		wp_set_current_user( $this->make_user( 'administrator' ) );
 		$html = $this->private_html( 'render_orders_card' );
 
 		$this->assertSame( 6, preg_match_all( '#<ol>.*?</ol>#s', $html, $lists ) ? substr_count( $lists[0][0], '<li>' ) : 0 );
 		$this->assertStringNotContainsString( 'DRAFT', $html );
 		$this->assertStringNotContainsStringIgnoringCase( 'legal review', $html );
-		$this->assertStringContainsString( 'I accept the order-data terms (version 2026-11)', $html );
+		$this->assertStringContainsString( 'I accept the order-data terms (version 2026-11-26)', $html );
 		$this->assertStringContainsString( 'href="https://samomind.com/terms-and-conditions/"', $html );
 		$this->assertStringContainsString( 'href="https://samomind.com/privacy-policy/"', $html );
 	}
@@ -114,14 +116,89 @@ class ReleaseChecksTest extends SAMOMIND_Integration_TestCase {
 		SAMOMIND()->orders->accept_terms( 5 );
 
 		$terms = SAMOMIND()->orders->get_terms();
-		$this->assertSame( '2026-11', $terms['version'] );
+		$this->assertSame( '2026-11-26', $terms['version'] );
 		$this->assertSame( 5, $terms['user_id'] );
 		$this->assertGreaterThan( 0, $terms['time'] );
+	}
+
+	public function test_a_shop_on_the_earlier_terms_is_asked_to_accept_the_updated_ones_by_an_administrator() {
+		$this->assertSame( '2026-11', SAMOMIND()->orders->get_terms()['version'] );
+		wp_set_current_user( $this->make_user( 'administrator' ) );
+		$html = $this->private_html( 'render_orders_card' );
+		$text = $this->plain_text( $html );
+
+		$this->assertStringContainsString( 'Updated order terms: customers can see all their orders after one code. Review and accept to switch this on.', $text );
+		$this->assertStringContainsString( 'Order status: order data terms (version 2026-11-26)', $text );
+		$this->assertSame( 1, substr_count( $html, 'class="samomind-terms"' ), 'The terms are shown once.' );
+		$this->assertStringContainsString( 'name="action" value="samomind_accept_orders_terms"', $html );
+		$this->assertStringContainsString( 'Accept the updated terms', $html );
+		$this->assertStringNotContainsString( 'name="samomind_orders_terms"', $html, 'No second checkbox: the button is the acceptance.' );
+		$this->assertStringContainsString( 'name="samomind_orders_enabled"', $html );
+		$this->assertStringContainsString( 'checked=\'checked\'>', $html, 'Order status stays switched on.' );
+		$this->assertTrue( SAMOMIND()->orders->is_enabled(), 'The new terms never switch order status off.' );
+	}
+
+	public function test_the_updated_terms_notice_is_for_administrators_and_only_until_they_are_accepted() {
+		wp_set_current_user( $this->make_user( 'editor' ) );
+		$this->assertStringNotContainsString( 'samomind_accept_orders_terms', $this->private_html( 'render_orders_card' ), 'No button for a user without manage_options.' );
+
+		SAMOMIND()->orders->accept_terms( 1 );
+		wp_set_current_user( $this->make_user( 'administrator' ) );
+		$html = $this->private_html( 'render_orders_card' );
+		$this->assertStringNotContainsString( 'Updated order terms:', $html );
+		$this->assertStringNotContainsString( 'samomind_accept_orders_terms', $html );
+		$this->assertStringContainsString( 'name="samomind_orders_terms"', $html );
+	}
+
+	private function press_accept( $nonce_ok = true ) {
+		$_REQUEST['_wpnonce'] = $nonce_ok ? wp_create_nonce( 'samomind_accept_orders_terms' ) : 'bad';
+		$die                  = static function () {
+			return static function () {
+				throw new RuntimeException( 'wp_die' );
+			};
+		};
+		$redirect             = static function () {
+			throw new RuntimeException( 'redirect' );
+		};
+		add_filter( 'wp_die_handler', $die );
+		add_filter( 'wp_redirect', $redirect );
+		try {
+			( new SAMOMIND_Admin() )->handle_accept_orders_terms();
+			$result = 'returned';
+		} catch ( RuntimeException $e ) {
+			$result = $e->getMessage();
+		}
+		remove_filter( 'wp_die_handler', $die );
+		remove_filter( 'wp_redirect', $redirect );
+		unset( $_REQUEST['_wpnonce'] );
+		return $result;
+	}
+
+	public function test_the_accept_button_records_the_new_terms_for_an_administrator_only() {
+		$this->assertFalse( SAMOMIND()->orders->history_terms_are_accepted() );
+
+		wp_set_current_user( $this->make_user( 'editor' ) );
+		$this->assertSame( 'wp_die', $this->press_accept() );
+		$this->assertFalse( SAMOMIND()->orders->history_terms_are_accepted(), 'A user without manage_options cannot accept.' );
+
+		$admin = $this->make_user( 'administrator' );
+		wp_set_current_user( $admin );
+		$this->assertSame( 'wp_die', $this->press_accept( false ) );
+		$this->assertFalse( SAMOMIND()->orders->history_terms_are_accepted(), 'A bad nonce changes nothing.' );
+
+		$this->assertSame( 'redirect', $this->press_accept() );
+		$terms = SAMOMIND()->orders->get_terms();
+		$this->assertSame( '2026-11-26', $terms['version'] );
+		$this->assertSame( $admin, $terms['user_id'] );
+		$this->assertTrue( SAMOMIND()->orders->history_enabled() );
+		$this->assertSame( self::SECRET, SAMOMIND()->orders->get_secret(), 'The key is untouched.' );
+		$this->assertTrue( SAMOMIND()->orders->is_opted_in() );
 	}
 
 	// ---- The settings are always shown --------------------------------------
 
 	public function test_the_order_settings_show_whatever_the_account_and_never_mention_payment() {
+		delete_option( 'samomind_orders_terms' );
 		wp_set_current_user( $this->make_user( 'administrator' ) );
 
 		foreach ( array( true, false ) as $opted_in ) {

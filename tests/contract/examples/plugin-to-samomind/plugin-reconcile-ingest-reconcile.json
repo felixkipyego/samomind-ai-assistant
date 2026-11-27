@@ -6,10 +6,10 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795336263",
+        "X-SamoMind-Timestamp": "1795725996",
         "Idempotency-Key": "wp-ebf617fc2443a8f10ed690c8a2cea8f7ab8f2b24",
-        "X-SamoMind-Signature": "v1=17ec12374bb0f68ba4c5f7d5ff553a32cdaa0dddf54cf3a783fb29a20fadde08",
+        "X-SamoMind-Signature": "v1=eb81168e79c6c8586fcbffd823b5442197f6d2ff99da43583ebeb72459679d5e",
         "Content-Type": "application/json"
     },
-    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"range_start\":null,\"range_end\":null,\"entries\":[{\"external_id\":\"1\",\"modified_at\":\"2026-11-22T08:25:39+00:00\"},{\"external_id\":\"2\",\"modified_at\":\"2026-11-22T08:25:39+00:00\"},{\"external_id\":\"36\",\"modified_at\":\"2026-11-22T08:31:02+00:00\"},{\"external_id\":\"37\",\"modified_at\":\"2026-11-22T08:31:02+00:00\"},{\"external_id\":\"5\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"6\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"7\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"},{\"external_id\":\"8\",\"modified_at\":\"2026-11-22T08:25:51+00:00\"}]}"
+    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"range_start\":null,\"range_end\":null,\"entries\":[{\"external_id\":\"1\",\"modified_at\":\"2026-11-26T20:42:29+00:00\"},{\"external_id\":\"2\",\"modified_at\":\"2026-11-26T20:42:29+00:00\"},{\"external_id\":\"203\",\"modified_at\":\"2026-11-26T20:46:35+00:00\"},{\"external_id\":\"204\",\"modified_at\":\"2026-11-26T20:46:35+00:00\"},{\"external_id\":\"205\",\"modified_at\":\"2026-11-26T20:46:35+00:00\"},{\"external_id\":\"206\",\"modified_at\":\"2026-11-26T20:46:35+00:00\"},{\"external_id\":\"209\",\"modified_at\":\"2026-11-26T20:46:35+00:00\"},{\"external_id\":\"5\",\"modified_at\":\"2026-11-26T20:42:37+00:00\"},{\"external_id\":\"6\",\"modified_at\":\"2026-11-26T20:42:37+00:00\"},{\"external_id\":\"7\",\"modified_at\":\"2026-11-26T20:42:37+00:00\"},{\"external_id\":\"8\",\"modified_at\":\"2026-11-26T20:42:37+00:00\"}]}"
 }

@@ -50,7 +50,7 @@ class OrdersTest extends SAMOMIND_TestCase {
 		$this->options[ SAMOMIND_Orders_Settings::OPT_IN ] = '1';
 		$payload = $settings->payload_addition();
 		$this->assertSame(
-			array( 'api', 'enabled', 'terms_accepted_version', 'share_items', 'share_tracking', 'tracking', 'hpos', 'woocommerce', 'mail_dispatch', 'reason' ),
+			array( 'api', 'enabled', 'terms_accepted_version', 'share_items', 'share_tracking', 'tracking', 'hpos', 'woocommerce', 'mail_dispatch', 'reason', 'history' ),
 			array_keys( $payload['capabilities']['orders'] )
 		);
 		$this->assertSame( 1, $payload['capabilities']['orders']['api'] );
@@ -87,9 +87,66 @@ class OrdersTest extends SAMOMIND_TestCase {
 		$this->assertEqualsWithDelta( time(), $terms['time'], 5 );
 		$this->assertTrue( $settings->terms_are_accepted() );
 
-		// A newer terms version is not accepted until it is accepted again.
+		// A version this plugin does not know is not accepted.
 		$this->options[ SAMOMIND_Orders_Settings::TERMS ]['version'] = '2025-01';
 		$this->assertFalse( $settings->terms_are_accepted() );
+		$this->assertFalse( $settings->history_terms_are_accepted() );
+	}
+
+	public function test_the_terms_are_version_2026_11_26_and_the_earlier_one_still_switches_order_status_on() {
+		$settings = $this->settings();
+		$this->assertSame( '2026-11-26', SAMOMIND_Orders_Settings::TERMS_VERSION );
+		$this->assertSame( '2026-11', SAMOMIND_Orders_Settings::PREVIOUS_TERMS_VERSION );
+
+		$this->options[ SAMOMIND_Orders_Settings::TERMS ] = array(
+			'version' => '2026-11',
+			'user_id' => 3,
+			'time'    => 1,
+		);
+		$this->assertTrue( $settings->terms_are_accepted(), 'The bump never switches order status off.' );
+		$this->assertFalse( $settings->history_terms_are_accepted(), 'History needs the new terms.' );
+		$this->assertTrue( $settings->needs_updated_terms() );
+
+		$this->options[ SAMOMIND_Orders_Settings::TERMS ]['version'] = '2026-11-26';
+		$this->assertTrue( $settings->terms_are_accepted() );
+		$this->assertTrue( $settings->history_terms_are_accepted() );
+		$this->assertFalse( $settings->needs_updated_terms() );
+	}
+
+	public function test_accepting_records_the_new_version() {
+		$settings = $this->settings();
+		$settings->accept_terms( 9 );
+		$this->assertSame( '2026-11-26', $settings->get_terms()['version'] );
+		$this->assertTrue( $settings->history_terms_are_accepted() );
+	}
+
+	public function test_history_is_reported_false_until_the_new_terms_are_accepted() {
+		$settings = $this->settings();
+		$this->assertFalse( $settings->capabilities()['history'] );
+
+		// Even with the new terms the feature stays off here: this test has no WooCommerce.
+		$settings->accept_terms( 1 );
+		$this->assertFalse( $settings->capabilities()['history'] );
+		$this->assertFalse( $settings->history_enabled() );
+	}
+
+	public function test_email_addresses_normalise_to_one_form_and_a_plus_address_is_another() {
+		$this->assertSame( 'buyer@example.com', SAMOMIND_Orders_Store::normalise_email( "  Buyer@Example.COM \n" ) );
+		$this->assertNotSame( SAMOMIND_Orders_Store::normalise_email( 'buyer+a@example.com' ), SAMOMIND_Orders_Store::normalise_email( 'buyer@example.com' ) );
+		$this->assertSame( '', SAMOMIND_Orders_Store::normalise_email( null ) );
+		$this->assertSame( '', SAMOMIND_Orders_Store::normalise_email( array( 'a@b.c' ) ) );
+	}
+
+	public function test_an_email_code_hash_ties_a_code_to_its_session_and_address() {
+		$store = new SAMOMIND_Orders_Store( 'secret' );
+		$base  = $store->email_code_hash( 'sessionA', 'buyer@example.com', '123456' );
+		$this->assertNotSame( $base, $store->email_code_hash( 'sessionB', 'buyer@example.com', '123456' ) );
+		$this->assertNotSame( $base, $store->email_code_hash( 'sessionA', 'buyer+a@example.com', '123456' ) );
+		$this->assertNotSame( $base, $store->email_code_hash( 'sessionA', 'buyer@example.com', '123457' ) );
+		$this->assertNotSame( $base, ( new SAMOMIND_Orders_Store( 'other' ) )->email_code_hash( 'sessionA', 'buyer@example.com', '123456' ) );
+		$this->assertNotSame( $base, $store->code_hash( 'sessionA', 0, '123456' ), 'Never the same as a one-order code.' );
+		$this->assertStringNotContainsString( '123456', $base );
+		$this->assertStringNotContainsString( 'buyer', $base );
 	}
 
 	public function test_sharing_defaults() {
@@ -177,5 +234,111 @@ class OrdersTest extends SAMOMIND_TestCase {
 	public function test_the_cron_fallback_is_reported_when_nothing_can_flush() {
 		Filters\expectApplied( 'SAMOMIND/orders/finish_function' )->andReturn( null );
 		$this->assertSame( 'cron_fallback', SAMOMIND_Orders_Mail::dispatch_mode() );
+	}
+
+	/**
+	 * Order fields as lookup builds them: n items with a name and an image address.
+	 */
+	private function fields( $count, $name, $image = null, array $extra = array() ) {
+		$items = array();
+		for ( $i = 0; $i < $count; $i++ ) {
+			$items[] = array(
+				'name'      => $name,
+				'qty'       => 1,
+				'image_url' => $image,
+			);
+		}
+		return array_merge(
+			array(
+				'order_number' => 'SM-1234',
+				'status'       => 'other',
+				'status_label' => str_repeat( "\u{1F600}", 40 ),
+				'created'      => '2026-11-08',
+				'paid'         => '2026-11-08',
+				'shipped'      => '2026-11-10',
+				'completed'    => null,
+				'items'        => $items,
+				'tracking'     => array(
+					'carrier' => str_repeat( "\u{1F600}", 80 ),
+					'number'  => str_repeat( "\u{1F600}", 80 ),
+					'url'     => 'https://t.example/' . str_repeat( 'a', 2030 ),
+				),
+				'total'        => str_repeat( '9', 32 ),
+			),
+			$extra
+		);
+	}
+
+	private function body_size( array $fields ) {
+		return strlen( json_encode( array( 'found' => true, 'order' => $fields ) ) );
+	}
+
+	public function test_the_worst_lookup_answer_fits_under_the_limit_with_names_shortened_and_nothing_dropped() {
+		Functions\when( 'wp_json_encode' )->alias( 'json_encode' );
+		$emoji = str_repeat( "\u{1F600}", 200 );
+		$image = 'https://shop.example/' . str_repeat( 'a', 2048 - 21 );
+
+		foreach ( array( 'version 2, with images' => $image, 'version 1, without' => null ) as $label => $url ) {
+			$fields = $this->fields( 50, $emoji, $url );
+			if ( null === $url ) {
+				foreach ( $fields['items'] as $i => $item ) {
+					unset( $fields['items'][ $i ]['image_url'] );
+				}
+				unset( $fields['total'] );
+			}
+			$this->assertGreaterThan( 100000, $this->body_size( $fields ), $label . ' starts far over the limit.' );
+
+			$fitted = ( new SAMOMIND_Orders_Lookup() )->fit_size( $fields );
+
+			$this->assertLessThanOrEqual( SAMOMIND_Orders_Lookup::MAX_ANSWER_BYTES, $this->body_size( $fitted ), $label );
+			$this->assertCount( 50, $fitted['items'], $label . ': no item is dropped.' );
+			foreach ( $fitted['items'] as $item ) {
+				$this->assertSame( '…', mb_substr( $item['name'], -1 ), $label . ': a shortened name ends with an ellipsis.' );
+				$this->assertSame( 0, strpos( $item['name'], "\u{1F600}" ), $label . ': the start is kept.' );
+				$this->assertGreaterThanOrEqual( 2, mb_strlen( $item['name'] ) );
+			}
+			$this->assertSame( $fields['tracking'], $fitted['tracking'], $label . ': tracking is never cut.' );
+			$this->assertSame( $fields['status_label'], $fitted['status_label'], $label );
+		}
+	}
+
+	public function test_names_are_shortened_longest_first_and_short_ones_stay() {
+		Functions\when( 'wp_json_encode' )->alias( 'json_encode' );
+		$fields                       = $this->fields( 50, str_repeat( "\u{1F600}", 200 ) );
+		$fields['items'][7]['name']   = 'Blue mug';
+		$fields['items'][8]['name']   = str_repeat( "\u{1F600}", 20 );
+
+		$fitted = ( new SAMOMIND_Orders_Lookup() )->fit_size( $fields );
+
+		$this->assertLessThanOrEqual( SAMOMIND_Orders_Lookup::MAX_ANSWER_BYTES, $this->body_size( $fitted ) );
+		$this->assertSame( 'Blue mug', $fitted['items'][7]['name'] );
+		$this->assertSame( $fields['items'][8]['name'], $fitted['items'][8]['name'] );
+	}
+
+	public function test_images_go_before_names_and_from_the_last_item_back() {
+		Functions\when( 'wp_json_encode' )->alias( 'json_encode' );
+		$image  = 'https://shop.example/' . str_repeat( 'a', 2048 - 21 );
+		$fields = $this->fields( 50, 'A name of ordinary length', $image );
+
+		$fitted = ( new SAMOMIND_Orders_Lookup() )->fit_size( $fields );
+
+		$this->assertLessThanOrEqual( SAMOMIND_Orders_Lookup::MAX_ANSWER_BYTES, $this->body_size( $fitted ) );
+		$this->assertSame( array_column( $fields['items'], 'name' ), array_column( $fitted['items'], 'name' ), 'No name is touched while dropping images is enough.' );
+		$seen_null = false;
+		foreach ( $fitted['items'] as $item ) {
+			if ( null === $item['image_url'] ) {
+				$seen_null = true;
+			} else {
+				$this->assertFalse( $seen_null );
+			}
+		}
+		$this->assertTrue( $seen_null );
+	}
+
+	public function test_an_answer_that_already_fits_is_returned_unchanged() {
+		Functions\when( 'wp_json_encode' )->alias( 'json_encode' );
+		$fields = $this->fields( 3, str_repeat( "\u{1F600}", 200 ), 'https://shop.example/a.jpg' );
+
+		$this->assertSame( $fields, ( new SAMOMIND_Orders_Lookup() )->fit_size( $fields ) );
 	}
 }

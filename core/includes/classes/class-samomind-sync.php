@@ -108,6 +108,24 @@ class SAMOMIND_Sync {
 	const BODY_MARGIN = 8192;
 
 	/**
+	 * Option: the plugin version that has resent every product once, so the
+	 * product cards have their image and price (0.4.1). Autoloaded: it is
+	 * read on every request until it is set.
+	 *
+	 * @since 0.4.1
+	 * @var   string
+	 */
+	const CARDS_OPTION = 'samomind_cards_sent';
+
+	/**
+	 * Value of CARDS_OPTION once the resend is done.
+	 *
+	 * @since 0.4.1
+	 * @var   string
+	 */
+	const CARDS_VERSION = '0.4.1';
+
+	/**
 	 * ######################
 	 * ###
 	 * #### STATE
@@ -147,6 +165,7 @@ class SAMOMIND_Sync {
 				'started_at'  => 0,
 				'finished_at' => 0,
 				'message'     => '',
+				'only'        => '',
 			)
 		);
 		$state['reconcile']   = wp_parse_args(
@@ -295,12 +314,78 @@ class SAMOMIND_Sync {
 			'started_at'  => time(),
 			'finished_at' => 0,
 			'message'     => '',
+			'only'        => '',
 		);
 		$state['batch_limit'] = 0;
 		$state['notice']      = '';
 		$this->save_state( $state );
 		$this->clear_retry();
+		// A full sync sends every product as it is now, so the one-time resend is not needed after it.
+		update_option( self::CARDS_OPTION, self::CARDS_VERSION, true );
 		SAMOMIND()->scheduler->schedule_worker( 0 );
+	}
+
+	/**
+	 * After an update to 0.4.1, send every synced product once more so the
+	 * product cards have their image and price. It is a full sync of the
+	 * product type only, through the normal batches and limits, and it is
+	 * marked done when it completes. Nothing happens until the site is
+	 * connected and the connection is not blocked; the next request or the
+	 * hourly run tries again, so a failed attempt is retried.
+	 *
+	 * @since   0.4.1
+	 * @return  void
+	 */
+	public function maybe_resend_products() {
+		if ( self::CARDS_VERSION === get_option( self::CARDS_OPTION, '' ) ) {
+			return;
+		}
+		$connection = SAMOMIND()->connection;
+		if ( ! $connection->is_connected() || $connection->is_blocked() ) {
+			return;
+		}
+		$state = $this->get_state();
+		if ( 'running' === $state['full']['state'] ) {
+			// A sync is under way; this runs again when it has finished.
+			return;
+		}
+		if ( ! in_array( 'product', SAMOMIND()->content->get_post_types(), true ) ) {
+			update_option( self::CARDS_OPTION, self::CARDS_VERSION, true );
+			return;
+		}
+
+		$state['full']        = array(
+			'state'       => 'running',
+			'run_id'      => wp_generate_uuid4(),
+			'cursor'      => 0,
+			'begun'       => false,
+			'total'       => SAMOMIND()->content->count_candidates( array( 'product' ) ),
+			'sent'        => 0,
+			'accepted'    => 0,
+			'unchanged'   => 0,
+			'refused'     => 0,
+			'started_at'  => time(),
+			'finished_at' => 0,
+			'message'     => '',
+			'only'        => 'product',
+		);
+		$state['batch_limit'] = 0;
+		$this->save_state( $state );
+		$this->clear_retry();
+		SAMOMIND()->scheduler->schedule_worker( 0 );
+	}
+
+	/**
+	 * Mark the one-time product resend done when the run that just ended was it.
+	 *
+	 * @since   0.4.1
+	 * @param   array $state  Sync state.
+	 * @return  void
+	 */
+	private function note_resend_done( array $state ) {
+		if ( 'product' === $state['full']['only'] ) {
+			update_option( self::CARDS_OPTION, self::CARDS_VERSION, true );
+		}
 	}
 
 	/**
@@ -689,6 +774,9 @@ class SAMOMIND_Sync {
 		// A suspended tenant or disabled source still checks in (5.4), a bad key does not.
 		$can_checkin = empty( $block['code'] ) || in_array( $block['code'], array( 'tenant_suspended', 'source_disabled' ), true );
 
+		// An update to 0.4.1 resends the products once; this is the retry if that did not happen yet.
+		$this->maybe_resend_products();
+
 		if ( $can_checkin && $connection->is_checkin_due() ) {
 			$result = $connection->checkin( false );
 			if ( ! is_wp_error( $result ) && ! $connection->is_blocked() ) {
@@ -742,6 +830,10 @@ class SAMOMIND_Sync {
 		$outcome = 'idle';
 
 		while ( $sent < self::MAX_REQUESTS_PER_RUN && time() - $started < self::RUN_TIME_BUDGET ) {
+			// A cache that cannot be cleared still must not carry a run past the memory limit: end it, the next run goes on.
+			if ( $sent > 0 && SAMOMIND_Content::memory_is_tight() ) {
+				break;
+			}
 			$request = $this->next_request();
 			if ( null === $request ) {
 				break;
@@ -749,6 +841,8 @@ class SAMOMIND_Sync {
 
 			$result = $client->post( $request['endpoint'], $request['payload'], $request['key'] );
 			++$sent;
+			// The posts of that batch are not needed again: drop this request's copy of the cache.
+			SAMOMIND_Content::release_runtime_cache();
 
 			if ( ! is_wp_error( $result ) ) {
 				$this->apply( $request, $result );
@@ -986,7 +1080,7 @@ class SAMOMIND_Sync {
 		$full_up   = false;
 
 		do {
-			$ids = $content->get_candidate_ids( $cursor, self::SCAN_CHUNK );
+			$ids = $content->get_candidate_ids( $cursor, self::SCAN_CHUNK, '' === $full['only'] ? array() : array( (string) $full['only'] ) );
 			foreach ( $ids as $id ) {
 				$document = $content->get_document( $id, $max_text );
 				if ( null !== $document && ! $this->add_to_batch( $documents, $bytes, $document ) ) {
@@ -995,6 +1089,7 @@ class SAMOMIND_Sync {
 				}
 				$cursor = $id;
 			}
+			SAMOMIND_Content::release_runtime_cache();
 		} while ( ! $full_up && ! empty( $ids ) );
 
 		if ( empty( $documents ) ) {
@@ -1106,12 +1201,14 @@ class SAMOMIND_Sync {
 					$state['full']['state']       = 'stopped';
 					$state['full']['finished_at'] = time();
 					$state['full']['message']     = self::page_cap_message();
+					$this->note_resend_done( $state );
 				}
 			}
 		} elseif ( 'sync_complete' === $request['type'] ) {
 			$state['full']['state']       = 'complete';
 			$state['full']['finished_at'] = time();
 			$state['batch_limit']         = 0;
+			$this->note_resend_done( $state );
 			$this->save_state( $state );
 			// 5.6: reconcile after a first sync.
 			$this->request_reconcile( 'sync-' . $state['full']['run_id'] );

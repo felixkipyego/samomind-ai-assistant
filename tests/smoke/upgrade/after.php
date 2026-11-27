@@ -10,7 +10,7 @@ require_once ABSPATH . 'wp-admin/includes/template.php';
 
 global $wpdb;
 
-smoke_check( 'new files are running (' . SAMOMIND_VERSION . ')', '0.4.0' === SAMOMIND_VERSION );
+smoke_check( 'new files are running (' . SAMOMIND_VERSION . ')', '0.4.1' === SAMOMIND_VERSION );
 
 // Keys and settings stay.
 smoke_check( 'key id stays', SMOKE_KEY_ID === get_option( 'samomind_key_id' ) );
@@ -21,13 +21,46 @@ smoke_check( 'the secret is still not autoloaded', ! isset( wp_load_alloptions()
 smoke_check( 'still connected', SAMOMIND()->connection->is_connected() );
 smoke_check( 'the widget is still on', SAMOMIND()->helpers->widget_is_active() );
 
-// What 0.4.0 needs, with no activation hook.
+// What 0.4.1 needs, with no activation hook.
+// A site that starts before 0.4.0 has no order status yet: the shop switches it on, with the 2026-11 terms, after the update.
+$from_before_orders = version_compare( (string) get_option( 'smoke_from_version', '0.4.0' ), '0.4.0', '<' );
+if ( $from_before_orders ) {
+	smoke_check( 'a site from before 0.4.0 has order status off after the update', ! SAMOMIND()->orders->is_enabled() && false === SAMOMIND()->orders->capabilities()['history'] );
+	update_option( 'samomind_orders_secret', SMOKE_ORDERS_SECRET, false );
+	update_option( 'samomind_orders_enabled', '1', false );
+	update_option( 'samomind_orders_share_items', '1', false );
+	update_option( 'samomind_orders_terms', array( 'version' => '2026-11', 'user_id' => 1, 'time' => time() ), false );
+	SAMOMIND_Orders_State::maybe_install();
+}
+// The order settings and the accepted terms of the earlier release are kept, and the new terms are not taken for the shop.
+smoke_check( 'order status stays on', '1' === get_option( 'samomind_orders_enabled' ) && SMOKE_ORDERS_SECRET === get_option( 'samomind_orders_secret' ) );
+smoke_check( 'the accepted terms stay 2026-11', '2026-11' === SAMOMIND()->orders->get_terms()['version'] );
+smoke_check( 'order status is still enabled with the earlier terms', SAMOMIND()->orders->is_enabled() );
+smoke_check( 'order history is off until the new terms are accepted', false === SAMOMIND()->orders->capabilities()['history'] );
+smoke_check( 'the orders table is there', SAMOMIND_Orders_State::DB_VERSION === (string) get_option( 'samomind_orders_db_version', '' ) );
+
+// The one-time resend of every product, started by the update itself.
+$state = SAMOMIND()->sync->get_state();
+smoke_check( 'the update queued a resend of the products only', 'running' === $state['full']['state'] && 'product' === $state['full']['only'] );
+smoke_check( 'it is not marked done before it ran', SAMOMIND_Sync::CARDS_VERSION !== get_option( SAMOMIND_Sync::CARDS_OPTION, '' ) );
+$progress = smoke_run_sync_to_the_end();
+smoke_check( 'the resend ran to the end (' . $progress['sent'] . ' sent)', 'complete' === $progress['state'] && 2 === $progress['sent'] && 0 === $progress['refused'] );
+smoke_check( 'it sent products only', count( $GLOBALS['smoke_documents'] ) === 2 && array( 'product' ) === array_values( array_unique( array_column( $GLOBALS['smoke_documents'], 'kind' ) ) ) );
+$cards = array_values( $GLOBALS['smoke_documents'] );
+smoke_check( 'each product carries the three card fields', isset( $cards[0]['fields']['image_url'] ) || array_key_exists( 'image_url', (array) $cards[0]['fields'] ) );
+smoke_check( 'the prices are shown as the shop shows them', in_array( $cards[0]['fields']['price_display'], array( '$10.00', '$25.00' ), true ) && null === $cards[0]['fields']['regular_price_display'] && null === $cards[0]['fields']['image_url'] );
+smoke_check( 'it is marked done', SAMOMIND_Sync::CARDS_VERSION === get_option( SAMOMIND_Sync::CARDS_OPTION, '' ) );
+$before = count( $GLOBALS['smoke_documents'] );
+$GLOBALS['smoke_documents'] = array();
+SAMOMIND()->sync->maybe_resend_products();
+smoke_run_sync_to_the_end();
+smoke_check( 'it runs once: nothing more is sent the second time', array() === $GLOBALS['smoke_documents'] && 2 === $before && 'complete' === SAMOMIND()->sync->get_state()['full']['state'] );
 $orders_table = SAMOMIND_Orders_State::table();
 $table_exists = function () use ( $wpdb, $orders_table ) {
 	return $orders_table === $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $orders_table ) );
 };
 smoke_check( 'the hourly tick is scheduled', false !== wp_next_scheduled( SAMOMIND_Scheduler::HOURLY_HOOK ) );
-smoke_check( 'no orders table yet: a site that never used order status gets none', ! $table_exists() );
+smoke_check( 'the orders table is in place', $table_exists() );
 
 // The admin pages load, with the new sections.
 $admin_id = wp_insert_user(
@@ -54,15 +87,35 @@ smoke_check( 'Settings has the Connect box', false !== strpos( $settings, 'Conne
 smoke_check( 'Settings has the Advanced fold', false !== strpos( $settings, 'Advanced: enter keys manually' ) );
 smoke_check( 'Settings has the order status card', false !== strpos( $settings, 'samomind_orders_enabled' ) );
 
-// Switch order status on, as the order settings form does, and use it.
-update_option( SAMOMIND_Orders_Settings::SECRET, SMOKE_ORDERS_SECRET, false );
-update_option( SAMOMIND_Orders_Settings::OPT_IN, '1', false );
-SAMOMIND()->orders->accept_terms( $admin_id );
-SAMOMIND_Orders_State::maybe_install();
-smoke_check( 'switching order status on makes the orders table', $table_exists() && SAMOMIND_Orders_State::DB_VERSION === (string) get_option( 'samomind_orders_db_version', '' ) );
-smoke_check( 'order status is enabled', SAMOMIND()->orders->is_enabled() );
+// Order status as the earlier release left it: a signed ping, and one order checked with a code (version 1).
 smoke_check( 'a signed ping from Samomind is answered (HTTP 200)', 200 === smoke_signed_ping() );
 smoke_check( 'the same ping signed with a wrong key is refused', 401 === smoke_signed_ping_with_wrong_key() );
+$ping = smoke_signed( 'ping' )->get_data();
+smoke_check( 'the ping reports order status on and history off', true === $ping['capabilities']['orders']['enabled'] && false === $ping['capabilities']['orders']['history'] );
+smoke_check( 'the Settings page offers the updated terms with an Accept button', false !== strpos( $settings, 'Updated order terms: customers can see all their orders after one code.' ) && false !== strpos( $settings, 'samomind_accept_orders_terms' ) );
+
+$order = new WC_Order();
+$order->set_billing_email( 'buyer@example.com' );
+$order->set_total( 30 );
+$order->set_status( 'processing' );
+$order->save();
+$session = substr( hash( 'sha256', 'update-test' ), 0, 32 );
+$start   = smoke_signed( 'start', array( 'request_id' => wp_generate_uuid4(), 'session_ref' => $session, 'order_number' => (string) $order->get_id(), 'email' => 'buyer@example.com', 'locale' => 'en' ) );
+smoke_run_plugin_shutdown();
+smoke_check( 'order status of version 1 works: a code is emailed for one order', 202 === $start->get_status() && 1 === count( $GLOBALS['smoke_mails'] ) );
+$email_start = smoke_signed( 'start', array( 'request_id' => wp_generate_uuid4(), 'session_ref' => $session, 'scope' => 'email', 'email' => 'buyer@example.com', 'locale' => 'en' ) );
+smoke_check( 'history is refused until the new terms are accepted', 403 === $email_start->get_status() && 1 === count( $GLOBALS['smoke_mails'] ) );
+smoke_check( 'a list is not granted', array( 'granted' => false ) === smoke_signed( 'list', array( 'request_id' => wp_generate_uuid4(), 'session_ref' => $session, 'limit' => 5 ) )->get_data() );
+
+// The administrator accepts the updated terms: history is on, the key and the opt-in are untouched.
+SAMOMIND()->orders->accept_terms( $admin_id );
+smoke_check( 'accepting the new terms turns history on', SAMOMIND()->orders->history_enabled() && true === smoke_signed( 'ping' )->get_data()['capabilities']['orders']['history'] );
+smoke_check( 'the key and the opt-in are untouched', SMOKE_ORDERS_SECRET === get_option( 'samomind_orders_secret' ) && '1' === get_option( 'samomind_orders_enabled' ) );
+$session2 = substr( hash( 'sha256', 'update-test-2' ), 0, 32 );
+$email_start = smoke_signed( 'start', array( 'request_id' => wp_generate_uuid4(), 'session_ref' => $session2, 'scope' => 'email', 'email' => 'buyer@example.com', 'locale' => 'en' ) );
+smoke_run_plugin_shutdown();
+smoke_check( 'an email code is now sent for an address with orders', 202 === $email_start->get_status() && 2 === count( $GLOBALS['smoke_mails'] ) );
+$order->delete( true );
 
 // Saving the same settings through the Settings API changes nothing.
 update_option( 'samomind_key_id', SMOKE_KEY_ID );

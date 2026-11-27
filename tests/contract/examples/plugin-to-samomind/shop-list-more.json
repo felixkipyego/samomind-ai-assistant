@@ -1,0 +1,10 @@
+{
+    "message": "shop-list-more",
+    "direction": "shop to Samomind",
+    "model": "ListResponse",
+    "status": 200,
+    "nonce": "9tEtZENYuIwKsSeIPv-IuL",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=606eb6764b005a290da31380c245037fa60b2e98deccb9ef263e7bf02761275c",
+    "body_raw": "{\"granted\":true,\"orders\":[{\"order_number\":\"SM-1236\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-20\",\"paid\":null,\"shipped\":null,\"completed\":null,\"total\":\"$129.00\",\"item_count\":3},{\"order_number\":\"SM-1235\",\"status\":\"completed\",\"status_label\":\"Completed\",\"created\":\"2026-10-02\",\"paid\":\"2026-11-26\",\"shipped\":null,\"completed\":\"2026-11-26\",\"total\":\"$45.00\",\"item_count\":1}],\"more\":true}"
+}

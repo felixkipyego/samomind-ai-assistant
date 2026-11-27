@@ -170,7 +170,20 @@ class SAMOMIND_Orders_Store {
 	 * @return  bool
 	 */
 	public function check_code( $session_ref, $order_id, $candidate_hash, $max_tries ) {
-		$row = SAMOMIND_Orders_State::get( 'code', SAMOMIND_Orders_State::key( array( $session_ref, (string) (int) $order_id ) ) );
+		return $this->check_code_row( SAMOMIND_Orders_State::key( array( $session_ref, (string) (int) $order_id ) ), $candidate_hash, $max_tries );
+	}
+
+	/**
+	 * The code check shared by both scopes.
+	 *
+	 * @since   0.4.1
+	 * @param   string $key             Row key.
+	 * @param   string $candidate_hash  Hash of what was typed.
+	 * @param   int    $max_tries       Tries allowed.
+	 * @return  bool
+	 */
+	private function check_code_row( $key, $candidate_hash, $max_tries ) {
+		$row = SAMOMIND_Orders_State::get( 'code', $key );
 		if ( null === $row || empty( $row['data']['hash'] ) ) {
 			return false;
 		}
@@ -178,6 +191,184 @@ class SAMOMIND_Orders_Store {
 			return false;
 		}
 		return hash_equals( (string) $row['data']['hash'], $candidate_hash ) && SAMOMIND_Orders_State::spend( $row['id'] );
+	}
+
+	/**
+	 * Normal form of an email address: trimmed and lower-cased, so case and
+	 * spaces never make two addresses. A plus-address stays a different one.
+	 *
+	 * @since   0.4.1
+	 * @param   mixed $email  What was typed or stored.
+	 * @return  string
+	 */
+	public static function normalise_email( $email ) {
+		return is_string( $email ) ? strtolower( trim( $email ) ) : '';
+	}
+
+	/**
+	 * Hash that stands for an email address in keys: the address itself is
+	 * never part of a key.
+	 *
+	 * @since   0.4.1
+	 * @param   string $email  Normalised address.
+	 * @return  string
+	 */
+	private static function email_id( $email ) {
+		return hash( 'sha256', $email );
+	}
+
+	/**
+	 * The stored form of a code sent to an email address (order history): tied
+	 * to the chat session and the address.
+	 *
+	 * @since   0.4.1
+	 * @param   string $session_ref  Session reference.
+	 * @param   string $email        Normalised address.
+	 * @param   string $code         Six digits.
+	 * @return  string
+	 */
+	public function email_code_hash( $session_ref, $email, $code ) {
+		return hash_hmac( 'sha256', $session_ref . '|email|' . self::email_id( $email ) . '|' . $code, $this->secret );
+	}
+
+	/**
+	 * Whether an address has used its code emails for this hour. Looks only.
+	 *
+	 * @since   0.4.1
+	 * @param   string $email  Normalised address.
+	 * @return  bool
+	 */
+	public function email_cap_reached( $email ) {
+		return SAMOMIND_Orders_State::count( 'omail', SAMOMIND_Orders_State::key( array( 'email', self::email_id( $email ) ) ) ) >= self::ORDER_EMAILS_PER_HOUR;
+	}
+
+	/**
+	 * Count a code email for one address and say whether it is within its
+	 * hourly limit (the same three an hour as one order).
+	 *
+	 * @since   0.4.1
+	 * @param   string $email  Normalised address.
+	 * @return  bool
+	 */
+	public function allow_email_mail( $email ) {
+		return SAMOMIND_Orders_State::bump( 'omail', SAMOMIND_Orders_State::key( array( 'email', self::email_id( $email ) ) ), self::ORDER_EMAILS_PER_HOUR, time() + HOUR_IN_SECONDS );
+	}
+
+	/**
+	 * Store a code for an address, replacing any earlier one for the same
+	 * session and address.
+	 *
+	 * @since   0.4.1
+	 * @param   string $session_ref  Session reference.
+	 * @param   string $email        Normalised address.
+	 * @param   string $hash         Output of email_code_hash().
+	 * @param   int    $ttl          Seconds the code works.
+	 * @return  void
+	 */
+	public function put_email_code( $session_ref, $email, $hash, $ttl ) {
+		SAMOMIND_Orders_State::put( 'code', SAMOMIND_Orders_State::key( array( $session_ref, 'email', self::email_id( $email ) ) ), time() + (int) $ttl, array( 'hash' => $hash ), $session_ref );
+	}
+
+	/**
+	 * Check a code for an address, with the same counted tries as check_code().
+	 *
+	 * @since   0.4.1
+	 * @param   string $session_ref     Session reference.
+	 * @param   string $email           Normalised address.
+	 * @param   string $candidate_hash  email_code_hash() of what was typed.
+	 * @param   int    $max_tries       Tries allowed.
+	 * @return  bool
+	 */
+	public function check_email_code( $session_ref, $email, $candidate_hash, $max_tries ) {
+		return $this->check_code_row( SAMOMIND_Orders_State::key( array( $session_ref, 'email', self::email_id( $email ) ) ), $candidate_hash, $max_tries );
+	}
+
+	/**
+	 * Create the grant of a verified address for one chat session: it lets
+	 * list and lookup read the orders of that address. A session holds one,
+	 * so a newer one replaces the older. The address is kept in the row
+	 * because list has to search by it; the row ends with the grant.
+	 *
+	 * @since   0.4.1
+	 * @param   string $session_ref  Session reference.
+	 * @param   string $email        Normalised address.
+	 * @param   int    $ttl          Seconds the grant lasts.
+	 * @return  void
+	 */
+	public function put_email_grant( $session_ref, $email, $ttl ) {
+		SAMOMIND_Orders_State::put(
+			'egrant',
+			SAMOMIND_Orders_State::key( array( $session_ref ) ),
+			time() + (int) $ttl,
+			array(
+				'email' => $email,
+				'id'    => self::email_id( $email ),
+			),
+			$session_ref
+		);
+	}
+
+	/**
+	 * The normalised address a session is verified for, or an empty string.
+	 *
+	 * @since   0.4.1
+	 * @param   string $session_ref  Session reference.
+	 * @return  string
+	 */
+	public function get_email_grant( $session_ref ) {
+		$row = SAMOMIND_Orders_State::get( 'egrant', SAMOMIND_Orders_State::key( array( $session_ref ) ) );
+		if ( null === $row || empty( $row['data']['email'] ) || ! is_string( $row['data']['email'] ) ) {
+			return '';
+		}
+		// The id is stored beside the address: a row that does not agree with itself is not used.
+		return isset( $row['data']['id'] ) && hash_equals( self::email_id( $row['data']['email'] ), (string) $row['data']['id'] ) ? $row['data']['email'] : '';
+	}
+
+	/**
+	 * Create the grant of a signed-in customer for one chat session, from the
+	 * same proof as an account grant for one order: it lets list and lookup
+	 * read every order of that customer.
+	 *
+	 * @since   0.4.1
+	 * @param   string $session_ref  Session reference.
+	 * @param   int    $user_id      Customer id.
+	 * @param   string $verifier     Hash of the login session token.
+	 * @param   int    $ttl          Seconds the grant lasts.
+	 * @return  void
+	 */
+	public function put_customer_grant( $session_ref, $user_id, $verifier, $ttl ) {
+		SAMOMIND_Orders_State::put(
+			'cgrant',
+			SAMOMIND_Orders_State::key( array( $session_ref ) ),
+			time() + (int) $ttl,
+			array(
+				'user_id'  => (int) $user_id,
+				'verifier' => (string) $verifier,
+			),
+			$session_ref
+		);
+	}
+
+	/**
+	 * The customer id a session is signed in as, or 0. It counts only while
+	 * the WordPress login it came from still exists; when that is gone the
+	 * grant is deleted.
+	 *
+	 * @since   0.4.1
+	 * @param   string $session_ref  Session reference.
+	 * @return  int
+	 */
+	public function get_customer_grant( $session_ref ) {
+		$row = SAMOMIND_Orders_State::get( 'cgrant', SAMOMIND_Orders_State::key( array( $session_ref ) ) );
+		if ( null === $row || empty( $row['data']['user_id'] ) ) {
+			return 0;
+		}
+		$user_id = (int) $row['data']['user_id'];
+		if ( $user_id < 1 || ! self::login_session_exists( $user_id, isset( $row['data']['verifier'] ) ? (string) $row['data']['verifier'] : '' ) ) {
+			SAMOMIND_Orders_State::spend( $row['id'] );
+			return 0;
+		}
+		return $user_id;
 	}
 
 	/**
@@ -234,7 +425,7 @@ class SAMOMIND_Orders_Store {
 	}
 
 	/**
-	 * Delete every code, grant and send counter of a session. Unknown
+	 * Delete every code, grant (order, email and customer) and send counter of a session. Unknown
 	 * sessions are fine. A one-time account record is keyed by its
 	 * challenge, which the shop does not tie to a session until it is
 	 * redeemed; it ends on its own within a minute.
@@ -244,7 +435,7 @@ class SAMOMIND_Orders_Store {
 	 * @return  void
 	 */
 	public function end_session( $session_ref ) {
-		SAMOMIND_Orders_State::delete_session( $session_ref, array( 'code', 'grant', 'gap', 'sends' ) );
+		SAMOMIND_Orders_State::delete_session( $session_ref, array( 'code', 'grant', 'egrant', 'cgrant', 'gap', 'sends' ) );
 	}
 
 	/**

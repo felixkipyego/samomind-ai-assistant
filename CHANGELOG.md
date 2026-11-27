@@ -1,5 +1,55 @@
 # Changelog
 
+## 0.4.1 (release candidate)
+
+Product cards and order history, with the new dashboard menu name. Written
+up for the release in readme.txt (External services, Changelog, Upgrade
+Notice). Contract: SamoMind docs/design/F-3-order-status.md section 15, as
+of 22913b9.
+
+- New: product fields for the chat's product cards. The document `fields`
+  gain `image_url` (the main image at WooCommerce's thumbnail size, https
+  only), `price_display` (the guest price without "(was ...)", "(some on
+  sale)" or the suffix) and `regular_price_display` (a simple or external
+  product on sale). The API refuses a whole body for one bad value, so each is checked
+  here and sent as null when it breaks a rule.
+- New: after the update every synced product is sent once more (a full sync
+  of the product type only, through the normal batches). Marked done in the
+  option `samomind_cards_sent`; retried by the next request or hourly run
+  until it completes. A full sync started by hand or on connect also marks it
+  done.
+- New: order history. `capabilities.orders.history` is reported only with
+  the order terms "2026-11-26" accepted. `POST /orders/start` and `verify`
+  take `scope: "email"` (a code is emailed to an address that has at least
+  one order; the answer is identical for an address without orders and when
+  the address is over its own cap of 3 codes an hour). New `POST
+  /orders/list`; `lookup` accepts an email or customer grant and adds
+  `total` and each item's `image_url`; `end` removes the new grants. A
+  lookup answer is held under 60 KB by dropping item image addresses from
+  the last item back.
+- New: a signed-in customer sees the orders of their account at once:
+  `POST /orders/account/redeem` with `scope: "account"` and no order number
+  makes a customer grant (needs the 2026-11-26 terms; the login session is
+  checked again on every list and lookup).
+- Fixed: the reconcile list no longer grows in memory with the size of the
+  shop. It reads plain rows (id, type, status, password, modified time) and a
+  product's visibility terms in batches of 500 instead of loading every post
+  and product, and judges them with the same function as a push. About 3,000
+  products used 52 MB and now use under 2 MB. A worker run also clears this
+  request's copy of the object cache after each request where the cache
+  supports it (never a flush of a persistent cache) and ends early when it has
+  used 70% of the memory limit.
+- Changed: every lookup answer, version 1 or 2, is held under 60 KB: item
+  images go first (last item back), then item names are shortened, longest
+  first, ending with an ellipsis. Items are never dropped.
+- Changed: the order terms are version 2026-11-26 (items 1 to 3 reworded for
+  order history). Shops that accepted 2026-11 keep order status exactly as
+  before; the order status card shows the updated terms with an Accept
+  button, and history stays off until they are accepted.
+- Changed: "Install > WordPress" in the dashboard is now "Channels >
+  Website: WordPress" in every text.
+- Changed: new header description and readme short description.
+
 ## 0.4.0 (release candidate)
 
 The first public WordPress.org upload, built from main, with order status.

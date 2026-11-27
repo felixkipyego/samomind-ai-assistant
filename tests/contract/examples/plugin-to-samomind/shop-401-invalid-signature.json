@@ -6,5 +6,5 @@
     "nonce": "0i6J5ujkrFycWkMIhQC84s",
     "secret": "smok_test_secret_for_the_integration_suite",
     "signature": null,
-    "body_raw": "{\"code\":\"invalid_signature\",\"server_time\":1795336261}"
+    "body_raw": "{\"code\":\"invalid_signature\",\"server_time\":1795725991}"
 }

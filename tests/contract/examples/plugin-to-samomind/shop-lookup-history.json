@@ -1,0 +1,10 @@
+{
+    "message": "shop-lookup-history",
+    "direction": "shop to Samomind",
+    "model": "LookupResponse",
+    "status": 200,
+    "nonce": "WpVeOq-1beFopiyWouXjxJ",
+    "secret": "smok_test_secret_for_the_integration_suite",
+    "signature": "v1=82377aca1fcfd8639cf8a96a5f2cb88ba3027082810a3d1b11764e10622b5847",
+    "body_raw": "{\"found\":true,\"order\":{\"order_number\":\"SM-1236\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-20\",\"paid\":null,\"shipped\":null,\"completed\":null,\"items\":[{\"name\":\"Blue mug\",\"qty\":2,\"image_url\":null},{\"name\":\"Blue mug\",\"qty\":1,\"image_url\":\"https:\\/\\/acme.example\\/wp-content\\/uploads\\/blue-mug-300x300.jpg\"}],\"tracking\":null,\"total\":\"$129.00\"}}"
+}

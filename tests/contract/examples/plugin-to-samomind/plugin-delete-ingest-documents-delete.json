@@ -6,10 +6,10 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795336263",
-        "Idempotency-Key": "wp-3865e1f1af4c94d8667a1a877379efc34f0a47fe",
-        "X-SamoMind-Signature": "v1=0d795ac6cf179fd996d18ad6b3804709ffcd0b3a6d1a00c8819afc1d1abda854",
+        "X-SamoMind-Timestamp": "1795725996",
+        "Idempotency-Key": "wp-0c2254370ea0c55997204d2e80dd3957eb1ea66b",
+        "X-SamoMind-Signature": "v1=a511e35c148f896437d2b571b269566c8234271c4ec127b42eda7a214179ce2a",
         "Content-Type": "application/json"
     },
-    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"external_ids\":[\"36\"]}"
+    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"external_ids\":[\"203\"]}"
 }

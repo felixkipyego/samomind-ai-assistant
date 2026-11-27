@@ -17,7 +17,7 @@ class SAMOMIND_Counting_Content extends SAMOMIND_Content {
 	public $among      = 0;
 	public $among_ids  = null;
 
-	public function count_candidates() {
+	public function count_candidates( array $only = array() ) {
 		return $this->candidates;
 	}
 
@@ -172,9 +172,138 @@ class ContentTest extends SAMOMIND_TestCase {
 				'price'        => 'KSh 1,500.00',
 				'stock_status' => 'instock',
 				'categories'   => array( 'Shoes' ),
+				'image_url'             => null,
+				'price_display'         => null,
+				'regular_price_display' => null,
 			),
 			$document['fields']
 		);
+	}
+
+	private function product_document( array $product ) {
+		return SAMOMIND_Content::build_document(
+			$this->page_data(
+				array(
+					'id'        => 7,
+					'post_type' => 'product',
+					'product'   => $product + array(
+						'price'        => '$89.00',
+						'stock_status' => 'instock',
+					),
+				)
+			),
+			200000
+		)['fields'];
+	}
+
+	public function test_a_product_card_carries_its_image_and_both_price_texts() {
+		$fields = $this->product_document(
+			array(
+				'image_url'             => 'https://shop.example/wp-content/uploads/mug-300x300.jpg',
+				'price_display'         => '$39.00 to $45.00',
+				'regular_price_display' => '$110.00',
+			)
+		);
+
+		$this->assertSame( 'https://shop.example/wp-content/uploads/mug-300x300.jpg', $fields['image_url'] );
+		$this->assertSame( '$39.00 to $45.00', $fields['price_display'] );
+		$this->assertSame( '$110.00', $fields['regular_price_display'] );
+		$this->assertSame( '$89.00', $fields['price'], 'The text the AI reads is unchanged.' );
+		$this->assertSame( 'instock', $fields['stock_status'] );
+	}
+
+	public function test_a_bad_image_address_becomes_null_and_the_rest_stays() {
+		$cases = array(
+			'plain http'         => 'http://shop.example/mug.jpg',
+			'a user and password' => 'https://user:pass@shop.example/mug.jpg',
+			'a user only'        => 'https://user@shop.example/mug.jpg',
+			'over 2048 chars'    => 'https://shop.example/' . str_repeat( 'a', 2030 ) . '.jpg',
+			'a space'            => 'https://shop.example/my mug.jpg',
+			'a newline'          => "https://shop.example/mug.jpg\n",
+			'a control char'     => "https://shop.example/mu\x07g.jpg",
+			'no host'            => 'https:///mug.jpg',
+			'a script address'   => 'javascript:alert(1)',
+			'upper case scheme'  => 'HTTPS://shop.example/mug.jpg',
+			'not a string'       => array( 'https://shop.example/mug.jpg' ),
+			'empty'              => '',
+		);
+		foreach ( $cases as $name => $url ) {
+			$fields = $this->product_document(
+				array(
+					'image_url'     => $url,
+					'price_display' => '$89.00',
+				)
+			);
+			$this->assertNull( $fields['image_url'], $name );
+			$this->assertSame( '$89.00', $fields['price_display'], $name );
+		}
+	}
+
+	public function test_an_image_address_at_the_limit_and_with_a_port_or_query_is_kept() {
+		$long = 'https://shop.example/' . str_repeat( 'a', 2048 - strlen( 'https://shop.example/' ) );
+		$this->assertSame( 2048, strlen( $long ) );
+		$this->assertSame( $long, $this->product_document( array( 'image_url' => $long ) )['image_url'] );
+		$this->assertNull( $this->product_document( array( 'image_url' => $long . 'a' ) )['image_url'] );
+
+		$this->assertSame( 'https://shop.example:8443/a.jpg?v=3#x', $this->product_document( array( 'image_url' => 'https://shop.example:8443/a.jpg?v=3#x' ) )['image_url'] );
+		$this->assertSame( 'https://shop.example/caf%C3%A9.jpg', $this->product_document( array( 'image_url' => 'https://shop.example/caf%C3%A9.jpg' ) )['image_url'] );
+	}
+
+	public function test_a_bad_price_text_becomes_null_and_never_leaves() {
+		$cases = array(
+			'markup'          => '<b>$5.00</b>',
+			'a lone bracket'  => '$5.00 >',
+			'an entity tag'   => '<span>$5.00</span>',
+			'over 64 chars'   => '$' . str_repeat( '9', 64 ),
+			'a control char'  => "\$5\x07.00",
+			'empty'           => '',
+			'blank'           => '   ',
+			'not a string'    => 89,
+		);
+		foreach ( $cases as $name => $text ) {
+			$fields = $this->product_document(
+				array(
+					'price_display'         => $text,
+					'regular_price_display' => $text,
+					'image_url'             => 'https://shop.example/mug.jpg',
+				)
+			);
+			$this->assertNull( $fields['price_display'], $name );
+			$this->assertNull( $fields['regular_price_display'], $name );
+			$this->assertSame( 'https://shop.example/mug.jpg', $fields['image_url'], $name );
+		}
+
+		$exactly = '$' . str_repeat( '9', 63 );
+		$this->assertSame( $exactly, $this->product_document( array( 'price_display' => $exactly ) )['price_display'], 'Exactly 64 characters is allowed.' );
+		$this->assertSame( 'KSh 1,500.00', $this->product_document( array( 'price_display' => "KSh\xC2\xA01,500.00" ) )['price_display'], 'A no-break space becomes a space.' );
+	}
+
+	public function test_every_sent_card_field_obeys_the_api_rules() {
+		$samples = array(
+			array( 'https://shop.example/a.jpg', '$1.00', '$2.00' ),
+			array( 'http://shop.example/a.jpg', '<i>x</i>', str_repeat( 'x', 80 ) ),
+			array( 'https://u:p@shop.example/a.jpg', '', null ),
+		);
+		foreach ( $samples as $sample ) {
+			$fields = $this->product_document(
+				array(
+					'image_url'             => $sample[0],
+					'price_display'         => $sample[1],
+					'regular_price_display' => $sample[2],
+				)
+			);
+			if ( null !== $fields['image_url'] ) {
+				$this->assertLessThanOrEqual( 2048, strlen( $fields['image_url'] ) );
+				$this->assertSame( 1, preg_match( '#^https://[^\s/?\#@]+([/?\#]\S*)?$#', $fields['image_url'] ) );
+			}
+			foreach ( array( 'price_display', 'regular_price_display' ) as $key ) {
+				if ( null !== $fields[ $key ] ) {
+					$this->assertLessThanOrEqual( 64, mb_strlen( $fields[ $key ] ) );
+					$this->assertStringNotContainsString( '<', $fields[ $key ] );
+					$this->assertStringNotContainsString( '>', $fields[ $key ] );
+				}
+			}
+		}
 	}
 
 	public function test_custom_post_type_is_kind_custom_and_without_terms_has_no_fields() {
@@ -511,5 +640,50 @@ class ContentTest extends SAMOMIND_TestCase {
 		$document = $this->document_content()->get_document( 42, 10 );
 
 		$this->assertSame( 10, strlen( $document['text'] ) );
+	}
+
+	public function test_the_runtime_cache_is_cleared_only_where_the_cache_says_it_can_be_and_never_flushed() {
+		$calls = array();
+		Brain\Monkey\Functions\when( 'wp_cache_flush_runtime' )->alias(
+			function () use ( &$calls ) {
+				$calls[] = 'flush_runtime';
+			}
+		);
+		Brain\Monkey\Functions\when( 'wp_cache_flush' )->alias(
+			function () use ( &$calls ) {
+				$calls[] = 'FLUSH';
+			}
+		);
+
+		Brain\Monkey\Functions\when( 'wp_cache_supports' )->justReturn( true );
+		SAMOMIND_Content::release_runtime_cache();
+		$this->assertSame( array( 'flush_runtime' ), $calls );
+
+		$calls = array();
+		Brain\Monkey\Functions\when( 'wp_cache_supports' )->justReturn( false );
+		SAMOMIND_Content::release_runtime_cache();
+		$this->assertSame( array(), $calls, 'Without support nothing is called, and the full flush never is.' );
+	}
+
+	public function test_the_plugin_never_flushes_or_deletes_from_the_object_cache() {
+		$root = dirname( __DIR__, 2 );
+		$files = array_merge( array( $root . '/samomind-ai-assistant.php', $root . '/uninstall.php' ), glob( $root . '/core/*.php' ), glob( $root . '/core/includes/classes/*.php' ) );
+		$this->assertNotEmpty( $files );
+		foreach ( $files as $file ) {
+			$code = (string) file_get_contents( $file );
+			foreach ( array( 'wp_cache_flush(', 'wp_cache_flush_group(', 'wp_cache_delete(', 'wp_cache_delete_multiple(', 'clean_post_cache(', 'clean_term_cache(', 'wp_cache_replace(' ) as $forbidden ) {
+				$this->assertStringNotContainsString( $forbidden, $code, basename( $file ) . ' calls ' . $forbidden );
+			}
+		}
+	}
+
+	public function test_memory_is_tight_reads_the_limit_and_an_unlimited_one_is_never_tight() {
+		$old = ini_get( 'memory_limit' );
+		ini_set( 'memory_limit', '-1' ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed -- a test of the reader.
+		$this->assertFalse( SAMOMIND_Content::memory_is_tight( 0.0000001 ) );
+		ini_set( 'memory_limit', '2G' ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed
+		$this->assertTrue( SAMOMIND_Content::memory_is_tight( 0.0000000001 ), 'A tiny share of 2G is already used.' );
+		$this->assertFalse( SAMOMIND_Content::memory_is_tight( 0.99 ) );
+		ini_set( 'memory_limit', $old ); // phpcs:ignore WordPress.PHP.IniSet.memory_limit_Disallowed
 	}
 }

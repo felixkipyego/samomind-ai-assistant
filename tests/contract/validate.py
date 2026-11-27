@@ -32,6 +32,7 @@ SHOP_MODELS = {
     "VerifyResponse": orders.VerifyResponse,
     "RedeemResponse": orders.RedeemResponse,
     "LookupResponse": orders.LookupResponse,
+    "ListResponse": orders.ListResponse,
     "InvalidSignatureBody": orders.InvalidSignatureBody,
     "AccountProof": orders.AccountProof,
 }
@@ -40,7 +41,11 @@ REQUEST_MODELS = {
     "StartRequest": orders.StartRequest,
     "VerifyRequest": orders.VerifyRequest,
     "RedeemRequest": orders.RedeemRequest,
+    "RedeemRequestV2": orders.RedeemRequestV2,
     "LookupRequest": orders.LookupRequest,
+    "StartRequestV2": orders.StartRequestV2,
+    "VerifyRequestV2": orders.VerifyRequestV2,
+    "ListRequest": orders.ListRequest,
     "EndRequest": orders.EndRequest,
 }
 INGEST_MODELS = {

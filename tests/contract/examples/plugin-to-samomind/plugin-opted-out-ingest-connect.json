@@ -6,10 +6,10 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795336263",
-        "Idempotency-Key": "connect-98d2158f-4d4e-4bbd-aa02-34143c208183",
-        "X-SamoMind-Signature": "v1=4ea9a0c59fb0d75e97126cc705e390db226218e761b8f7ddbfdd0269d758ab46",
+        "X-SamoMind-Timestamp": "1795725995",
+        "Idempotency-Key": "connect-ae7ccd59-3a5f-4fdc-a990-bc230a95cc9a",
+        "X-SamoMind-Signature": "v1=af6e920070b0cd57ac0368a33ec758378d55ce72dcfc8a6c2c6dd98016169d07",
         "Content-Type": "application/json"
     },
-    "body_raw": "{\"site_url\":\"http://localhost:8889\",\"connector\":\"wordpress\",\"connector_version\":\"0.4.0\",\"platform_version\":\"7.1.5\"}"
+    "body_raw": "{\"site_url\":\"http://localhost:8889\",\"connector\":\"wordpress\",\"connector_version\":\"0.4.1\",\"platform_version\":\"7.1.5\"}"
 }

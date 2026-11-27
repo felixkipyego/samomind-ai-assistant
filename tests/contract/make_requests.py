@@ -19,13 +19,17 @@ from app.features.woo_order_status import signing, texts
 from app.features.woo_order_status.client import _canonical_body
 from app.features.woo_order_status.schemas import (
     EndRequest,
+    ListRequest,
     LookupRequest,
     PingRequest,
     RedeemRequest,
+    RedeemRequestV2,
     ShareChoices,
     ShopLimits,
     StartRequest,
+    StartRequestV2,
     VerifyRequest,
+    VerifyRequestV2,
 )
 
 SECRET = "smok_ContractFixtureSecret0000000000000000000"
@@ -71,6 +75,42 @@ EXAMPLES = {
             session_ref=SESSION,
             order_number=ORDER_NUMBER,
             code="123456",
+            limits=LIMITS,
+        ),
+    ),
+    # Version 2 (order history, plugin 0.4.1): the email scope and the list.
+    "start-email": (
+        texts.PATH_START,
+        StartRequestV2(
+            request_id=uid("start-email"),
+            session_ref=SESSION,
+            scope="email",
+            email=EMAIL,
+            limits=LIMITS,
+        ),
+    ),
+    "verify-email": (
+        texts.PATH_VERIFY,
+        VerifyRequestV2(
+            request_id=uid("verify-email"),
+            session_ref=SESSION,
+            scope="email",
+            email=EMAIL,
+            code="123456",
+            limits=LIMITS,
+        ),
+    ),
+    "list": (
+        texts.PATH_LIST,
+        ListRequest(request_id=uid("list"), session_ref=SESSION, limit=20),
+    ),
+    "redeem-account": (
+        texts.PATH_REDEEM,
+        RedeemRequestV2(
+            request_id=uid("redeem-account"),
+            session_ref=SESSION,
+            challenge=CHALLENGE,
+            scope="account",
             limits=LIMITS,
         ),
     ),

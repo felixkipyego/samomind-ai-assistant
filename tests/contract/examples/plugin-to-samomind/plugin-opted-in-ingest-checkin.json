@@ -6,10 +6,10 @@
     "headers": {
         "X-SamoMind-API-Version": "1",
         "X-SamoMind-Key-Id": "5a1c7e2b-9d3f-4b8a-8c6d-1e2f3a4b5c6d",
-        "X-SamoMind-Timestamp": "1795336263",
-        "Idempotency-Key": "checkin-5d7187a7-65d1-42b9-a6ba-c3a01a7a42fc",
-        "X-SamoMind-Signature": "v1=41dfffb87180e7c0a81444e0ded1eb2f049cf63a46aa50aa4a6f00dc65b3e42a",
+        "X-SamoMind-Timestamp": "1795725996",
+        "Idempotency-Key": "checkin-f994c3fc-6dd8-4acc-b82c-13c4d3e7e2ff",
+        "X-SamoMind-Signature": "v1=3d092d920bcee43b06d2d721a89823d7d551c214dcb028b6dfc7c29ad958e808",
         "Content-Type": "application/json"
     },
-    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"connector_version\":\"0.4.0\",\"platform_version\":\"7.1.5\",\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":true,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":null}}}"
+    "body_raw": "{\"source_id\":\"8c1d2e3f-4a5b-4c6d-8e7f-9a0b1c2d3e4f\",\"connector_version\":\"0.4.1\",\"platform_version\":\"7.1.5\",\"capabilities\":{\"orders\":{\"api\":1,\"enabled\":true,\"terms_accepted_version\":\"2026-11\",\"share_items\":true,\"share_tracking\":true,\"tracking\":\"wc_shipment_tracking\",\"hpos\":false,\"woocommerce\":\"11.3.0\",\"mail_dispatch\":\"shutdown\",\"reason\":null,\"history\":false}}}"
 }

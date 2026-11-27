@@ -271,4 +271,106 @@ class OrdersRaceTest extends SAMOMIND_Integration_TestCase {
 		);
 		$this->assertCount( self::PARALLEL - 3, $capped, 'The rest are told the mail was capped.' );
 	}
+
+	public function test_parallel_starts_for_one_email_send_at_most_three_codes_and_never_say_mail_capped() {
+		$this->accept_history_terms();
+		$this->make_order( array( 'billing_email' => 'racer@example.com' ) );
+		$requests = array();
+		for ( $i = 0; $i < self::PARALLEL; $i++ ) {
+			$requests[] = $this->build(
+				'start',
+				wp_json_encode(
+					array(
+						'request_id'  => wp_generate_uuid4(),
+						'session_ref' => $this->session_ref( 'es' . $i ),
+						'scope'       => 'email',
+						'email'       => 'racer@example.com',
+						'locale'      => 'en',
+					)
+				),
+				array()
+			);
+		}
+		$results = $this->post_all( $requests );
+
+		foreach ( $results as $i => $result ) {
+			$this->assertSame( 202, $result[0], "Request $i" );
+			$this->assertSame( array( 'accepted' => true ), $result[1], "Request $i answers alike, whatever the cap." );
+		}
+		$omail = $this->state_rows( 'omail' );
+		$this->assertCount( 1, $omail );
+		$this->assertSame( 3, (int) $omail[0]['n'], 'Three emails for the address, never a fourth.' );
+		$this->assertCount( 3, $this->state_rows( 'code' ) );
+		$this->assertSame( 3, (int) $this->state_rows( 'hour' )[0]['n'], 'Only those three are counted for the shop.' );
+	}
+
+	public function test_parallel_wrong_email_codes_are_counted_three_at_most() {
+		$this->accept_history_terms();
+		$this->make_order( array( 'billing_email' => 'racer@example.com' ) );
+		$store = new SAMOMIND_Orders_Store( self::SECRET );
+		$right = '424242';
+		$store->put_email_code( $this->session_ref(), 'racer@example.com', $store->email_code_hash( $this->session_ref(), 'racer@example.com', $right ), 600 );
+
+		$requests = array();
+		for ( $i = 0; $i < self::PARALLEL; $i++ ) {
+			$requests[] = $this->build(
+				'verify',
+				wp_json_encode(
+					array(
+						'request_id'  => wp_generate_uuid4(),
+						'session_ref' => $this->session_ref(),
+						'scope'       => 'email',
+						'email'       => 'racer@example.com',
+						'code'        => str_pad( (string) ( 100000 + $i ), 6, '0', STR_PAD_LEFT ),
+					)
+				),
+				array()
+			);
+		}
+		foreach ( $this->post_all( $requests ) as $i => $result ) {
+			$this->assertSame( 200, $result[0], "Request $i" );
+			$this->assertFalse( $result[1]['verified'], "Request $i" );
+		}
+
+		$rows = $this->state_rows( 'code' );
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 3, (int) $rows[0]['n'], 'No more than three tries are counted.' );
+		$this->assertCount( 0, $this->state_rows( 'egrant' ) );
+	}
+
+	public function test_parallel_right_email_codes_make_one_grant() {
+		$this->accept_history_terms();
+		$this->make_order( array( 'billing_email' => 'racer@example.com' ) );
+		$store = new SAMOMIND_Orders_Store( self::SECRET );
+		$right = '515151';
+		$store->put_email_code( $this->session_ref(), 'racer@example.com', $store->email_code_hash( $this->session_ref(), 'racer@example.com', $right ), 600 );
+
+		$requests = array();
+		for ( $i = 0; $i < 4; $i++ ) {
+			$requests[] = $this->build(
+				'verify',
+				wp_json_encode(
+					array(
+						'request_id'  => wp_generate_uuid4(),
+						'session_ref' => $this->session_ref(),
+						'scope'       => 'email',
+						'email'       => 'racer@example.com',
+						'code'        => $right,
+					)
+				),
+				array()
+			);
+		}
+		$verified = array_filter(
+			array_map(
+				function ( $result ) {
+					return ! empty( $result[1]['verified'] );
+				},
+				$this->post_all( $requests )
+			)
+		);
+
+		$this->assertCount( 1, $verified, 'A code works once, even when it is sent four times at once.' );
+		$this->assertCount( 1, $this->state_rows( 'egrant' ) );
+	}
 }

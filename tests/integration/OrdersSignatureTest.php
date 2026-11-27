@@ -312,7 +312,9 @@ class OrdersSignatureTest extends SAMOMIND_Integration_TestCase {
 		$caps = $data['capabilities']['orders'];
 		$this->assertSame( 1, $caps['api'] );
 		$this->assertTrue( $caps['enabled'] );
-		$this->assertSame( SAMOMIND_Orders_Settings::TERMS_VERSION, $caps['terms_accepted_version'] );
+		// The suite starts on the earlier terms; history needs the current ones (OrdersHistoryTest).
+		$this->assertSame( SAMOMIND_Orders_Settings::PREVIOUS_TERMS_VERSION, $caps['terms_accepted_version'] );
+		$this->assertFalse( $caps['history'] );
 		$this->assertTrue( $caps['share_items'] );
 		$this->assertTrue( $caps['share_tracking'] );
 		$this->assertSame( SAMOMIND_Orders_Lookup::tracking_provider(), $caps['tracking'] );

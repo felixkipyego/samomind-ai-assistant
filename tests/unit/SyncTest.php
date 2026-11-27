@@ -39,24 +39,51 @@ class SAMOMIND_Fake_Content extends SAMOMIND_Content {
 	public $posts = array();
 
 	/**
+	 * The post types that are synced.
+	 *
+	 * @var string[]
+	 */
+	public $synced_types = array( 'page', 'product' );
+
+	public function get_post_types() {
+		return $this->synced_types;
+	}
+
+	/**
 	 * Current text per post id; what a push would carry right now.
 	 *
 	 * @var array
 	 */
 	public $texts = array();
 
-	public function get_candidate_ids( $after_id, $limit ) {
-		$ids = array_filter(
+	/**
+	 * Post type per post id; a post without one is a "page".
+	 *
+	 * @var array
+	 */
+	public $types = array();
+
+	/**
+	 * What the last get_candidate_ids() call was narrowed to.
+	 *
+	 * @var array
+	 */
+	public $last_only = array();
+
+	public function get_candidate_ids( $after_id, $limit, array $only = array() ) {
+		$this->last_only = $only;
+		$ids             = array_filter(
 			array_keys( $this->posts ),
-			function ( $id ) use ( $after_id ) {
-				return $id > $after_id;
+			function ( $id ) use ( $after_id, $only ) {
+				$type = isset( $this->types[ $id ] ) ? $this->types[ $id ] : 'page';
+				return $id > $after_id && ( empty( $only ) || in_array( $type, $only, true ) );
 			}
 		);
 		sort( $ids );
 		return array_slice( $ids, 0, $limit );
 	}
 
-	public function count_candidates() {
+	public function count_candidates( array $only = array() ) {
 		return count( $this->posts );
 	}
 
@@ -252,6 +279,8 @@ class SyncTest extends SAMOMIND_TestCase {
 			}
 		);
 		Functions\when( 'wp_generate_uuid4' )->justReturn( 'run-0001' );
+		// Another test may have defined the cache functions; this one has no cache to clear.
+		Functions\when( 'wp_cache_supports' )->justReturn( false );
 		Functions\when( 'sanitize_text_field' )->returnArg( 1 );
 		Functions\when( 'wp_is_post_revision' )->justReturn( false );
 		Functions\when( 'wp_is_post_autosave' )->justReturn( false );
@@ -348,6 +377,142 @@ class SyncTest extends SAMOMIND_TestCase {
 		$this->assertSame( 1, $progress['reconcile']['stale'] );
 		$this->assertSame( 1, $progress['reconcile']['deleted'] );
 		$this->assertSame( 0, $progress['pending'] );
+	}
+
+	public function test_after_the_update_every_product_is_sent_once_and_only_products() {
+		$this->content->posts    = array(
+			1 => true,
+			2 => true,
+			3 => true,
+			4 => true,
+		);
+		$this->content->types    = array(
+			2 => 'product',
+			3 => 'product',
+			4 => 'post',
+		);
+		$this->client->responses = array(
+			array( 'state' => 'in_progress', 'cursor' => null ),
+			$this->queued( array( 2, 3 ) ),
+			array( 'state' => 'complete', 'cursor' => '3' ),
+			array( 'missing' => array(), 'stale' => array(), 'deleted' => array() ),
+		);
+
+		$this->sync->maybe_resend_products();
+		$this->assertNotSame( SAMOMIND_Sync::CARDS_VERSION, get_option( SAMOMIND_Sync::CARDS_OPTION, '' ), 'Not done before it ran.' );
+		$this->assertSame( 'idle', $this->sync->run() );
+
+		$calls = $this->client->calls;
+		$this->assertSame( array( '2', '3' ), array_column( $calls[1]['payload']['documents'], 'external_id' ), 'Products only: no page, no post.' );
+		$this->assertSame( array( 'product' ), $this->content->last_only );
+		$this->assertSame( SAMOMIND_Sync::CARDS_VERSION, get_option( SAMOMIND_Sync::CARDS_OPTION, '' ) );
+
+		// Once: another call, or the hourly run, starts nothing.
+		$before = count( $this->client->calls );
+		$this->sync->maybe_resend_products();
+		$this->assertSame( 'idle', $this->sync->run() );
+		$this->assertCount( $before, $this->client->calls );
+	}
+
+	public function test_the_reconcile_after_the_product_resend_lists_every_eligible_item_not_only_products() {
+		// Samomind deletes what is in range and not listed: a product-only list would remove every page and post.
+		$this->content->posts    = array(
+			1 => true,
+			2 => true,
+			3 => true,
+			4 => true,
+			5 => false,
+		);
+		$this->content->types    = array(
+			2 => 'product',
+			3 => 'post',
+			4 => 'product',
+		);
+		$this->client->responses = array(
+			array( 'state' => 'in_progress', 'cursor' => null ),
+			$this->queued( array( 2, 4 ) ),
+			array( 'state' => 'complete', 'cursor' => '4' ),
+			array( 'missing' => array(), 'stale' => array(), 'deleted' => array() ),
+		);
+
+		$this->sync->maybe_resend_products();
+		$this->sync->run();
+
+		$this->assertSame( array( '/sync', '/documents', '/sync', '/reconcile' ), $this->endpoints() );
+		$reconcile = $this->client->calls[3]['payload'];
+		$this->assertSame( array( '1', '2', '3', '4' ), array_column( $reconcile['entries'], 'external_id' ), 'Pages, posts and products, every eligible one.' );
+		$this->assertNull( $reconcile['range_start'] );
+		$this->assertNull( $reconcile['range_end'], 'The whole range, so nothing outside the list is deleted by mistake.' );
+	}
+
+	public function test_the_resend_waits_until_the_site_is_connected() {
+		unset( $this->options['samomind_connection'] );
+		$this->content->posts = array( 2 => true );
+		$this->content->types = array( 2 => 'product' );
+
+		$this->sync->maybe_resend_products();
+
+		$this->assertSame( 'not_connected', $this->sync->run() );
+		$this->assertSame( array(), $this->client->calls );
+		$this->assertArrayNotHasKey( SAMOMIND_Sync::CARDS_OPTION, $this->options, 'Still to do once it is connected.' );
+	}
+
+	public function test_a_failed_resend_is_retried_and_finishes_later() {
+		$this->content->posts    = array( 2 => true );
+		$this->content->types    = array( 2 => 'product' );
+		$this->client->responses = array(
+			array( 'state' => 'in_progress', 'cursor' => null ),
+			$this->error( 503, 'http_503' ),
+		);
+
+		$this->sync->maybe_resend_products();
+		$this->assertSame( 'retry', $this->sync->run() );
+		$this->assertArrayNotHasKey( SAMOMIND_Sync::CARDS_OPTION, $this->options, 'Not marked done while it is failing.' );
+
+		// The run is still the product run: asking again does not start a second one.
+		$this->sync->maybe_resend_products();
+		$this->assertSame( 'running', $this->sync->get_state()['full']['state'] );
+
+		$queue                           = $this->sync->get_queue();
+		$queue['retry']['next_at']       = time() - 1;
+		$this->options['samomind_queue'] = $queue;
+		$this->client->responses         = array(
+			$this->queued( array( 2 ) ),
+			array( 'state' => 'complete', 'cursor' => '2' ),
+			array( 'missing' => array(), 'stale' => array(), 'deleted' => array() ),
+		);
+		$this->assertSame( 'idle', $this->sync->run() );
+		$this->assertSame( SAMOMIND_Sync::CARDS_VERSION, get_option( SAMOMIND_Sync::CARDS_OPTION, '' ) );
+	}
+
+	public function test_a_site_that_does_not_sync_products_has_nothing_to_resend() {
+		$this->content->synced_types = array( 'page' );
+
+		$this->sync->maybe_resend_products();
+
+		$this->assertSame( array(), $this->client->calls );
+		$this->assertSame( SAMOMIND_Sync::CARDS_VERSION, get_option( SAMOMIND_Sync::CARDS_OPTION, '' ) );
+		$this->assertSame( 'idle', $this->sync->get_state()['full']['state'] );
+	}
+
+	public function test_a_full_sync_covers_the_resend() {
+		$this->content->posts = array( 1 => true );
+
+		$this->sync->start_full_sync();
+
+		$this->assertSame( SAMOMIND_Sync::CARDS_VERSION, get_option( SAMOMIND_Sync::CARDS_OPTION, '' ) );
+		$this->assertSame( '', $this->sync->get_state()['full']['only'], 'A full sync sends every type.' );
+	}
+
+	public function test_a_resend_does_not_interrupt_a_sync_that_is_running() {
+		$this->content->posts = array( 1 => true );
+		$this->sync->start_full_sync();
+		unset( $this->options[ SAMOMIND_Sync::CARDS_OPTION ] );
+
+		$this->sync->maybe_resend_products();
+
+		$this->assertSame( '', $this->sync->get_state()['full']['only'] );
+		$this->assertArrayNotHasKey( SAMOMIND_Sync::CARDS_OPTION, $this->options );
 	}
 
 	public function test_full_sync_resumes_after_the_server_cursor() {

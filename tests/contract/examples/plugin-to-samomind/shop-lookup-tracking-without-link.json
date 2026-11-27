@@ -5,6 +5,6 @@
     "status": 200,
     "nonce": "GMdyLS7snXFru-f1ueHT9q",
     "secret": "smok_test_secret_for_the_integration_suite",
-    "signature": "v1=a4b0b0ccbdcf24ab1bd1df5d4ec15273afb1eccc1828271273a6a3e5fe7c3c56",
-    "body_raw": "{\"found\":true,\"order\":{\"order_number\":\"SM-1234\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-22\",\"paid\":null,\"shipped\":\"2026-11-10\",\"completed\":null,\"items\":[{\"name\":\"Blue mug\",\"qty\":2}],\"tracking\":{\"carrier\":\"DHL\",\"number\":\"JD014600\",\"url\":null}}}"
+    "signature": "v1=9ad660dca2bd0d0caf466c47b1e2a4d8c4f09c1e96eb6824f5aa2bc1a6fe6f31",
+    "body_raw": "{\"found\":true,\"order\":{\"order_number\":\"SM-1234\",\"status\":\"processing\",\"status_label\":\"Processing\",\"created\":\"2026-11-26\",\"paid\":null,\"shipped\":\"2026-11-10\",\"completed\":null,\"items\":[{\"name\":\"Blue mug\",\"qty\":2}],\"tracking\":{\"carrier\":\"DHL\",\"number\":\"JD014600\",\"url\":null}}}"
 }

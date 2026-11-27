@@ -71,7 +71,7 @@ class SAMOMIND_Admin {
 	 *
 	 * @var string[]
 	 */
-	const ACTIONS = array( 'connect', 'disconnect', 'sync_now', 'checkin', 'reconcile', 'clear_log', 'replace_secret', 'save_orders', 'plugin_connect', 'plugin_disconnect' );
+	const ACTIONS = array( 'connect', 'disconnect', 'sync_now', 'checkin', 'reconcile', 'clear_log', 'replace_secret', 'save_orders', 'accept_orders_terms', 'plugin_connect', 'plugin_disconnect' );
 
 	/**
 	 * Our SAMOMIND_Admin constructor to run the plugin logic.
@@ -316,7 +316,7 @@ class SAMOMIND_Admin {
 		if ( '' === $value || SAMOMIND_Embed::is_valid_site_key( $value ) ) {
 			return $value;
 		}
-		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
+		add_settings_error( self::SETTINGS_GROUP, 'samomind_site_key', esc_html__( 'The site key looks like pk_live_ followed by letters and numbers. Copy it from Channels > Website: WordPress > Advanced: show keys for manual setup in the Samomind dashboard, without a script tag. The previous key was kept.', 'samomind-ai-assistant' ) );
 		return SAMOMIND()->helpers->get_site_key();
 	}
 
@@ -638,6 +638,36 @@ class SAMOMIND_Admin {
 			array_unshift( $notes, __( 'Order status settings saved. Order status is not switched on yet.', 'samomind-ai-assistant' ) );
 		}
 		$this->finish( self::SETTINGS_SLUG, null === $reason ? 'success' : 'warning', implode( ' ', $notes ) );
+	}
+
+	/**
+	 * Accept the updated order terms (the ones that cover order history) for a
+	 * shop that accepted the earlier ones. Nothing else on the order status
+	 * card changes.
+	 *
+	 * @since   0.4.1
+	 * @return  void
+	 */
+	public function handle_accept_orders_terms() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'You do not have permission to do this.', 'samomind-ai-assistant' ) );
+		}
+		check_admin_referer( 'samomind_accept_orders_terms' );
+
+		$orders = SAMOMIND()->orders;
+		if ( ! $orders->history_terms_are_accepted() ) {
+			$orders->accept_terms( get_current_user_id() );
+		}
+		SAMOMIND_Orders_State::maybe_install();
+
+		if ( SAMOMIND()->connection->is_connected() ) {
+			SAMOMIND()->connection->checkin( true, false );
+		}
+
+		if ( $orders->history_enabled() ) {
+			$this->finish( self::SETTINGS_SLUG, 'success', __( 'Updated order terms accepted. Customers can now see all their orders after an email code.', 'samomind-ai-assistant' ) );
+		}
+		$this->finish( self::SETTINGS_SLUG, 'warning', __( 'Updated order terms accepted. Order status is not switched on yet.', 'samomind-ai-assistant' ) );
 	}
 
 	/**
@@ -1155,7 +1185,7 @@ class SAMOMIND_Admin {
 			<details class="samomind-advanced">
 				<summary><?php esc_html_e( 'Advanced: enter keys manually', 'samomind-ai-assistant' ); ?></summary>
 				<p class="description">
-					<?php esc_html_e( 'In the Samomind dashboard, open Install > WordPress > Advanced: show keys for manual setup and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
+					<?php esc_html_e( 'In the Samomind dashboard, open Channels > Website: WordPress > Advanced: show keys for manual setup and click "Create an ingest key". Copy the key id and the secret here. The secret is shown only once there.', 'samomind-ai-assistant' ); ?>
 				</p>
 
 			<div class="samomind-card">
@@ -1268,7 +1298,7 @@ class SAMOMIND_Admin {
 									<?php
 									echo wp_kses(
 										/* translators: %s: the site address, for example https://example.com */
-										sprintf( __( 'Before you turn this on, allow <code>%s</code> in the Samomind dashboard under Install > WordPress. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
+										sprintf( __( 'Before you turn this on, allow <code>%s</code> in the Samomind dashboard under Channels > Website: WordPress. The chat will not load on this site until you do.', 'samomind-ai-assistant' ), esc_html( $helpers->get_site_origin() ) ),
 										array(
 											'code'   => array(),
 											'strong' => array(),
@@ -1286,7 +1316,7 @@ class SAMOMIND_Admin {
 							<td>
 								<input type="text" id="samomind_site_key" name="samomind_site_key" class="regular-text code" spellcheck="false" autocomplete="off"
 									value="<?php echo esc_attr( $helpers->get_site_key() ); ?>" placeholder="pk_live_...">
-								<p class="description"><?php esc_html_e( 'Filled in when you connect with a code. For a manual setup, copy it from Install > WordPress > Advanced: show keys for manual setup in the Samomind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Filled in when you connect with a code. For a manual setup, copy it from Channels > Website: WordPress > Advanced: show keys for manual setup in the Samomind dashboard. Only the key, not a script tag.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>
@@ -1357,7 +1387,7 @@ class SAMOMIND_Admin {
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
 					<?php wp_nonce_field( 'samomind_plugin_connect' ); ?>
 					<input type="hidden" name="action" value="samomind_plugin_connect">
-					<p class="description"><?php esc_html_e( 'In your Samomind dashboard, open Install > WordPress and create a connection code. Paste it here. The code works once and expires soon.', 'samomind-ai-assistant' ); ?></p>
+					<p class="description"><?php esc_html_e( 'In your Samomind dashboard, open Channels > Website: WordPress and create a connection code. Paste it here. The code works once and expires soon.', 'samomind-ai-assistant' ); ?></p>
 					<table class="form-table" role="presentation">
 						<tr>
 							<th scope="row"><label for="samomind_connect_code"><?php esc_html_e( 'Connection code', 'samomind-ai-assistant' ); ?></label></th>
@@ -1369,6 +1399,43 @@ class SAMOMIND_Admin {
 					<?php submit_button( __( 'Connect', 'samomind-ai-assistant' ), 'primary', 'submit', false ); ?>
 				</form>
 			<?php endif; ?>
+		</div>
+		<?php
+	}
+
+	/**
+	 * The order-data terms (version SAMOMIND_Orders_Settings::TERMS_VERSION)
+	 * as a box: the list, the links and what happens when order status is
+	 * switched off.
+	 *
+	 * @since   0.4.1
+	 * @return  void
+	 */
+	private function render_terms_box() {
+		?>
+		<div class="samomind-terms">
+			<h3>
+				<?php
+				/* translators: %s: version of the order-data terms, for example 2026-11-26 */
+				echo esc_html( sprintf( __( 'Order status: order data terms (version %s)', 'samomind-ai-assistant' ), SAMOMIND_Orders_Settings::TERMS_VERSION ) );
+				?>
+			</h3>
+			<p><?php esc_html_e( 'Before you switch on order status, please confirm that you accept these terms.', 'samomind-ai-assistant' ); ?></p>
+			<ol>
+				<li><?php esc_html_e( 'Your customers can check only their own orders. A customer proves who they are with a 6-digit code that your shop emails to them, or by being signed in to your shop. After the code, they can see the orders placed with that email address; signed-in customers see the orders of their account. The assistant never decides who someone is.', 'samomind-ai-assistant' ); ?></li>
+				<li><?php esc_html_e( 'Samomind looks orders up live from your shop and keeps no copy of your orders. It never receives addresses, phone numbers or payment details. The email address and the code pass through Samomind only while the check runs and are not stored.', 'samomind-ai-assistant' ); ?></li>
+				<li><?php esc_html_e( 'The order number, status, dates and order total are always shown to a verified customer. You choose whether item names (with their product photos) and tracking details are also shown.', 'samomind-ai-assistant' ); ?></li>
+				<li><?php esc_html_e( 'You are the controller of your shop\'s order data, and Samomind processes it for you under Schedule 1 of the Samomind Terms of Service. You confirm that you have a lawful basis to let customers check their orders this way and that your shop\'s privacy notice tells them.', 'samomind-ai-assistant' ); ?></li>
+				<li><?php esc_html_e( 'Keep your orders key secret. If you think it has been exposed, replace it in the Samomind dashboard.', 'samomind-ai-assistant' ); ?></li>
+				<li><?php esc_html_e( 'The code emails are sent by your own shop, from its own email address.', 'samomind-ai-assistant' ); ?></li>
+			</ol>
+			<p><?php esc_html_e( 'You can switch order status off at any time on this page.', 'samomind-ai-assistant' ); ?></p>
+			<p>
+				<?php esc_html_e( 'Terms of Service:', 'samomind-ai-assistant' ); ?>
+				<a href="https://samomind.com/terms-and-conditions/" target="_blank" rel="noopener">https://samomind.com/terms-and-conditions/</a><br>
+				<?php esc_html_e( 'Privacy Policy:', 'samomind-ai-assistant' ); ?>
+				<a href="https://samomind.com/privacy-policy/" target="_blank" rel="noopener">https://samomind.com/privacy-policy/</a>
+			</p>
 		</div>
 		<?php
 	}
@@ -1397,10 +1464,21 @@ class SAMOMIND_Admin {
 					<a href="<?php echo esc_url( admin_url( 'options-permalink.php' ) ); ?>"><?php esc_html_e( 'Open Permalinks', 'samomind-ai-assistant' ); ?></a>
 				</p>
 			<?php else : ?>
-				<p class="description"><?php esc_html_e( 'Let customers ask the assistant where their order is. A customer proves it is theirs with a code emailed from this shop to the order\'s billing address, or by being logged in. Off by default: nothing about orders is sent to Samomind until you switch this on.', 'samomind-ai-assistant' ); ?></p>
+				<p class="description"><?php esc_html_e( 'Let customers ask the assistant where their order is. A customer proves who they are with a code emailed from this shop, or by being logged in, and can then see all their orders. Off by default: nothing about orders is sent to Samomind until you switch this on.', 'samomind-ai-assistant' ); ?></p>
 				<?php $late_mail = SAMOMIND_Orders_Mail::late_mail_notice(); ?>
 				<?php if ( '' !== $late_mail ) : ?>
 					<p class="description"><strong><?php echo esc_html( $late_mail ); ?></strong></p>
+				<?php endif; ?>
+				<?php if ( $orders->needs_updated_terms() && current_user_can( 'manage_options' ) ) : ?>
+					<div class="samomind-card samomind-card--notice" id="samomind-orders-terms">
+						<p><strong><?php esc_html_e( 'Updated order terms: customers can see all their orders after one code. Review and accept to switch this on.', 'samomind-ai-assistant' ); ?></strong></p>
+						<?php $this->render_terms_box(); ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<?php wp_nonce_field( 'samomind_accept_orders_terms' ); ?>
+							<input type="hidden" name="action" value="samomind_accept_orders_terms">
+							<?php submit_button( __( 'Accept the updated terms', 'samomind-ai-assistant' ), 'primary', 'submit', false ); ?>
+						</form>
+					</div>
 				<?php endif; ?>
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" autocomplete="off">
 					<?php wp_nonce_field( 'samomind_save_orders' ); ?>
@@ -1418,45 +1496,32 @@ class SAMOMIND_Admin {
 						<tr>
 							<th scope="row"><?php esc_html_e( 'Order-data terms', 'samomind-ai-assistant' ); ?></th>
 							<td>
-								<div class="samomind-terms">
-									<h3>
-										<?php
-										/* translators: %s: version of the order-data terms, for example 2026-11 */
-										echo esc_html( sprintf( __( 'Order status: order data terms (version %s)', 'samomind-ai-assistant' ), SAMOMIND_Orders_Settings::TERMS_VERSION ) );
-										?>
-									</h3>
-									<p><?php esc_html_e( 'Before you switch on order status, please confirm that you accept these terms.', 'samomind-ai-assistant' ); ?></p>
-									<ol>
-										<li><?php esc_html_e( 'Your customers can check only their own orders. Each check needs either a 6-digit code that your shop emails to the order\'s billing address, or the customer being signed in to your shop. The assistant never decides who someone is.', 'samomind-ai-assistant' ); ?></li>
-										<li><?php esc_html_e( 'Samomind looks each order up live from your shop and keeps no copy of your orders. It never receives addresses, phone numbers or payment details. The billing email and the code pass through Samomind only while the check runs and are not stored.', 'samomind-ai-assistant' ); ?></li>
-										<li><?php esc_html_e( 'The order number, status and dates are always shown to a verified customer. You choose whether item names and tracking details are also shown.', 'samomind-ai-assistant' ); ?></li>
-										<li><?php esc_html_e( 'You are the controller of your shop\'s order data, and Samomind processes it for you under Schedule 1 of the Samomind Terms of Service. You confirm that you have a lawful basis to let customers check their orders this way and that your shop\'s privacy notice tells them.', 'samomind-ai-assistant' ); ?></li>
-										<li><?php esc_html_e( 'Keep your orders key secret. If you think it has been exposed, replace it in the Samomind dashboard.', 'samomind-ai-assistant' ); ?></li>
-										<li><?php esc_html_e( 'The code emails are sent by your own shop, from its own email address.', 'samomind-ai-assistant' ); ?></li>
-									</ol>
-									<p><?php esc_html_e( 'You can switch order status off at any time on this page.', 'samomind-ai-assistant' ); ?></p>
-									<p>
-										<?php esc_html_e( 'Terms of Service:', 'samomind-ai-assistant' ); ?>
-										<a href="https://samomind.com/terms-and-conditions/" target="_blank" rel="noopener">https://samomind.com/terms-and-conditions/</a><br>
-										<?php esc_html_e( 'Privacy Policy:', 'samomind-ai-assistant' ); ?>
-										<a href="https://samomind.com/privacy-policy/" target="_blank" rel="noopener">https://samomind.com/privacy-policy/</a>
-									</p>
-								</div>
-								<label>
-									<input type="checkbox" id="samomind_orders_terms" name="samomind_orders_terms" value="1"<?php checked( $orders->terms_are_accepted() ); ?>>
-									<?php
-									/* translators: %s: version of the order-data terms, for example 2026-11 */
-									echo esc_html( sprintf( __( 'I accept the order-data terms (version %s)', 'samomind-ai-assistant' ), SAMOMIND_Orders_Settings::TERMS_VERSION ) );
-									?>
-								</label>
-								<?php if ( $orders->terms_are_accepted() ) : ?>
+								<?php if ( $orders->needs_updated_terms() ) : ?>
+									<?php /* The updated terms and their Accept button are above the form; the earlier ones keep order status on meanwhile. */ ?>
 									<p class="description">
 										<?php
-										$accepted_by = ! empty( $terms['user_id'] ) ? get_userdata( (int) $terms['user_id'] ) : false;
-										/* translators: 1: name of the user, 2: date and time */
-										echo esc_html( sprintf( __( 'Accepted by %1$s on %2$s.', 'samomind-ai-assistant' ), $accepted_by ? $accepted_by->display_name : __( 'a former user', 'samomind-ai-assistant' ), SAMOMIND()->helpers->format_time( $terms['time'] ) ) );
+										/* translators: %s: version of the order-data terms, for example 2026-11 */
+										echo esc_html( sprintf( __( 'You accepted version %s. Order status stays on. Accept the updated terms above to let customers see all their orders.', 'samomind-ai-assistant' ), $terms['version'] ) );
 										?>
 									</p>
+								<?php else : ?>
+									<?php $this->render_terms_box(); ?>
+									<label>
+										<input type="checkbox" id="samomind_orders_terms" name="samomind_orders_terms" value="1"<?php checked( $orders->terms_are_accepted() ); ?>>
+										<?php
+										/* translators: %s: version of the order-data terms, for example 2026-11-26 */
+										echo esc_html( sprintf( __( 'I accept the order-data terms (version %s)', 'samomind-ai-assistant' ), SAMOMIND_Orders_Settings::TERMS_VERSION ) );
+										?>
+									</label>
+									<?php if ( $orders->terms_are_accepted() ) : ?>
+										<p class="description">
+											<?php
+											$accepted_by = ! empty( $terms['user_id'] ) ? get_userdata( (int) $terms['user_id'] ) : false;
+											/* translators: 1: name of the user, 2: date and time */
+											echo esc_html( sprintf( __( 'Accepted by %1$s on %2$s.', 'samomind-ai-assistant' ), $accepted_by ? $accepted_by->display_name : __( 'a former user', 'samomind-ai-assistant' ), SAMOMIND()->helpers->format_time( $terms['time'] ) ) );
+											?>
+										</p>
+									<?php endif; ?>
 								<?php endif; ?>
 							</td>
 						</tr>
@@ -1486,9 +1551,9 @@ class SAMOMIND_Admin {
 								</label><br>
 								<label>
 									<input type="checkbox" name="samomind_orders_share_items" value="1"<?php checked( $orders->shares_items() ); ?>>
-									<?php esc_html_e( 'Share item names', 'samomind-ai-assistant' ); ?>
+									<?php esc_html_e( 'Share item names (with their product photos)', 'samomind-ai-assistant' ); ?>
 								</label>
-								<p class="description"><?php esc_html_e( 'The status and the dates are always shared with the customer who verified the order. Addresses, phone numbers, emails, payment details and totals are never sent.', 'samomind-ai-assistant' ); ?></p>
+								<p class="description"><?php esc_html_e( 'The status, the dates and the order total are always shared with the customer who verified. Addresses, phone numbers, emails and payment details are never sent.', 'samomind-ai-assistant' ); ?></p>
 							</td>
 						</tr>
 					</table>

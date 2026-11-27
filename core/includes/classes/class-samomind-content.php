@@ -42,6 +42,8 @@ class SAMOMIND_Content {
 	const MAX_CATEGORIES     = 50;
 	const MAX_CATEGORY_CHARS = 100;
 	const MAX_URL_CHARS      = 2048;
+	const MAX_IMAGE_CHARS    = 2048;
+	const MAX_DISPLAY_CHARS  = 64;
 
 	/**
 	 * Post types whose published items are sent: the available types that
@@ -230,7 +232,7 @@ class SAMOMIND_Content {
 			'password'  => $post->post_password,
 		);
 		if ( 'product' === $post->post_type ) {
-			$data['product'] = array( 'catalog_visibility' => $this->product_visibility( $post->ID ) );
+			$data['product'] = array( 'catalog_visibility' => $this->product_visibilities( array( $post->ID ) )[ (int) $post->ID ] );
 		}
 		return self::is_eligible_data( $data, $this->get_post_types(), $this->get_excluded_ids() );
 	}
@@ -328,6 +330,12 @@ class SAMOMIND_Content {
 		if ( ! empty( $categories ) ) {
 			$fields['categories'] = array_slice( $categories, 0, self::MAX_CATEGORIES );
 		}
+		if ( isset( $data['product'] ) && is_array( $data['product'] ) ) {
+			// The card fields (F-33). The API refuses the whole body for one value that breaks a rule, so each is checked here and sent as null when it does.
+			$fields['image_url']             = self::safe_image_url( isset( $data['product']['image_url'] ) ? $data['product']['image_url'] : null );
+			$fields['price_display']         = self::plain_display( isset( $data['product']['price_display'] ) ? $data['product']['price_display'] : null );
+			$fields['regular_price_display'] = self::plain_display( isset( $data['product']['regular_price_display'] ) ? $data['product']['regular_price_display'] : null );
+		}
 		if ( ! empty( $fields ) ) {
 			$document['fields'] = $fields;
 		}
@@ -420,6 +428,9 @@ class SAMOMIND_Content {
 					// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce's own filter, so the description renders as on the product page.
 					'short_description_html' => apply_filters( 'woocommerce_short_description', $product->get_short_description() ),
 					'price'                  => $this->product_price_text( $product ),
+					'price_display'          => $this->product_price_display( $product ),
+					'regular_price_display'  => $this->product_regular_price_display( $product ),
+					'image_url'              => self::product_image_url( $product ),
 					'stock_status'           => $product->get_stock_status(),
 					'catalog_visibility'     => $product->get_catalog_visibility(),
 				);
@@ -438,7 +449,21 @@ class SAMOMIND_Content {
 	 * @return  string
 	 */
 	public static function modified_gmt( $post ) {
-		return ( '0000-00-00 00:00:00' === $post->post_modified_gmt ) ? $post->post_date_gmt : $post->post_modified_gmt;
+		return self::modified_from( $post->post_modified_gmt, $post->post_date_gmt );
+	}
+
+	/**
+	 * The modified time from the two columns it is read from: the modified
+	 * time, or the publish time when WordPress left the modified time empty.
+	 * One rule for a post object and for a row read by get_inventory().
+	 *
+	 * @since   0.4.1
+	 * @param   string $modified_gmt  post_modified_gmt.
+	 * @param   string $date_gmt      post_date_gmt.
+	 * @return  string
+	 */
+	public static function modified_from( $modified_gmt, $date_gmt ) {
+		return ( '0000-00-00 00:00:00' === $modified_gmt ) ? $date_gmt : $modified_gmt;
 	}
 
 	/**
@@ -478,6 +503,52 @@ class SAMOMIND_Content {
 	 * @return  string  Empty when there is no price.
 	 */
 	public function product_price_text( $product ) {
+		return $this->price_text( $product, false );
+	}
+
+	/**
+	 * The current guest price as the shop formats it and nothing else: no
+	 * "(was ...)", no "(some on sale)" and no price suffix ("$89.00",
+	 * "$39.00 to $45.00"). The card shows it beside the product. Empty when
+	 * there is no price to show.
+	 *
+	 * @since   0.4.1
+	 * @param   WC_Product $product  Product.
+	 * @return  string
+	 */
+	public function product_price_display( $product ) {
+		return $this->price_text( $product, true );
+	}
+
+	/**
+	 * The regular price of a simple or external product that is on sale at a different
+	 * price, as the shop formats it ("$110.00"); empty for everything else.
+	 *
+	 * @since   0.4.1
+	 * @param   WC_Product $product  Product.
+	 * @return  string
+	 */
+	public function product_regular_price_display( $product ) {
+		if ( ! is_object( $product ) || ! $product->is_type( array( 'simple', 'external' ) ) || ! $product->is_on_sale() || '' === $product->get_price() || '' === $product->get_regular_price() ) {
+			return '';
+		}
+		if ( '' === trim( wp_strip_all_tags( (string) $product->get_price_html() ) ) ) {
+			return '';
+		}
+		$price   = wc_get_price_to_display( $product );
+		$regular = wc_get_price_to_display( $product, array( 'price' => $product->get_regular_price() ) );
+		return (string) $regular !== (string) $price ? self::money( $regular ) : '';
+	}
+
+	/**
+	 * The price text behind product_price_text() and product_price_display().
+	 *
+	 * @since   0.4.1
+	 * @param   WC_Product $product  Product.
+	 * @param   bool       $display  True for the bare price, false for the text the AI reads.
+	 * @return  string
+	 */
+	private function price_text( $product, $display ) {
 		if ( ! is_object( $product ) || '' === trim( wp_strip_all_tags( (string) $product->get_price_html() ) ) ) {
 			return '';
 		}
@@ -490,7 +561,7 @@ class SAMOMIND_Content {
 			$text = self::range_text(
 				current( $prices['price'] ),
 				end( $prices['price'] ),
-				(bool) $product->is_on_sale(),
+				! $display && $product->is_on_sale(),
 				current( $prices['regular_price'] ),
 				end( $prices['regular_price'] )
 			);
@@ -501,7 +572,7 @@ class SAMOMIND_Content {
 				$child = wc_get_product( $child_id );
 				if ( $child && '' !== $child->get_price() ) {
 					$child_prices[] = wc_get_price_to_display( $child );
-					$on_sale        = $on_sale || $child->is_on_sale();
+					$on_sale        = $on_sale || ( ! $display && $child->is_on_sale() );
 				}
 			}
 			if ( empty( $child_prices ) ) {
@@ -513,12 +584,16 @@ class SAMOMIND_Content {
 		} else {
 			$price = wc_get_price_to_display( $product );
 			$text  = self::money( $price );
-			if ( $product->is_on_sale() ) {
+			if ( ! $display && $product->is_on_sale() ) {
 				$regular = wc_get_price_to_display( $product, array( 'price' => $product->get_regular_price() ) );
 				if ( (string) $regular !== (string) $price ) {
 					$text .= ' (was ' . self::money( $regular ) . ')';
 				}
 			}
+		}
+
+		if ( $display ) {
+			return $text;
 		}
 
 		$suffix = trim( html_entity_decode( wp_strip_all_tags( (string) $product->get_price_suffix() ), ENT_QUOTES, 'UTF-8' ) );
@@ -555,12 +630,81 @@ class SAMOMIND_Content {
 	 * An amount in the store's currency and number format, as plain text.
 	 *
 	 * @since   0.3.6
-	 * @param   float|string $amount  Amount.
+	 * @param   float|string $amount    Amount.
+	 * @param   string       $currency  Currency code; the store's when empty.
 	 * @return  string
 	 */
-	private static function money( $amount ) {
-		$text = html_entity_decode( wp_strip_all_tags( wc_price( $amount ) ), ENT_QUOTES, 'UTF-8' );
+	public static function money( $amount, $currency = '' ) {
+		$text = html_entity_decode( wp_strip_all_tags( wc_price( $amount, '' === $currency ? array() : array( 'currency' => $currency ) ) ), ENT_QUOTES, 'UTF-8' );
 		return trim( str_replace( "\xC2\xA0", ' ', $text ) );
+	}
+
+	/**
+	 * The main image of a product at WooCommerce's thumbnail size, as an
+	 * address the API takes, or null. A variation without an image of its own
+	 * uses its parent's. A product with no image gives null, never
+	 * WooCommerce's placeholder.
+	 *
+	 * @since   0.4.1
+	 * @param   WC_Product|mixed $product  Product or variation.
+	 * @return  string|null
+	 */
+	public static function product_image_url( $product ) {
+		if ( ! is_object( $product ) || ! method_exists( $product, 'get_image_id' ) ) {
+			return null;
+		}
+		$image_id = (int) $product->get_image_id();
+		if ( $image_id < 1 && method_exists( $product, 'get_parent_id' ) && (int) $product->get_parent_id() > 0 ) {
+			$parent   = wc_get_product( (int) $product->get_parent_id() );
+			$image_id = $parent ? (int) $parent->get_image_id() : 0;
+		}
+		if ( $image_id < 1 ) {
+			return null;
+		}
+		return self::safe_image_url( wp_get_attachment_image_url( $image_id, 'woocommerce_thumbnail' ) );
+	}
+
+	/**
+	 * An image address the API takes: https, a host, no user name or
+	 * password, no spaces or control characters, at most MAX_IMAGE_CHARS
+	 * characters. Anything else is null; it is never repaired.
+	 *
+	 * @since   0.4.1
+	 * @param   mixed $url  Address from the shop.
+	 * @return  string|null
+	 */
+	public static function safe_image_url( $url ) {
+		if ( ! is_string( $url ) || '' === $url ) {
+			return null;
+		}
+		if ( strlen( $url ) > self::MAX_IMAGE_CHARS * 4 || mb_strlen( $url, 'UTF-8' ) > self::MAX_IMAGE_CHARS ) {
+			return null;
+		}
+		// The API's own pattern, with the "no @ before the path" rule that keeps user:pass out; a space, control or format character anywhere is refused.
+		if ( 1 !== preg_match( '#^https://[^\s/?\#@]+(?:[/?\#]\S*)?$#u', $url ) || 0 !== preg_match( '/[\s\p{Z}\p{C}]/u', $url ) ) {
+			return null;
+		}
+		return $url;
+	}
+
+	/**
+	 * A price as plain text the API takes in price_display: no markup, no
+	 * control characters, at most MAX_DISPLAY_CHARS characters. A value that
+	 * breaks a rule is null; a price is never cut in the middle.
+	 *
+	 * @since   0.4.1
+	 * @param   mixed $text  Price text from the shop.
+	 * @return  string|null
+	 */
+	public static function plain_display( $text ) {
+		if ( ! is_string( $text ) ) {
+			return null;
+		}
+		$text = trim( (string) preg_replace( '/\s+/u', ' ', str_replace( "\xC2\xA0", ' ', $text ) ) );
+		if ( '' === $text || 0 !== preg_match( '/[<>\p{C}]/u', $text ) || mb_strlen( $text, 'UTF-8' ) > self::MAX_DISPLAY_CHARS ) {
+			return null;
+		}
+		return $text;
 	}
 
 	/**
@@ -577,18 +721,48 @@ class SAMOMIND_Content {
 	}
 
 	/**
-	 * WooCommerce catalog visibility, empty when not a product.
+	 * WooCommerce catalog visibility (visible, catalog, search or hidden) of
+	 * a batch of products, read from the terms WooCommerce keeps it in. The
+	 * one source for the reconcile list and for a push, so they cannot differ.
 	 *
-	 * @since   0.1.0
-	 * @param   int $post_id  Post id.
-	 * @return  string
+	 * @since   0.4.1
+	 * @param   int[] $ids  Product ids.
+	 * @return  string[]  Product id => visibility.
 	 */
-	private function product_visibility( $post_id ) {
-		if ( ! function_exists( 'wc_get_product' ) ) {
-			return '';
+	public function product_visibilities( array $ids ) {
+		global $wpdb;
+
+		$ids        = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+		$visibility = array_fill_keys( $ids, 'visible' );
+		if ( empty( $ids ) ) {
+			return $visibility;
 		}
-		$product = wc_get_product( $post_id );
-		return $product ? (string) $product->get_catalog_visibility() : '';
+
+		// WooCommerce keeps visibility as two terms of "product_visibility"; both is hidden. Read here as plain columns so no post or product is loaded into the object cache.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- one batch of ids; the placeholders are generated here.
+		$rows        = (array) $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT tr.object_id AS id, t.name AS name FROM {$wpdb->term_relationships} tr INNER JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id INNER JOIN {$wpdb->terms} t ON t.term_id = tt.term_id WHERE tt.taxonomy = 'product_visibility' AND tr.object_id IN (" . implode( ',', array_fill( 0, count( $ids ), '%d' ) ) . ')',
+				$ids
+			),
+			ARRAY_A
+		);
+		$hidden_from = array();
+		foreach ( $rows as $row ) {
+			$hidden_from[ (int) $row['id'] ][ (string) $row['name'] ] = true;
+		}
+		foreach ( $hidden_from as $id => $names ) {
+			$search  = isset( $names['exclude-from-search'] );
+			$catalog = isset( $names['exclude-from-catalog'] );
+			if ( $search && $catalog ) {
+				$visibility[ $id ] = 'hidden';
+			} elseif ( $search ) {
+				$visibility[ $id ] = 'catalog';
+			} elseif ( $catalog ) {
+				$visibility[ $id ] = 'search';
+			}
+		}
+		return $visibility;
 	}
 
 	/**
@@ -606,14 +780,15 @@ class SAMOMIND_Content {
 	 * id order. Eligibility is checked per post by the caller.
 	 *
 	 * @since   0.1.0
-	 * @param   int $after_id  Exclusive lower bound.
-	 * @param   int $limit     Rows.
+	 * @param   int      $after_id  Exclusive lower bound.
+	 * @param   int      $limit     Rows.
+	 * @param   string[] $only      Keep only these post types; none keeps all.
 	 * @return  int[]
 	 */
-	public function get_candidate_ids( $after_id, $limit ) {
+	public function get_candidate_ids( $after_id, $limit, array $only = array() ) {
 		global $wpdb;
 
-		$types = $this->get_post_types();
+		$types = $this->types_within( $only );
 		if ( empty( $types ) ) {
 			return array();
 		}
@@ -627,6 +802,36 @@ class SAMOMIND_Content {
 		);
 
 		return array_map( 'intval', $ids );
+	}
+
+	/**
+	 * Published, unprotected posts of the tracked types after an id, in id
+	 * order, as plain rows with only the columns eligibility and the modified
+	 * time need.
+	 *
+	 * @since   0.4.1
+	 * @param   int $after_id  Exclusive lower bound.
+	 * @param   int $limit     Rows.
+	 * @return  array[]
+	 */
+	public function get_candidate_rows( $after_id, $limit ) {
+		global $wpdb;
+
+		$types = $this->get_post_types();
+		if ( empty( $types ) ) {
+			return array();
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- id-range paging over posts, which WP_Query cannot express; a read of columns, not posts.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT ID, post_type, post_status, post_password, post_modified_gmt, post_date_gmt FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_password = '' AND post_type IN (" . implode( ',', array_fill( 0, count( $types ), '%s' ) ) . ') AND ID > %d ORDER BY ID ASC LIMIT %d',
+				array_merge( $types, array( (int) $after_id, (int) $limit ) )
+			),
+			ARRAY_A
+		);
+
+		return (array) $rows;
 	}
 
 	/**
@@ -676,16 +881,29 @@ class SAMOMIND_Content {
 	}
 
 	/**
+	 * The tracked post types, narrowed to the given ones when any are given.
+	 *
+	 * @since   0.4.1
+	 * @param   string[] $only  Post types to keep, or none to keep all.
+	 * @return  string[]
+	 */
+	private function types_within( array $only ) {
+		$types = $this->get_post_types();
+		return empty( $only ) ? $types : array_values( array_intersect( $types, $only ) );
+	}
+
+	/**
 	 * Number of published, unprotected posts of the tracked types: the
 	 * progress total of a full sync, before per-post exclusions.
 	 *
 	 * @since   0.1.0
+	 * @param   string[] $only  Keep only these post types; none keeps all.
 	 * @return  int
 	 */
-	public function count_candidates() {
+	public function count_candidates( array $only = array() ) {
 		global $wpdb;
 
-		$types = $this->get_post_types();
+		$types = $this->types_within( $only );
 		if ( empty( $types ) ) {
 			return 0;
 		}
@@ -751,16 +969,36 @@ class SAMOMIND_Content {
 	 * @return  array
 	 */
 	public function get_inventory() {
-		$entries = array();
-		$after   = 0;
+		// Plain rows, 500 at a time, judged by the same is_eligible_data() that judges a push. No post or product is loaded, so nothing builds up in the object cache and memory stays flat however many items the shop has.
+		$entries  = array();
+		$after    = 0;
+		$types    = $this->get_post_types();
+		$excluded = $this->get_excluded_ids();
 		do {
-			$ids   = $this->get_candidate_ids( $after, 500 );
-			$found = count( $ids );
-			_prime_post_caches( $ids, false, false );
-			foreach ( $ids as $id ) {
-				$post = get_post( $id );
-				if ( $this->is_eligible( $post ) ) {
-					$entries[ (string) $id ] = self::rfc3339( self::modified_gmt( $post ) );
+			$rows  = $this->get_candidate_rows( $after, 500 );
+			$found = count( $rows );
+
+			$product_ids = array();
+			foreach ( $rows as $row ) {
+				if ( 'product' === $row['post_type'] ) {
+					$product_ids[] = (int) $row['ID'];
+				}
+			}
+			$visibility = $this->product_visibilities( $product_ids );
+
+			foreach ( $rows as $row ) {
+				$id   = (int) $row['ID'];
+				$data = array(
+					'id'        => $id,
+					'post_type' => $row['post_type'],
+					'status'    => $row['post_status'],
+					'password'  => $row['post_password'],
+				);
+				if ( 'product' === $row['post_type'] ) {
+					$data['product'] = array( 'catalog_visibility' => $visibility[ $id ] );
+				}
+				if ( self::is_eligible_data( $data, $types, $excluded ) ) {
+					$entries[ (string) $id ] = self::rfc3339( self::modified_from( $row['post_modified_gmt'], $row['post_date_gmt'] ) );
 				}
 				$after = $id;
 			}
@@ -789,5 +1027,44 @@ class SAMOMIND_Content {
 			}
 		);
 		return $pairs;
+	}
+
+	/**
+	 * Clear this request's in-memory copy of the object cache, where the cache
+	 * says it can: a persistent cache keeps what it has, and nothing is ever
+	 * flushed or deleted from it. Without that support nothing happens.
+	 *
+	 * @since   0.4.1
+	 * @return  void
+	 */
+	public static function release_runtime_cache() {
+		if ( function_exists( 'wp_cache_flush_runtime' ) && function_exists( 'wp_cache_supports' ) && wp_cache_supports( 'flush_runtime' ) ) {
+			wp_cache_flush_runtime();
+		}
+	}
+
+	/**
+	 * Whether this request has used most of its memory, so a worker run can
+	 * end now and carry on in the next one.
+	 *
+	 * @since   0.4.1
+	 * @param   float $share  Share of the limit that counts as most of it.
+	 * @return  bool
+	 */
+	public static function memory_is_tight( $share = 0.7 ) {
+		$limit = ini_get( 'memory_limit' );
+		if ( false === $limit || '' === $limit || '-1' === (string) $limit ) {
+			return false;
+		}
+		$bytes = (int) $limit;
+		$unit  = strtolower( substr( trim( (string) $limit ), -1 ) );
+		if ( 'g' === $unit ) {
+			$bytes *= 1024 * 1024 * 1024;
+		} elseif ( 'm' === $unit ) {
+			$bytes *= 1024 * 1024;
+		} elseif ( 'k' === $unit ) {
+			$bytes *= 1024;
+		}
+		return $bytes > 0 && memory_get_usage() > $share * $bytes;
 	}
 }
